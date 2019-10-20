@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist API Get Identification Leaf Taxa Counts" />
+<title>iNaturalist API Get Identification Leaf Taxa Counts</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+</style>
+</head>
+
+<body>
+<script>
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function fresults(xobj) {
+   faddelem('p',document.body,null,null,furl(famp(apiurl)));
+   var results = xobj.results;
+   if (results) {
+      faddelem('p',document.body,null,null,'total leaf taxa: '+xobj.total_results);
+      var table = faddelem('table',document.body,null,'main');
+      var thead = faddelem('thead',table);
+      var hrow = faddelem('tr',thead);
+      faddelem('td',hrow,null,null,'#');
+      faddelem('td',hrow,null,null,'id');
+      faddelem('td',hrow,null,null,'photo');
+      faddelem('td',hrow,null,null,'name');
+      faddelem('td',hrow,null,null,'common name');
+      faddelem('td',hrow,null,null,'rank');
+      faddelem('td',hrow,'tar',null,'taxon obs/id count');
+      faddelem('td',hrow,'tar',null,'taxon ttl obs count');
+      var tbody = faddelem('tbody',table);
+      for (var i=0; i<results.length; i++) {
+         var brow = faddelem('tr',tbody);
+         faddelem('td',brow,null,null,i+1);
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].taxon.id,results[i].taxon.id));
+         faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].taxon.default_photo.square_url+'" />');
+         faddelem('td',brow,null,null,results[i].taxon.name);
+         faddelem('td',brow,null,null,results[i].taxon.preferred_common_name);
+         faddelem('td',brow,null,null,results[i].taxon.rank);
+         faddelem('td',brow,'tar',null,results[i].count);
+         faddelem('td',brow,'tar',null,results[i].taxon.observations_count);
+      };
+   }
+   else { faddelem('p',document.body,null,null,'No results returned.'); };
+};
+var apiurl = 'https://api.inaturalist.org/v1/identifications/species_counts'+window.location.search;
+if (window.location.search==='') {
+   faddelem('p',document.body,null,null,'This page displays the results of a request to the iNaturalist Identification Species Counts API in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_species_counts')+' for available query parameters.');
+   faddelem('p',document.body,null,null,'Suppose this page is saved locally as C:\\example.html, <br />and you want to see the results of '+furl(famp('https://api.inaturalist.org/v1/identifications/species_counts?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in a friendly format, <br />then you would open '+furl(famp('file:///C:/example.html?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in your browser.');
+}
+else {
+   fetch(apiurl)
+      .then((response) => {
+         if (!response.ok) { throw Error(response.statusText); };
+         return response.json();
+      })
+      .then((data) => { fresults(data); })
+      .catch((err) => { console.log('Error: '+err); });
+}
+</script>
+</body>
+
+
+</html>
