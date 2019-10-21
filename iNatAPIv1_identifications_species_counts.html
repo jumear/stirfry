@@ -65,17 +65,20 @@ function fresults(xobj) {
 var apiurl = 'https://api.inaturalist.org/v1/identifications/species_counts'+window.location.search;
 if (window.location.search==='') {
    faddelem('p',document.body,null,null,'This page displays the results of a request to the iNaturalist Identification Species Counts API in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_species_counts')+' for available query parameters.');
-   faddelem('p',document.body,null,null,'Suppose this page is saved locally as C:\\example.html, <br />and you want to see the results of '+furl(famp('https://api.inaturalist.org/v1/identifications/species_counts?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in a friendly format, <br />then you would open '+furl(famp('file:///C:/example.html?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in your browser.');
+   faddelem('p',document.body,null,null,'Suppose the address of this page is '+window.location+', <br />and you want to see the results of '+furl(famp(apiurl+'?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in a friendly format, <br />then you would open '+furl(famp(window.location+'?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in your browser.');
 }
 else {
    fetch(apiurl)
       .then((response) => {
-         if (!response.ok) { throw Error(response.statusText); };
+         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
          return response.json();
       })
       .then((data) => { fresults(data); })
-      .catch((err) => { console.log('Error: '+err); });
-}
+      .catch((err) => {
+         console.error(err.message);
+         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+      });
+};
 </script>
 </body>
 
