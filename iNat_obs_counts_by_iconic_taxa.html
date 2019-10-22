@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observation Counts by Iconic Taxa" />
+<title>iNaturalist Observation Counts by Iconic Taxa</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tfoot tr { font-weight:600; background:black; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+</style>
+</head>
+
+<body>
+<script>
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fpct(d) {
+   x = Math.round(d*1000)/10;
+   return x.toFixed(1);
+};
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function fsettdvalue(rlabel,clabel,val) {
+   document.getElementById(rlabel+'_'+clabel).innerHTML = val;
+};
+function fgetcount(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      .then((data) => { return data.total_results; })
+      .catch((err) => { console.error(err); });
+};
+
+var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=1&only_id=true';
+var ary_it = [
+   {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒"},
+   {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅"},
+   {icon_taxa:"Reptilia",disp_name:"Reptiles",icon:"🐍"},
+   {icon_taxa:"Actinopterygii",disp_name:"Ray-Finned Fish",icon:"🐠"},
+   {icon_taxa:"Amphibia",disp_name:"Amphibians",icon:"🐸"},
+   {icon_taxa:"Mollusca",disp_name:"Mollusks",icon:"🐌"},
+   {icon_taxa:"Insecta",disp_name:"Insects",icon:"🐞"},
+   {icon_taxa:"Arachnida",disp_name:"Arachnids",icon:"🕷"},
+   {icon_taxa:"Animalia",disp_name:"Other Animals",icon:"🦀"},
+   {icon_taxa:"Plantae",disp_name:"Plants",icon:"🌱"},
+   {icon_taxa:"Fungi",disp_name:"Fungi",icon:"🍄"},
+   {icon_taxa:"Chromista",disp_name:"Chromista"},
+   {icon_taxa:"Protozoa",disp_name:"Protozoa"},
+   {icon_taxa:"unknown",disp_name:"Unknown*"},
+   {icon_taxa:"All",disp_name:"All",icon:"🌐"},
+];
+
+faddelem('h1',document.body,null,null,'iNaturalist Observation Counts by Iconic Taxa');
+
+// create the basic structure of the table
+var table = faddelem('table',document.body,null,'main');
+var thead = faddelem('thead',table);
+var hrow = faddelem('tr',thead);
+faddelem('td',hrow,null,null,'Iconic Taxon');
+faddelem('td',hrow);
+faddelem('td',hrow,'tar',null,'Verifiable');
+faddelem('td',hrow,'tar',null,'R Grade');
+faddelem('td',hrow,'tar',null,'% RG of V');
+faddelem('td',hrow,'tar',null,'Needs ID');
+faddelem('td',hrow,'tar',null,'% NID of V');
+faddelem('td',hrow,'tar',null,'All');
+faddelem('td',hrow,'tar',null,'Diff All-V');
+faddelem('td',hrow,'tar',null,'% V of All');
+var tbody = faddelem('tbody',table);
+var tfoot = faddelem('tfoot',table);
+for (i=0;i<ary_it.length;i++) {
+   var str_it = ary_it[i].icon_taxa;
+   var str_dn = ary_it[i].disp_name;
+   var str_ic = ary_it[i].icon;
+   var trow = faddelem('tr',(str_it==='All'?tfoot:tbody));
+   faddelem('td',trow,null,str_it+'_it',str_dn);
+   faddelem('td',trow,null,str_it+'_ic',str_ic);
+   faddelem('td',trow,'tar',str_it+'_v');
+   faddelem('td',trow,'tar',str_it+'_rg');
+   faddelem('td',trow,'tar',str_it+'_rgv');
+   faddelem('td',trow,'tar',str_it+'_nid');
+   faddelem('td',trow,'tar',str_it+'_nidv');
+   faddelem('td',trow,'tar',str_it+'_all');
+   faddelem('td',trow,'tar',str_it+'_diff');
+   faddelem('td',trow,'tar',str_it+'_va');
+};
+faddelem('p',document.body,null,null,'Notes:<br />'
+   +'* Unknown includes things like Bacteria.<br />'
+   +'** Because numbers are pulled asynchronously, they may not all tie exactly.');
+
+// pull data into table
+// (this is separate from the creation of the table structure just in case there are failures while pulling data)
+for (j=0;j<ary_it.length;j++) {
+   var str_it = ary_it[j].icon_taxa
+   var p_it = str_it==='All'?'':'&iconic_taxa='+str_it;
+   var prom0 = Promise.resolve(str_it);
+   var prom1 = fgetcount(apiurl+p_it+'&verifiable=true');
+   var prom2 = fgetcount(apiurl+p_it+'&quality_grade=research');
+   var prom3 = fgetcount(apiurl+p_it);
+   Promise.all([prom0,prom1,prom2,prom3]).then(function(values) {
+      var it = values[0];
+      var v = values[1];
+      var rg = values[2];
+      var a = values[3];
+      var n = v-rg;
+      fsettdvalue(it,'v',fcomnum(v));
+      fsettdvalue(it,'rg',fcomnum(rg));
+      fsettdvalue(it,'rgv',fpct(rg/v));
+      fsettdvalue(it,'nid',fcomnum(n));
+      fsettdvalue(it,'nidv',fpct(n/v));
+      fsettdvalue(it,'all',fcomnum(a));
+      fsettdvalue(it,'diff',fcomnum(a-v));
+      fsettdvalue(it,'va',fpct(v/a));
+   });  
+};
+
+</script>
+</body>
+
+</html>
