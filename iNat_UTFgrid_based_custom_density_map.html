@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="Custom iNaturalist Observation Density Maps" />
+<title>Custom iNaturalist Observation Density Maps</title>
+<style>
+   body { font:10pt Sans-Serif; margin:0px; padding:0px; border:0px; background:darkgray; }
+   #nav { width:384px; height:1024px; position:absolute; top:0px; left:0px; }
+   h3 { font:600 11pt Sans-Serif; margin:0px; padding:15px 10px 0px 10px; }
+   p { font:10pt Sans-Serif; margin:0px; padding:10px 10px 0px 10px; }
+   #keytable { display:table; margin:0px 10px; }
+   #keybody { display:table-row-group; }
+   .keyentry { width:384px; display:table-row; }
+   .keyicon { width:4px; height:4px; display:table-cell; }
+   .keytext { width:350px top:4px; display:table-cell; padding-top:10px; padding-left:5px; }
+   #map { width:1024x; height:1024px; position:absolute; top:0px; left:384px; }
+   .layer { width:1024x; height:1024px; position:absolute; opacity:0.9999999; }
+   .tile { width:256px; height:256px; position:absolute; }
+   .cell { width:4px; height:4px; position:absolute; }
+   a { text-decoration:none; color:darkblue; }
+</style>
+</head>
+
+<body>
+<div id='nav'>
+<h3>Examples of Custom iNaturalist Observation Density Maps Based on UTFGrids</h3>
+<p>iNaturalist provides 3 <a href="https://api.inaturalist.org/v1/docs/#/Observation_Tiles">stock mapping options</a>: point maps, circle heatmaps, and regular heatmaps. Although useful, these maps are not very customizable from a formatting perspective. It's possible to create custom maps using downloaded observation data, but this approach can be labor-intensive and impractical for large datasets.</p>
+<p>As an alternative, the counts of observations for cells (cellcount) found iNaturalist observation <a href="https://api.inaturalist.org/v1/docs/#/UTFGrid">UTFgrid</a> data can be leveraged to create custom density maps.</p>
+<p>UTFgrid data are not super precise (so probably should not be used for rigorous science), but they are useful for creating quick and highly customizable map visualizations.</p>
+<p>This page provides examples of maps made using UTFgrids, although these represent only the tip of the iceberg of possibilities. For coding simplicity, these maps are static (not zoomable / pannable) at 1024px x 1024px.</p>
+<h3>Example Map Details</h3>
+</div>
+<script>
+let map = faddelem('div',document.body,null,'map');
+let nav = document.getElementById('nav');
+let mddescr = faddelem('div',nav,null,'mddescr');
+let keytable = faddelem('div',nav,null,'keytable');
+let keybody = faddelem('div',keytable,null,'keybody');
+
+/*
+function newDoc() {
+  window.location.assign("https://www..com")
+}
+*/
+
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var example = winurlparams.get('example');
+example = (example===null?1:example[0]); // gets first value passed in the url "example" parameter, or else 1
+
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function futfgrid(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+//      .then((data) => {  })
+      .catch((err) => { console.error(err); });
+};
+function freplacexyz(url,x,y,z) {
+   url = url.replace('{x}',x);
+   url = url.replace('{y}',y);
+   url = url.replace('{z}',z);
+   return url;
+};
+
+function fltcid(lseq,tx=null,ty=null,cx=null,cy=null) { return 'l'+lseq+((tx!==null&&ty!==null)?('tx'+tx+'ty'+ty):'')+((cx!==null&&cy!==null)?('cx'+cx+'cy'+cy):''); };
+
+var zoom = 2;
+var txmax = Math.pow(2,zoom)-1;
+var tymax = Math.pow(2,zoom)-1;
+var txnstart = 0;
+var tynstart = 0;
+let txnum = tynum = 4;
+let txpx = typx = 256;
+let cxnum = cynum = 64;
+let cxpx = cypx = 4;
+
+function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2; };
+
+function fmapextent(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
+   var w=bbox.swlng
+   var e=bbox.nelng
+   var n=bbox.nelat
+   var s=bbox.swlat
+
+   dw = ((e>=w)?(e-w):(360-w+e))/360;
+   dh = latidx(s)-latidx(n);
+
+   zoom = Math.floor( Math.log((1/((dw>dh)?dw/txnum:dh/tynum))) / Math.log(2) );
+   zoom = (zoom>20)?20:(zoom<2)?2:zoom;
+
+   txmax = Math.pow(2,zoom)-1;
+   tymax = Math.pow(2,zoom)-1;
+
+   var txw = Math.floor((180+(w<180?w:-180))/360*(txmax+1));
+   var txe = Math.floor((180+(e<180?e:-180))/360*(txmax+1));
+   var tyn = Math.floor(latidx(n)*Math.pow(2,zoom));
+   var tys = Math.floor(latidx(s)*Math.pow(2,zoom));
+   tyn = (tyn>tymax)?tymax:tyn;
+   tys = (tys>tymax)?tymax:tys;
+
+   var tw = ((e>=w)?(txe-txw):(txmax+1-txw+txe))+1;
+   var th = tys-tyn+1;
+
+   txnstart = (tw===(txmax+1))?0:(tw===txnum)?txw:txw-Math.floor((txnum/2-tw/2));
+   txnstart = (txnstart>=0)?txnstart:txmax+txnstart+1;
+   tynstart = (th===(tymax+1))?0:(th===tynum)?tyn:tyn-Math.floor((tynum/2-th/2));
+   tynstart = (tynstart<0)?0:(tynstart+tynum>=tymax)?(tymax-tynum+1):tynstart;
+};
+
+function fstylecell(cell,cxy=[0,0],cstyle,ccolor) {
+   var cxyspx = [4,4];
+   var cxyopx = [0,0];
+   if (cstyle==='square') {
+      cxyspx = [2,2];
+      cxyopx = [1,1];
+   }        
+   else if (cstyle==='square_med') {
+      cxyspx = [3,3];
+   }
+   else if (cstyle==='square_overlap') {
+      cxyspx = [6,6];
+      cxyopx = [-1,-1];
+   }
+   else if (cstyle==='square_tl') {
+      cxyspx = [2,2];
+      cxyopx = [0,0];
+   }
+   else if (cstyle==='square_tr') {
+      cxyspx = [2,2];
+      cxyopx = [0,2];
+   }
+   else if (cstyle==='square_bl') {
+      cxyspx = [2,2];
+      cxyopx = [2,0];
+   }
+   else if (cstyle==='square_br') {
+      cxyspx = [2,2];
+      cxyopx = [2,2];
+   }
+   else if (cstyle==='pixel') {
+      cxyspx = [1,1];
+      cxyopx = [1,1];
+   }
+   else if (cstyle==='pixel_tl') {
+      cxyspx = [1,1];
+      cxyopx = [1,1];
+   }
+   else if (cstyle==='pixel_tr') {
+      cxyspx = [1,1];
+      cxyopx = [1,3];
+   }
+   else if (cstyle==='pixel_bl') {
+      cxyspx = [1,1];
+      cxyopx = [3,1];
+   }
+   else if (cstyle==='pixel_br') {
+      cxyspx = [1,1];
+      cxyopx = [3,3];
+   }
+   else if (cstyle==='diamond') {
+      cxyspx = [2,2];
+      cell.style.transform = "rotate(45deg)";
+   }
+   else if (cstyle==='diamond_med') {
+      cxyspx = [2.5,2.5];
+      cell.style.transform = "rotate(45deg)";
+   }
+   else if (cstyle==='diamond_overlap') {
+      cxyspx = [4,4];
+      cell.style.transform = "rotate(45deg)";
+   }
+   else if (cstyle==='circle') {
+      cxyspx = [2,2];
+      cxyopx = [1,1];
+      cell.style.borderRadius = '1px';
+   }
+   else if (cstyle==='circle_med') {
+      cxyspx = [3,3];
+      cell.style.borderRadius = '1.5px';
+   }
+   else if (cstyle==='circle_overlap') {
+      cxyspx = [6,6];
+      cxyopx = [0,0];
+      cell.style.borderRadius = '3px';
+   }
+   else if (cstyle==='ring') {
+      cxyspx = [2,2];
+      cell.style.borderRadius = '2px';
+      cell.style.borderWidth = '1px';
+      cell.style.borderColor = ccolor;
+      cell.style.borderStyle = 'solid';
+   }
+   else if (cstyle==='ring_square') {
+      cxyspx = [2,2];
+      cell.style.borderWidth = '1px';
+      cell.style.borderColor = ccolor;
+      cell.style.borderStyle = 'solid';
+   }
+   else if (cstyle==='ring_overlap') {
+      cxyspx = [2,2];
+      cxyopx = [-1,-1];
+      cell.style.borderRadius = '3px';
+      cell.style.borderWidth = '2px';
+      cell.style.borderColor = ccolor;
+      cell.style.borderStyle = 'solid';
+   };
+   cell.style.left=(cxpx*(cxy?cxy[0]:0)+cxyopx[0])+'px';
+   cell.style.top=(cypx*(cxy?cxy[1]:0)+cxyopx[1])+'px';
+   cell.style.width=cxyspx[0]+'px';
+   cell.style.height=cxyspx[1]+'px';
+   cell.style.background=(['ring','ring_overlap','ring_square'].includes(cstyle))?'none':ccolor;
+};
+
+function fcreatelayer(lseq,ltype,lurl,crgb=[0,0,0],cdensityfactor=1,cstyle=null) {
+   var layer = faddelem('div',map,'layer',fltcid(lseq));
+   layer.style.left='0px';
+   layer.style.top='0px';
+   for (ty=0;ty<tynum;ty++) {
+      var tya = tynstart+ty;
+      for (tx=0;tx<txnum;tx++) {
+         var txa = txnstart+tx;
+         txa = (txa>txmax)?txa-txmax-1:txa;
+         var tile = faddelem('div',layer,'tile',fltcid(lseq,txa,tya));
+         tile.style.left=(txpx*tx)+'px';
+         tile.style.top=(typx*ty)+'px';
+         if (ltype==='basemap') {
+            tile.style.backgroundImage = "url('"+freplacexyz(lurl,txa,tya,zoom)+"')"; 
+            }
+         else if (ltype==='utfoverlay') {
+            var prom0 = Promise.resolve([tile,tx,ty]);
+            var prom1 = futfgrid(freplacexyz(lurl,txa,tya,zoom));
+            Promise.all([prom0,prom1])
+            .then(data => {
+               var tile = data[0][0];
+               var tx = data[0][1];
+               var ty = data[0][2];
+               var utfgrid = data[1];
+               for (cy=0;cy<=(cynum-1);cy++) {
+                  for (cx=0;cx<=(cxnum-1);cx++) {
+                     //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
+                     var i = utfgrid.grid[cy].charCodeAt(cx);
+                     i = i-((i>=93)?34:(i>=35)?33:32);
+                     var d = utfgrid.data[utfgrid.keys[i]];
+                     if (d!=null) {
+                        var cell = faddelem('div',tile,'cell',fltcid(lseq,tx,ty,cx,cy));
+                        var ccolor = "rgba("+crgb+","+d.cellCount/cdensityfactor+")";
+                        fstylecell(cell,[cx,cy],cstyle,ccolor);
+                     };
+                  };
+               }; 
+            });
+         };
+      };
+   };
+   return layer;
+};
+
+function fcreatebaselayer(lseq,lurl,ldescr=null,lattr=null,visible=true,stylefilter=null,bgcolor=null) {
+   var layer = fcreatelayer(lseq,'basemap',lurl);
+   if (stylefilter!==null) { layer.style.filter = stylefilter; };
+   if (bgcolor!==null) { layer.style.bgcolor = bgcolor; };
+   var entry = faddelem('div',keybody,'keyentry');
+   var icon = faddelem('div',entry,'keyicon',null,'🗺️');
+   var text = faddelem('div',entry,'keytext',null,'Base Map: '+ldescr+(stylefilter?(' &rarr; '+stylefilter.replace(/ /g,' &rarr; ')):'')+'<br />Attribution: '+lattr);
+};
+
+function fcreateoverlay(lseq,lurl,ldescr,lattr,visible=true,crgb=[0,0,0],cdensityfactor=1,cstyle=null) {
+   var layer = fcreatelayer(lseq,'utfoverlay',lurl,crgb,cdensityfactor,cstyle);
+   var entry = faddelem('div',keybody,'keyentry');
+   var icon = faddelem('div',entry,'keyicon',null,' ');
+   var text = faddelem('div',entry,'keytext',null,'Layer '+lseq+': '+ldescr+'<br />Attribution: '+lattr+'<br />Density Factor: '+cdensityfactor);
+   var cell = faddelem('div',icon,'cell');
+   cell.style.position = 'relative';
+   fstylecell(cell,[1.5,0],cstyle,"rgba("+crgb+",1)");
+};
+
+function fmapdescr(descr,notes=null) {
+   faddelem('p',mddescr,null,null,descr);
+   if (notes) { faddelem('p',mddescr,null,null,'Notes: '+notes); };
+};
+
+let s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
+let bm_s_toner = {url:'https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png',description:'Stamen Toner',attribution:s_stamen_copyright};
+let bm_s_toner_lite = {url:'https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png',description:'Stamen Toner Lite',attribution:s_stamen_copyright};
+let bm_s_terrain = {url:'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png',description:'Stamen Terrain',attribution:s_stamen_copyright};
+
+let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist</a>'};
+
+/*
+//examples of how to set map extent based on a bounding box:
+fmapextent({swlat:5.504044778645039,swlng:166.60386750474572,nelat:83.53583411313593,nelng:-16.36688232421875}); // North America
+fmapextent({swlat:18.803882491774857,swlng:172.7116527222097,nelat:71.39943192712963,nelng:-66.80360281839967}); // US (including AK and HI)
+fmapextent({swlat:13.290435858313753,swlng:-125.83712134009516,nelat:52.407256269196154,nelng:-63.551673623382214}); // Continental US + Mexico
+fmapextent({swlat:25.800311593338847,swlng:-106.78545135073364,nelat:36.567753315903246,nelng:-93.43606950715184}); // Texas
+fmapextent({swlat:28.779301713220775,swlng:-96.61523133516312,nelat:30.609263330698013,nelng:-94.20131103135645}); // Greater Houston
+fmapextent({swlat:29.75417166016996,swlng:-95.45843155123293,nelat:29.7783586056903,nelng:-95.42147004045546}); // Memorial Park (Houston, TX)
+fmapextent({swlat:29.24411828132679,swlng:-12.73389295962346,nelat:61.69814729146579,nelng:49.55155475708949}); // Partial Europe, Central Asia, Middle East, and North Africa 
+fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:-6.9330779537034735,nelng:-179.80389642724742}); // Australia & New Zealand
+fmapextent({swlat:-5.663220447316494,swlng:-141.97235941886902,nelat:66.91145404319461,nelng:-48.80829691886902}); // Partial North America
+fmapextent({swlat:-5.316705319907759,swlng:-128.29067492857575,nelat:67.04758656179122,nelng:-3.719779495149851}); // Partial North America + Partial Europe
+fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788}); // East Asia, Southeast Asia, and South Asia
+fmapextent({swlat:20.610355962999165,swlng:116.6253334376961,nelat:26.395377893932164,nelng:122.19673661515117}); // Taiwan
+*/
+
+if (example==1) {
+   fmapdescr('All Observations Worldwide','A basic map with green markers on a dark basemap. The opacity of the markers is scaled for a density factor. In this example, the density factor of Layer 1 is 100,000, which means that the cell that a given marker represents should have at least 100,000 observations in it if the marker is 100% opaque. Cells with fewer observations will be proportionately less opaque.');
+   fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(25%)'); 
+   fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,255,0],100000,'circle_med');
+}
+else if (example==2) {
+   fmapdescr('Worldwide Observations by Year (2016-2019)','Shows observations for 4 different years using markers of 4 different colors on a dark basemap. The markers for the different years appear in different corners of a given cell so that all 4 years can be visually represented together without overlapping.');
+   fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'brightness(20%) contrast(125%)');
+   fcreateoverlay(1,utfgridapi.url+'?year=2019','Observations in 2019',utfgridapi.attr,true,[255,0,0],20000,'square_tl');
+   fcreateoverlay(2,utfgridapi.url+'?year=2018','Observations in 2018',utfgridapi.attr,true,[255,255,0],20000,'square_tr');
+   fcreateoverlay(3,utfgridapi.url+'?year=2017','Observations in 2017',utfgridapi.attr,true,[0,255,0],20000,'square_bl');
+   fcreateoverlay(4,utfgridapi.url+'?year=2016','Observations in 2016',utfgridapi.attr,true,[0,0,255],20000,'square_br');
+}
+else if (example==3) {
+   fmapdescr('2019 Observations in Western Europe (and Nearby Areas), Highlighting City Nature Challenge 2019 Observations','The previous map (Example 2) seemed to show high numbers of observations in a lot of new places Western Europe in 2019. This map uses 2 different markers to show where CNC 2019 observations coincided with all 2019 observations. The markers use the same opacity scale (density factor). Where CNC 2019 obervations were not associated with one of the high-observations areas, the map may highlight places to promote CNC in 2020.');
+   fmapextent({swlat:29.24411828132679,swlng:-12.73389295962346,nelat:61.69814729146579,nelng:49.55155475708949});
+   fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(70%)');
+   fcreateoverlay(1,utfgridapi.url+'?year=2019','Observations in 2019',utfgridapi.attr,true,[0,255,255],5000,'square');
+   fcreateoverlay(2,utfgridapi.url+'?project_id=city-nature-challenge-2019','City Nature Challenge 2019 Observations',utfgridapi.attr,true,[255,128,128],5000,'ring_square');
+}
+else if (example==4) {
+   fmapdescr('2019 Observations in South / East Asia in 2019','This map shows the same data set using 2 different markers at 2 different opacity scales (density factor) in order to visualize both places with relatively few observations and places with lots of observations, without losing the gradations in either scale. This map also shows how to use color filters on a black and white basemap to produce a colored basemap.');
+   fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788});
+   fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(40%) sepia(40%) hue-rotate(60deg) saturate(400%) contrast(200%)');
+   fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,192,64],1000,'circle');
+   fcreateoverlay(2,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,192,64],25000,'ring_overlap');
+}
+else if (example==5) {
+   fmapdescr('Monarch Observations by Month (July 2019 to October 2019), aka Fall 2019 Monarch Migration','This applies some concepts from previous example maps, along with a filter on a specific taxon, to show geographic shifts in observations for that taxon over time.');
+   fmapextent({swlat:13.290435858313753,swlng:-125.83712134009516,nelat:52.407256269196154,nelng:-63.551673623382214}); // Continental US + Mexico
+   fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'invert(100%) brightness(60%) sepia(100%) hue-rotate(180deg) saturate(150%)');
+   fcreateoverlay(1,utfgridapi.url+'?taxon_id=48662&year=2019&month=10','Observations of Monarchs in October 2019',utfgridapi.attr,true,[255,0,0],10,'square_tl');
+   fcreateoverlay(2,utfgridapi.url+'?taxon_id=48662&year=2019&month=9','Observations of Monarchs in September 2019',utfgridapi.attr,true,[255,255,0],10,'square_tr');
+   fcreateoverlay(3,utfgridapi.url+'?taxon_id=48662&year=2019&month=8','Observations of Monarchs in August 2019',utfgridapi.attr,true,[0,255,0],10,'square_bl');
+   fcreateoverlay(4,utfgridapi.url+'?taxon_id=48662&year=2019&month=7','Observations of Monarchs in July 2019',utfgridapi.attr,true,[0,0,255],10,'square_br');
+}
+else if (example==6) {
+   fmapdescr('Observations of Different Kinds of Organisms in the Greater Houston Area (Houston, TX, USA)','This uses the 4-corners-of-a-cell technique from previous example maps to visualize observations for 4 different kinds of organisms. It also uses a terrain basemap just for fun, darkening it just a bit to allow the markers to show up a little better. This is similar to the stock pin maps that iNaturalist provides, but instead of each marker representing a single random observation, they represent a group of observations in a given cell on the map, with opacity scaled for observation density.');
+   //Greater Houston Area by Taxon Groups -- g p r b 5 -- Greater Houston Area
+   fmapextent({swlat:28.779301713220775,swlng:-96.61523133516312,nelat:30.609263330698013,nelng:-94.20131103135645}); // Greater Houston
+   fcreatebaselayer(0,bm_s_terrain.url,bm_s_terrain.description,bm_s_terrain.attribution,true,'brightness(80%) saturate(50%)'); 
+   fcreateoverlay(1,utfgridapi.url+'?taxon_id=47126','Observations of Plants',utfgridapi.attr,true,[0,255,0],75,'square_tl'); // plants
+   fcreateoverlay(2,utfgridapi.url+'?taxon_id=47170','Observations of Fungi',utfgridapi.attr,true,[255,0,255],75,'square_bl'); // fungi
+   fcreateoverlay(3,utfgridapi.url+'?taxon_id=1&without_taxon_id=355675','Observations of Invertebrates (Animals not Vertebrates)',utfgridapi.attr,true,[255,0,0],75,'square_tr'); // invertebrates (non-vertebrate animals)
+   fcreateoverlay(4,utfgridapi.url+'?taxon_id=355675','Observations of Vertebrates',utfgridapi.attr,true,[0,0,255],75,'square_br'); // vertebrates
+}
+else if (example==7) {
+   fmapdescr("A Single User's Contribution to Observations in Memorial Park (Houston, TX, USA)","This overlays a single user's observations on top of all observations in an area to show how that user's observations contributed to overall observations in the area. Relatively large markers with dark colors are used in this map to allow for maximum visibility on top of a white basemap. This particular marker will overlap with neighboring markers, providing extra emphasis to cells that have neighboring cells with observations.");
+   fmapextent({swlat:29.75417166016996,swlng:-95.45843155123293,nelat:29.7783586056903,nelng:-95.42147004045546}); // Memorial Park (Houston, TX)
+   fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution);
+   fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,128,128],15,'ring_overlap');
+   fcreateoverlay(2,utfgridapi.url+'?user_id=pisum','Observations by @pisum',utfgridapi.attr,true,[255,128,128],15,'ring_overlap');
+}
+else { faddelem('p',mddescr,null,null,'No example found with the requested ID. Please specify another example ID.'); };
+
+</script>
+</body>
+
+</html>
