@@ -50,7 +50,7 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-var example = winurlparams.get('example');
+var example = winurlparams.get('example').split(',');
 example = (example===null?1:example[0]); // gets first value passed in the url "example" parameter, or else 1
 
 //function to create new elements
@@ -358,7 +358,7 @@ fmapextent({swlat:25.800311593338847,swlng:-106.78545135073364,nelat:36.56775331
 fmapextent({swlat:28.779301713220775,swlng:-96.61523133516312,nelat:30.609263330698013,nelng:-94.20131103135645}); // Greater Houston
 fmapextent({swlat:29.75417166016996,swlng:-95.45843155123293,nelat:29.7783586056903,nelng:-95.42147004045546}); // Memorial Park (Houston, TX)
 fmapextent({swlat:29.24411828132679,swlng:-12.73389295962346,nelat:61.69814729146579,nelng:49.55155475708949}); // Partial Europe, Central Asia, Middle East, and North Africa 
-fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:-6.9330779537034735,nelng:-179.80389642724742}); // Australia & New Zealand
+fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:9.033917886632137,nelng:179.99}); // Australia & New Zealand
 fmapextent({swlat:-5.663220447316494,swlng:-141.97235941886902,nelat:66.91145404319461,nelng:-48.80829691886902}); // Partial North America
 fmapextent({swlat:-5.316705319907759,swlng:-128.29067492857575,nelat:67.04758656179122,nelng:-3.719779495149851}); // Partial North America + Partial Europe
 fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788}); // East Asia, Southeast Asia, and South Asia
@@ -424,13 +424,13 @@ else if (example==7) {
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,128,128],15,'ring_overlap');
    fcreateoverlay(2,utfgridapi.url+'?user_id=pisum','Observations by @pisum',utfgridapi.attr,true,[255,128,128],15,'ring_overlap');
 }
-if (example==8) {
-   fmapdescr("Observations in Australia and New Zealand","This map is different from previous examples in that its markers are scaled along a color gradient (in this case, dull blue=low to bright magenta=high) instead of using opacity. The color gradient scaling is a little better than opacity scaling for visualizing wide ranges, but gradients are a little less flexible and more complex to code / configure. I've created only this example just to show what it looks like and to provide a little code to build on for others who might want to use gradients.");
-   fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:-6.9330779537034735,nelng:-179.80389642724742}); // Australia & New Zealand
+else if (example==8) {
+   fmapdescr("Observations in Australia, New Zealand, and Nearby Nations","This map is different from previous examples in that its markers are scaled along a color gradient (in this case, dull blue=low to bright magenta=high) instead of using opacity. The color gradient scaling is a little better than opacity scaling for visualizing wide ranges, but gradients are a little less flexible and more complex to code / configure. I've created only this example just to show what it looks like and to provide a little code to build on for others who might want to use gradients.");
+   fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:9.033917886632137,nelng:179.99}); // Australia & New Zealand
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(80%)'); 
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10000,'circle_grad_lin_hr270');
 }
-if (example==9) {
+else if (example==9) {
    fmapdescr("Observations in Africa","This is an attempt to achieve a logarithmic scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
    fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:38.37686518217217,nelng:53.91939463596975}); // Africa
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'invert(100%) brightness(50%) sepia(100%) hue-rotate(205deg) saturate(160%)');
