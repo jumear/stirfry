@@ -45,6 +45,7 @@ function newDoc() {
 }
 */
 
+//get parameters from the url
 let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
@@ -52,6 +53,7 @@ let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 var example = winurlparams.get('example');
 example = (example===null?1:example[0]); // gets first value passed in the url "example" parameter, or else 1
 
+//function to create new elements
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
@@ -60,6 +62,8 @@ function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    eparent.appendChild(eobj);
    return eobj;
 };
+
+//function to get a JSON file
 function futfgrid(url) {
    return fetch(url)
       .then((response) => {
@@ -69,6 +73,8 @@ function futfgrid(url) {
 //      .then((data) => {  })
       .catch((err) => { console.error(err); });
 };
+
+//function to return the correct x, y, and zoom values to a given map tile or UTFgrid url
 function freplacexyz(url,x,y,z) {
    url = url.replace('{x}',x);
    url = url.replace('{y}',y);
@@ -76,8 +82,15 @@ function freplacexyz(url,x,y,z) {
    return url;
 };
 
+//function to add ids to layer, tile, and cell divs
+//this does not have to be used, but it helps to identify specific cells and may be useful for future development
 function fltcid(lseq,tx=null,ty=null,cx=null,cy=null) { return 'l'+lseq+((tx!==null&&ty!==null)?('tx'+tx+'ty'+ty):'')+((cx!==null&&cy!==null)?('cx'+cx+'cy'+cy):''); };
 
+//start to set some basic variables to create layers, tiles, and cells
+//one or more layer divs will be placed on the 1024px x 1024px map div. each layer div will be the same size as the map div. multiple layer divs will be stacked.
+//each layer div will contain 16 256px x 256px tiles (in 4 columns and 4 rows).
+//each tile may contain up to 4096 4px x 4px cells (in 64 columns and 64 rows).
+//because maps at zoom 1 will contain only 4 tiles, we will set the default (lowest) zoom level 2 for simplicity.
 var zoom = 2;
 var txmax = Math.pow(2,zoom)-1;
 var tymax = Math.pow(2,zoom)-1;
@@ -88,8 +101,11 @@ let txpx = typx = 256;
 let cxnum = cynum = 64;
 let cxpx = cypx = 4;
 
+//need to do some geometry to figure out the vertical position of a point at given lattitude on a Mercator projection
+//this is not necessary for longitudes
 function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2; };
 
+//function to identify the right tiles to pull, given a bounding box defined by a SW point and NE point in GPS coordinates
 function fmapextent(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
    var w=bbox.swlng
    var e=bbox.nelng
@@ -121,6 +137,8 @@ function fmapextent(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
    tynstart = (tynstart<0)?0:(tynstart+tynum>=tymax)?(tymax-tynum+1):tynstart;
 };
 
+//this defines some different styling options for cells
+//the styling will help these cells look like markers on a map
 function fstylecell(cell,cxy=[0,0],cstyle,ccolor,cstylefilter=null) {
    var cxyspx = [4,4];
    var cxyopx = [0,0];
@@ -226,6 +244,7 @@ function fstylecell(cell,cxy=[0,0],cstyle,ccolor,cstylefilter=null) {
    if (cstylefilter) { cell.style.filter = cstylefilter; };
 };
 
+//this is the main function that creates tiles and cells and puts them into the document
 function fcreatelayer(lseq,ltype,lurl,crgb=[0,0,0],cdensityfactor=1,cstyle=null) {
    var layer = faddelem('div',map,'layer',fltcid(lseq));
    layer.style.left='0px';
@@ -262,13 +281,13 @@ function fcreatelayer(lseq,ltype,lurl,crgb=[0,0,0],cdensityfactor=1,cstyle=null)
                            var f = d.cellCount/cdensityfactor;
                            f = (f<0)?0:(f>1)?1:f;
                            var ccolor = "hsla("+(240+f*-300)+","+(f*70+30)+"%,50%,0.7)";
+                           fstylecell(cell,[cx,cy],cstyle,ccolor);
 // I originally intended to handle gradients using style filters, but the results are unexpected
 // So I switched to HSLA color coding, which produces more expected results.
-// But I left the style coding here as an example for future coding
+// But I left the style coding here as an example for future development
 //                           var ccolor = "rgb("+crgb+")";
 //                           var cstylefilter = "hue-rotate("+f*-270+"deg)";
 //                           fstylecell(cell,[cx,cy],cstyle,ccolor,cstylefilter);
-                           fstylecell(cell,[cx,cy],cstyle,ccolor);
                         }
                         else {
                            var ccolor = "rgba("+crgb+","+d.cellCount/cdensityfactor+")";
@@ -284,6 +303,11 @@ function fcreatelayer(lseq,ltype,lurl,crgb=[0,0,0],cdensityfactor=1,cstyle=null)
    return layer;
 };
 
+//function to create basemap layers
+//it includes some functionality to apply filter styling on the basemap layers, which will allow for some color transformations on the basemaps. (note that filter stlying is applied in the order that it is specified. also note that there is a opacity:0.99999 value on the css .layer class styling which is necessary for some reason on Edge to display the filter styling correctly in some cases.)
+//it also creates a key entry on in the map details section.
+//this includes visibility parameter that is not actually handled in this code. it may be useful for future development (for, say, an on/off toggle switch on a layer).
+//this includes a bgcolor parameter this is handled but not used by any of the examples.
 function fcreatebaselayer(lseq,lurl,ldescr=null,lattr=null,visible=true,stylefilter=null,bgcolor=null) {
    var layer = fcreatelayer(lseq,'basemap',lurl);
    if (stylefilter!==null) { layer.style.filter = stylefilter; };
@@ -293,6 +317,9 @@ function fcreatebaselayer(lseq,lurl,ldescr=null,lattr=null,visible=true,stylefil
    var text = faddelem('div',entry,'keytext',null,'Base Map: '+ldescr+(stylefilter?(' &rarr; '+stylefilter.replace(/ /g,' &rarr; ')):'')+'<br />Attribution: '+lattr);
 };
 
+//function to create overlay layers
+//it also creates a key entry on in the map details section. the icon in the key will match the styling of the markers (cells) used in the layer at 100% opacity.
+//this includes visibility parameter that is not actually handled in this code. it may be useful for future development (for, say, an on/off toggle switch on a layer).
 function fcreateoverlay(lseq,lurl,ldescr,lattr,visible=true,crgb=[0,0,0],cdensityfactor=1,cstyle=null) {
    var layer = fcreatelayer(lseq,'utfoverlay',lurl,crgb,cdensityfactor,cstyle);
    var entry = faddelem('div',keybody,'keyentry');
@@ -303,20 +330,27 @@ function fcreateoverlay(lseq,lurl,ldescr,lattr,visible=true,crgb=[0,0,0],cdensit
    fstylecell(cell,[1.5,0],cstyle,"rgba("+crgb+",1)");
 };
 
+//function to add a description and notes to the map details section
 function fmapdescr(descr,notes=null) {
    faddelem('p',mddescr,null,null,descr);
    if (notes) { faddelem('p',mddescr,null,null,'Notes: '+notes); };
 };
 
+//some basemaps
+//note that Stamen Toner is black and white, and Toner Lite is grayscale. in their default forms, they have limited usefulness, but because of b/w/grayscale, they are easily customized via style filters. 
 let s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
 let bm_s_toner = {url:'https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png',description:'Stamen Toner',attribution:s_stamen_copyright};
 let bm_s_toner_lite = {url:'https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png',description:'Stamen Toner Lite',attribution:s_stamen_copyright};
 let bm_s_terrain = {url:'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png',description:'Stamen Terrain',attribution:s_stamen_copyright};
 
+//the main iNat UTFGrid API
+//note that iNat technically provides 3 UTFGrid endpoints, but as far as I can tell, they provide identical functionality.
 let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
 
 /*
 //examples of how to set map extent based on a bounding box:
+//(I saved them here in for easy copying and pasting for use in future maps.)
+//note that bounding box coordinates can be easily obtained by using the iNaturalist Explore page in map view, setting the desired map view, and clicking the "Redo Search in Map" button, and then getting the coordinates from the updated URL. it's also possible to get bounding box coordinates in various ways using the iNaturalist API.
 fmapextent({swlat:5.504044778645039,swlng:166.60386750474572,nelat:83.53583411313593,nelng:-16.36688232421875}); // North America
 fmapextent({swlat:18.803882491774857,swlng:172.7116527222097,nelat:71.39943192712963,nelng:-66.80360281839967}); // US (including AK and HI)
 fmapextent({swlat:13.290435858313753,swlng:-125.83712134009516,nelat:52.407256269196154,nelng:-63.551673623382214}); // Continental US + Mexico
@@ -331,6 +365,12 @@ fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.6141381298
 fmapextent({swlat:20.610355962999165,swlng:116.6253334376961,nelat:26.395377893932164,nelng:122.19673661515117}); // Taiwan
 */
 
+//this is where the set of example maps are defined. each example is provided a unique example ID, which allows the example map to be called by adding "?example=[id]" to the page URL.
+//each definition can include:
+//  a map description and notes
+//  a map extent. (if not included, the map will default to the whole world)
+//  a base map definition. (technically you can define many basemap layers, but these examples each only have one.)
+//  one or more overlay layers
 if (example==1) {
    fmapdescr('All Observations Worldwide','A basic map with green markers on a dark basemap. The opacity of the markers is scaled for a density factor. In this example, the density factor of Layer 1 is 100,000, which means that the cell that a given marker represents should have at least 100,000 observations in it if the marker is 100% opaque. Cells with fewer observations will be proportionately less opaque.');
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(25%)'); 
@@ -390,7 +430,7 @@ if (example==8) {
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10000,'circle_grad_lin_hr270');
 }
 if (example==9) {
-   fmapdescr("Observations in Western, Central, Eastern, and Southern Africa","This is an attempt to achieve an exponential-scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
+   fmapdescr("Observations in Western, Central, Eastern, and Southern Africa","This is an attempt to achieve a logarithmically scaled gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
    fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:8.37686518217217,nelng:53.91939463596975});
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'invert(100%) brightness(50%) sepia(100%) hue-rotate(205deg) saturate(160%)');
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10,'pixel');
