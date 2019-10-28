@@ -363,6 +363,7 @@ fmapextent({swlat:-5.663220447316494,swlng:-141.97235941886902,nelat:66.91145404
 fmapextent({swlat:-5.316705319907759,swlng:-128.29067492857575,nelat:67.04758656179122,nelng:-3.719779495149851}); // Partial North America + Partial Europe
 fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788}); // East Asia, Southeast Asia, and South Asia
 fmapextent({swlat:20.610355962999165,swlng:116.6253334376961,nelat:26.395377893932164,nelng:122.19673661515117}); // Taiwan
+fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:38.37686518217217,nelng:53.91939463596975}); // Africa
 */
 
 //this is where the set of example maps are defined. each example is provided a unique example ID, which allows the example map to be called by adding "?example=[id]" to the page URL.
@@ -430,8 +431,8 @@ if (example==8) {
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10000,'circle_grad_lin_hr270');
 }
 if (example==9) {
-   fmapdescr("Observations in Western, Central, Eastern, and Southern Africa","This is an attempt to achieve a logarithmically scaled gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
-   fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:8.37686518217217,nelng:53.91939463596975});
+   fmapdescr("Observations in Africa","This is an attempt to achieve a logarithmic scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
+   fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:38.37686518217217,nelng:53.91939463596975}); // Africa
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'invert(100%) brightness(50%) sepia(100%) hue-rotate(205deg) saturate(160%)');
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10,'pixel');
    fcreateoverlay(2,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,255,0],100,'pixel');
