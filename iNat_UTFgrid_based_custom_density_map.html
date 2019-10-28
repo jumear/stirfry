@@ -141,11 +141,11 @@ function fstylecell(cell,cxy=[0,0],cstyle,ccolor,cstylefilter=null) {
    }
    else if (cstyle==='square_tr') {
       cxyspx = [2,2];
-      cxyopx = [0,2];
+      cxyopx = [2,0];
    }
    else if (cstyle==='square_bl') {
       cxyspx = [2,2];
-      cxyopx = [2,0];
+      cxyopx = [0,2];
    }
    else if (cstyle==='square_br') {
       cxyspx = [2,2];
@@ -161,11 +161,11 @@ function fstylecell(cell,cxy=[0,0],cstyle,ccolor,cstylefilter=null) {
    }
    else if (cstyle==='pixel_tr') {
       cxyspx = [1,1];
-      cxyopx = [1,3];
+      cxyopx = [3,1];
    }
    else if (cstyle==='pixel_bl') {
       cxyspx = [1,1];
-      cxyopx = [3,1];
+      cxyopx = [1,3];
    }
    else if (cstyle==='pixel_br') {
       cxyspx = [1,1];
@@ -352,7 +352,7 @@ else if (example==3) {
    fcreateoverlay(2,utfgridapi.url+'?project_id=city-nature-challenge-2019','City Nature Challenge 2019 Observations',utfgridapi.attr,true,[255,128,128],5000,'ring_square');
 }
 else if (example==4) {
-   fmapdescr('2019 Observations in South / East Asia in 2019','This map shows the same data set using 2 different markers at 2 different opacity scales (density factor) in order to visualize both places with relatively few observations and places with lots of observations, without losing the gradations in either scale. This map also shows how to use color filters on a black and white basemap to produce a colored basemap.');
+   fmapdescr('Observations in South / East Asia','This map shows the same data set using 2 different markers at 2 different opacity scales (density factor) in order to visualize both places with relatively few observations and places with lots of observations, without losing the gradations in either scale. This map also shows how to use color filters on a black and white basemap to produce a colored basemap.');
    fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788});
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(40%) sepia(40%) hue-rotate(60deg) saturate(400%) contrast(200%)');
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,192,64],1000,'circle');
@@ -369,7 +369,6 @@ else if (example==5) {
 }
 else if (example==6) {
    fmapdescr('Observations of Different Kinds of Organisms in the Greater Houston Area (Houston, TX, USA)','This uses the 4-corners-of-a-cell technique from previous example maps to visualize observations for 4 different kinds of organisms. It also uses a terrain basemap just for fun, darkening it just a bit to allow the markers to show up a little better. This is similar to the stock pin maps that iNaturalist provides, but instead of each marker representing a single random observation, they represent a group of observations in a given cell on the map, with opacity scaled for observation density.');
-   //Greater Houston Area by Taxon Groups -- g p r b 5 -- Greater Houston Area
    fmapextent({swlat:28.779301713220775,swlng:-96.61523133516312,nelat:30.609263330698013,nelng:-94.20131103135645}); // Greater Houston
    fcreatebaselayer(0,bm_s_terrain.url,bm_s_terrain.description,bm_s_terrain.attribution,true,'brightness(80%) saturate(50%)'); 
    fcreateoverlay(1,utfgridapi.url+'?taxon_id=47126','Observations of Plants',utfgridapi.attr,true,[0,255,0],75,'square_tl'); // plants
@@ -389,6 +388,16 @@ if (example==8) {
    fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:-6.9330779537034735,nelng:-179.80389642724742}); // Australia & New Zealand
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(80%)'); 
    fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10000,'circle_grad_lin_hr270');
+}
+if (example==9) {
+   fmapdescr("Observations in Western, Central, Eastern, and Southern Africa","This is an attempt to achieve an exponential-scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different scales. It renders fine in Google Chrome and Firefox but may not render fully in some other browsers like Edge. (Too many markers to handle in those other browsers?)");
+   fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:8.37686518217217,nelng:53.91939463596975});
+   fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'invert(100%) brightness(50%) sepia(100%) hue-rotate(205deg) saturate(160%)');
+   fcreateoverlay(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,0,255],10,'pixel');
+   fcreateoverlay(2,utfgridapi.url,'All Observations',utfgridapi.attr,true,[0,255,0],100,'pixel');
+   fcreateoverlay(3,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,255,0],1000,'square');
+   fcreateoverlay(4,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,0,0],10000,'square');
+   fcreateoverlay(5,utfgridapi.url,'All Observations',utfgridapi.attr,true,[255,0,255],100000,'diamond_overlap');
 }
 else { faddelem('p',mddescr,null,null,'No example found with the requested ID. Please specify another example ID.'); };
 
