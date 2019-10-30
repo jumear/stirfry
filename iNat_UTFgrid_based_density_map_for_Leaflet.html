@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observation Density Map Based on UTFGrid Data and Integrated in Leaflet.js" />
+<title>iNaturalist Observation Density Map Based on UTFGrid Data and Integrated in Leaflet.js</title>
+<style>
+   body { height:100vh; width:100vw; margin:0px; }
+   #nav { font:9pt Sans-serif; height:100vh; width:25vw; position:absolute; top:0vh; left:0vw; background:darkgray; }
+   #mapid { height:100vh; width:75vw; position:absolute; top:0vh; left:25vw; background:darkgray; }
+   p { margin:10px 10px 0px 10px; }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
+<script>
+
+// debug grid example from https://leafletjs.com/examples/extending/extending-2-layers.html
+L.GridLayer.DebugCoords = L.GridLayer.extend({
+   createTile: function (coords) {
+      var tile = document.createElement('div');
+      tile.innerHTML = [coords.x, coords.y, coords.z].join(', ');
+      tile.style.outline = '1px solid red';
+      return tile;
+   }
+});
+L.gridLayer.debugCoords = function(opts) {
+   return new L.GridLayer.DebugCoords(opts);
+};
+
+// iNaturalist UTFGrid Density Map
+function freplacexyz(url,x,y,z) {
+   url = url.replace('{x}',x);
+   url = url.replace('{y}',y);
+   url = url.replace('{z}',z);
+   return url;
+};
+L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
+   createTile: function (coords, done) {
+
+      var tile = document.createElement('canvas');
+      var tileSize = this.getTileSize();
+      tile.width = tileSize.x;
+      tile.height = tileSize.y;
+      var cellsPerTile = {x:64,y:64};
+      var cellSize = {x:tileSize.x/cellsPerTile.x,y:tileSize.y/cellsPerTile.y};
+      var ctx = tile.getContext('2d');
+
+      // default marker setups
+      var dmarkerOpacity = {type:'circle',size:0.75,offset:{x:0,y:0},scaleType:'opacity',scaleFactor:1,colorRGB:[255,0,0]};
+      var dmarkerGradRainbow = {type:'square',size:0.75,offset:{x:0,y:0},scaleType:'grad_rainbow',scaleFactor:5};
+      var marker = null;
+      if (this.options.marker) {
+         marker = this.options.marker;
+         marker.scaleType = marker.scaleType || dmarkerOpacity.scaleType;
+         if (marker.scaleType==='grad_rainbow') {
+            marker.type = marker.type || dmarkerGradRainbow.type;
+            marker.size = marker.size || dmarkerGradRainbow.size;
+            marker.offset = marker.offset || dmarkerGradRainbow.offset;
+            marker.offset.x = marker.offset.x || dmarkerGradRainbow.offset.x;
+            marker.offset.y = marker.offset.y || dmarkerGradRainbow.offset.y;
+            marker.scaleFactor = marker.scaleFactor || dmarkerGradRainbow.scaleFactor;
+         }
+         else { // default = if (marker.scaleType==='opacity')
+            marker.type = marker.type || dmarkerOpacity.type;
+            marker.size = marker.size || dmarkerOpacity.size;
+            marker.offset = marker.offset || dmarkerOpacity.offset;
+            marker.offset.x = marker.offset.x || dmarkerOpacity.offset.x;
+            marker.offset.y = marker.offset.y || dmarkerOpacity.offset.y;
+            marker.scaleFactor = marker.scaleFactor || dmarkerOpacity.scaleFactor;
+            marker.colorRGB = marker.colorRGB || dmarkerOpacity.colorRGB;
+         };
+      }
+      else { marker = dmarkerOpacity };
+
+      var markerType = marker.type;
+      var scaleType = marker.scaleType;
+      var offset = marker.offset;
+      var scaleFactor = marker.scaleFactor;
+
+      // get UTFgrid
+      var url = freplacexyz(this.options.url,coords.x,coords.y,coords.z);
+      fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      // draw markers on a canvas object
+      .then((utfgrid) => {
+         //draw markers on the tile canvas
+         for (cx=0;cx<cellsPerTile.x;cx++) {
+            for (cy=0;cy<cellsPerTile.y;cy++) {
+               var cell = {x:cx,y:cy};
+               //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
+               var i = utfgrid.grid[cell.y].charCodeAt(cell.x);
+               i = i-((i>=93)?34:(i>=35)?33:32);
+               var d = utfgrid.data[utfgrid.keys[i]];
+               var markerColor = 0; //default to black
+               if (d!=null) {
+                  var cellCount = d.cellCount;
+                  if (scaleType==='grad_rainbow') {
+                     var f = cellCount/scaleFactor;
+                     f = (f<0)?0:(f>1)?1:f;
+                     markerColor = 'hsl('+(240+f*-300)+','+(f*70+30)+'%,50%)'; //hsl format; opacity can be controlled at the gridLayer level
+                  }
+                  else { // default = if (scaleType==='opacity')
+                     var opacity = cellCount/scaleFactor;
+                     markerColor = 'rgba('+marker.colorRGB+','+opacity+')'; //rgba format
+                  };
+                  if (['circle','ring'].includes(markerType)) {
+                     ctx.beginPath();
+                     var circleRadius = cellSize.x/2*marker.size;
+                     ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
+                     if (markerType==='ring') {
+                        ctx.strokeStyle = markerColor;
+                        ctx.stroke();
+                     }
+                     else {
+                        ctx.fillStyle = markerColor;
+                        ctx.fill();
+                     };
+                  }
+                  else { // default = if(markerType==='square')
+                     ctx.fillStyle = markerColor;
+                     ctx.fillRect(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,cellSize.x*marker.size,cellSize.y*marker.size);
+                  };
+               };
+            };
+         };
+      })
+      .catch((err) => { console.error(err); });
+
+      // asynchronous call
+      setTimeout(function() {
+         done(null, tile);
+      }, 1000);
+      return tile;
+   }
+});
+L.gridLayer.utfGridDensityMap = function (options) {
+   return new L.GridLayer.UTFGridDensityMap(options);
+};
+
+</script>
+</head>
+<body>
+<div id="nav">
+<p>This is an example of an iNaturalist observation density map created using UTFgrid data and integrated as an extension of a Leaflet.js grid layer.</p>
+<p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). There are also other layers that may be useful for comparison purposes.</p>
+<p>The example returns all iNaturalist observations by default, but it will also handle filter parameters added to the URL. For example, to see only observations in 2019, add "?year=2019" to the end of the URL. Note, however, that the scaling factor of the markers is not dynamic. So filtering for, say, a taxon with very few observations may seem to return nothing in the opacity version of the density map at lower zoom levels. (The gradient version of the density map will still show the observations.)</p>
+<p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher.</p>
+<p>For more information and other examples of UTFgrid-based density maps (not integrated into Leaflet.js), see <span id='otherpage'></span></p>
+</div>
+<div id="mapid"></div>
+
+<script>
+
+//get parameters from the url
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var taxon_id = winurlparams.get('taxon_id')
+taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
+var place_id = winurlparams.get('place_id_id')
+place_id = (place_id===null?null:place_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
+
+var otherurl = winurlexsearchstr.replace('iNat_UTFgrid_based_density_map_for_Leaflet.html','iNat_UTFgrid_based_custom_density_map.html');
+document.getElementById('otherpage').innerHTML = '<a href="'+otherurl+'">'+otherurl+'</a>';
+
+// the main iNat UTFGrid API
+//note that iNat technically provides 3 UTFGrid endpoints, but as far as I can tell, they provide identical functionality.
+let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
+
+// iNat UTFGrid-based density map scaled on opacity; set different scaleFactors at different zoom levels
+var l_utfgdm_opacity1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:100000,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:10000,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:1000,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:100,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:10,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:5,colorRGB:[255,0,0]}})
+var g_utfgdm_opacity = L.layerGroup([l_utfgdm_opacity1,l_utfgdm_opacity2,l_utfgdm_opacity3,l_utfgdm_opacity4,l_utfgdm_opacity5,l_utfgdm_opacity6]);
+
+// iNat UTFGrid-based density map scaled on a gradient; set different scaleFactors at different zoom levels
+var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:100000},opacity:0.65})
+var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:10000},opacity:0.65})
+var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:1000},opacity:0.65})
+var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:100},opacity:0.65})
+var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:10},opacity:0.65})
+var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:5},opacity:0.65})
+var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
+
+// other iNaturalist Layers
+let inat_points = {url:'https://api.inaturalist.org/v1/points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist</a>'};
+let inat_circles = {url:'https://api.inaturalist.org/v1/colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist</a>'};
+let inat_heat = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist</a>'};
+let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF</a>'};
+var l_inat_points = L.tileLayer(inat_points.url+winurlsearchstr,{maxZoom:20, attribution:inat_points.attribution});
+var l_inat_circles = L.tileLayer(inat_circles.url+winurlsearchstr,{maxZoom:20, attribution:inat_circles.attribution});
+var l_inat_heat = L.tileLayer(inat_heat.url+winurlsearchstr,{maxZoom:20, attribution:inat_heat.attribution});
+var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
+
+// Stamen layers
+var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
+var s_stamen_urlbase = 'https://stamen-tiles-{s}.a.ssl.fastly.net/';
+var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
+var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
+var l_stamen_terrainbg = L.tileLayer(s_stamen_urlbase+'terrain-background/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
+var l_stamen_terrainlines = L.tileLayer(s_stamen_urlbase+'terrain-lines/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
+var l_stamen_terrainlabels = L.tileLayer(s_stamen_urlbase+'terrain-labels/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
+var l_stamen_toner = L.tileLayer(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerlite = L.tileLayer(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerbg = L.tileLayer(s_stamen_urlbase+'toner-background/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerhybrid = L.tileLayer(s_stamen_urlbase+'toner-hybrid/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerlines = L.tileLayer(s_stamen_urlbase+'toner-lines/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerlabels = L.tileLayer(s_stamen_urlbase+'toner-labels/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+
+// OpenStreetMaps & OpenTopoMap
+var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
+var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
+var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+
+//debug layer
+var l_debug = L.gridLayer.debugCoords();
+
+// create map, and set default center coordinates, zoom level, and layers
+var mymap = L.map('mapid', {
+   center: [0,0],
+   zoom: 2,
+   layers: [l_stamen_toner, g_utfgdm_opacity],
+   doubleClickZoom: false
+});
+
+// define available basemaps (can view only one at a time)
+var basemaps = {
+   "Stamen Watercolor": l_stamen_watercolor,
+   "Stamen Terrain Terrain": l_stamen_terrain,
+   "Stamen Terrain Background": l_stamen_terrainbg,
+   "Stamen Toner": l_stamen_toner,
+   "Stamen Toner Background": l_stamen_tonerbg,
+   "Stamen Toner Lite": l_stamen_tonerlite,
+   "OpenTopoMap": l_otm,
+   "OpenStreetMap France": l_osm_fr,
+   "OpenStreetMap Humanitarian": l_osm_hot,
+};
+
+// define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
+var overlaymaps = {
+   "Stamen Terrain Lines": l_stamen_terrainlines,
+   "Stamen Toner Lines": l_stamen_tonerlines,
+   "Stamen Toner Hybrid": l_stamen_tonerhybrid,
+   "Stamen Terrain Labels": l_stamen_terrainlabels,
+   "Stamen Toner Labels": l_stamen_tonerlabels,
+   "iNaturalist Observations Density (opacity)":g_utfgdm_opacity,
+   "iNaturalist Observations Density (gradient)":g_utfgdm_gradient,
+   "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
+   "iNaturalist Observations Heatmap": l_inat_heat,
+   "iNaturalist Observations Circles": l_inat_circles,
+   "iNaturalist Observations Points": l_inat_points,
+   "Debug Grid":l_debug,
+/*
+   "iNaturalist Taxon Range": l_inat_taxonrange,
+   "iNaturalist Taxon Places": l_inat_taxonplace,
+   "iNaturalist Place": l_inat_place,
+*/
+};
+
+// add a layer selector control and scale bar
+L.control.layers(basemaps, overlaymaps).addTo(mymap);
+L.control.scale().addTo(mymap);
+
+</script>
+</body>
+</html>
