@@ -163,7 +163,7 @@ let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 var taxon_id = winurlparams.get('taxon_id')
 taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
-var place_id = winurlparams.get('place_id_id')
+var place_id = winurlparams.get('place_id')
 place_id = (place_id===null?null:place_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
 
 var otherurl = winurlexsearchstr.replace('iNat_UTFgrid_based_density_map_for_Leaflet.html','iNat_UTFgrid_based_custom_density_map.html');
@@ -191,15 +191,23 @@ var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winur
 var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:5},opacity:0.65})
 var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
 
-// other iNaturalist Layers
-let inat_points = {url:'https://api.inaturalist.org/v1/points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist</a>'};
-let inat_circles = {url:'https://api.inaturalist.org/v1/colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist</a>'};
-let inat_heat = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist</a>'};
-let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF</a>'};
+// other iNaturalist Observation Layers
+let inat_urlbase = 'https://api.inaturalist.org/v1/';
+let inat_points = {url:inat_urlbase+'points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'};
+let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
+let inat_heat = {url:inat_urlbase+'heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
+let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
 var l_inat_points = L.tileLayer(inat_points.url+winurlsearchstr,{maxZoom:20, attribution:inat_points.attribution});
 var l_inat_circles = L.tileLayer(inat_circles.url+winurlsearchstr,{maxZoom:20, attribution:inat_circles.attribution});
 var l_inat_heat = L.tileLayer(inat_heat.url+winurlsearchstr,{maxZoom:20, attribution:inat_heat.attribution});
 var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
+
+// Other iNaturalist Layers
+var l_inat_place = L.tileLayer(inat_urlbase+'places/'+place_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
+
+// iNaturalist Taxon Places Checklist and Range Layers
+var l_inat_taxonplace = L.tileLayer(inat_urlbase+'taxon_places/'+taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_places_taxon_id_zoom_x_y_png">iNaturalist taxon place checklist data</a>'});
+var l_inat_taxonrange = L.tileLayer(inat_urlbase+'taxon_ranges/'+taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_ranges_taxon_id_zoom_x_y_png">iNaturalist taxon range data</a>'});
 
 // Stamen layers
 var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
@@ -252,6 +260,9 @@ var overlaymaps = {
    "Stamen Toner Hybrid": l_stamen_tonerhybrid,
    "Stamen Terrain Labels": l_stamen_terrainlabels,
    "Stamen Toner Labels": l_stamen_tonerlabels,
+   "iNaturalist Taxon Range": l_inat_taxonrange,
+   "iNaturalist Taxon Places": l_inat_taxonplace,
+   "iNaturalist Place": l_inat_place,
    "iNaturalist Observations Density (opacity)":g_utfgdm_opacity,
    "iNaturalist Observations Density (gradient)":g_utfgdm_gradient,
    "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
@@ -259,11 +270,13 @@ var overlaymaps = {
    "iNaturalist Observations Circles": l_inat_circles,
    "iNaturalist Observations Points": l_inat_points,
    "Debug Grid":l_debug,
-/*
-   "iNaturalist Taxon Range": l_inat_taxonrange,
-   "iNaturalist Taxon Places": l_inat_taxonplace,
-   "iNaturalist Place": l_inat_place,
-*/
+};
+if (taxon_id===null) {
+   delete overlaymaps["iNaturalist Taxon Range"];
+   delete overlaymaps["iNaturalist Taxon Places"];
+};
+if (place_id===null) {
+   delete overlaymaps["iNaturalist Place"];
 };
 
 // add a layer selector control and scale bar
