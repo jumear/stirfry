@@ -189,11 +189,11 @@ var g_utfgdm_opacity = L.layerGroup([l_utfgdm_opacity1,l_utfgdm_opacity2,l_utfgd
 
 // iNat UTFGrid-based density map scaled on a gradient; set different scaleFactors at different zoom levels
 var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
-var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||10000):10000)},opacity:0.65})
-var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||1000):1000)},opacity:0.65})
-var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100):100)},opacity:0.65})
-var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||10):10)},opacity:0.65})
-var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||5):5)},opacity:0.65})
+var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000)},opacity:0.65})
+var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000)},opacity:0.65})
+var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[3]||100):100)},opacity:0.65})
+var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[4]||10):10)},opacity:0.65})
+var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[5]||5):5)},opacity:0.65})
 var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
 
 // other iNaturalist Observation Layers
