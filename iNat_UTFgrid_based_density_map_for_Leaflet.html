@@ -149,7 +149,8 @@ L.gridLayer.utfGridDensityMap = function (options) {
 <p>This is an example of an iNaturalist observation density map created using UTFgrid data and integrated as an extension of a Leaflet.js grid layer.</p>
 <p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). There are also other layers that may be useful for comparison purposes.</p>
 <p>The example returns all iNaturalist observations by default, but it will also handle filter parameters added to the URL. For example, to see only observations in 2019, add "?year=2019" to the end of the URL. Note, however, that the scaling factor of the markers is not dynamic. So filtering for, say, a taxon with very few observations may seem to return nothing in the opacity version of the density map at lower zoom levels. (The gradient version of the density map will still show the observations.)</p>
-<p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher.</p>
+<p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher. It's also possible to pass in custom scale factors in the URL parameters. For example, to query for Rudbeckia amplexicaulis with an appropriate scale factor(s), I could add "?taxon_id=200073&scale_factor=5,4,3,2,2,1" or "?taxon_id=200073&scale_factor=5" to my URL.
+</p>
 <p>For more information and other examples of UTFgrid-based density maps (not integrated into Leaflet.js), see <span id='otherpage'></span></p>
 </div>
 <div id="mapid"></div>
