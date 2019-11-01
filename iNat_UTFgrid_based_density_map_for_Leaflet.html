@@ -149,8 +149,7 @@ L.gridLayer.utfGridDensityMap = function (options) {
 <p>This is an example of an iNaturalist observation density map created using UTFgrid data and integrated as an extension of a Leaflet.js grid layer.</p>
 <p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). There are also other layers that may be useful for comparison purposes.</p>
 <p>The example returns all iNaturalist observations by default, but it will also handle filter parameters added to the URL. For example, to see only observations in 2019, add "?year=2019" to the end of the URL. Note, however, that the scaling factor of the markers is not dynamic. So filtering for, say, a taxon with very few observations may seem to return nothing in the opacity version of the density map at lower zoom levels. (The gradient version of the density map will still show the observations.)</p>
-<p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher. It's also possible to pass in custom scale factors in the URL parameters. For example, to query for Rudbeckia amplexicaulis with an appropriate scale factor(s), I could add "?taxon_id=200073&scale_factor=5,4,3,2,2,1" or "?taxon_id=200073&scale_factor=5" to my URL.
-</p>
+<p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher. It's also possible to pass in custom scale factors in the URL parameters. For example, to query for Rudbeckia amplexicaulis with an appropriate scale factor(s), I could add "?taxon_id=200073&amp;scale_factor=5,4,3,2,2,1" or "?taxon_id=200073&amp;scale_factor=5" to my URL.</p>
 <p>For more information and other examples of UTFgrid-based density maps (not integrated into Leaflet.js), see <span id='otherpage'></span></p>
 </div>
 <div id="mapid"></div>
@@ -166,6 +165,11 @@ var taxon_id = winurlparams.get('taxon_id')
 taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
 var place_id = winurlparams.get('place_id')
 place_id = (place_id===null?null:place_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
+var scale_factor = winurlparams.get('scale_factor')
+if (scale_factor) {
+   var sfarray = scale_factor.split(',');
+   for (sf=1;sf<6;sf++) { if (sfarray.length<=sf) {sfarray.push(sfarray[sf-1]);};}
+;};
 
 var otherurl = winurlexsearchstr.replace('iNat_UTFgrid_based_density_map_for_Leaflet.html','iNat_UTFgrid_based_custom_density_map.html');
 document.getElementById('otherpage').innerHTML = '<a href="'+otherurl+'">'+otherurl+'</a>';
@@ -175,21 +179,21 @@ document.getElementById('otherpage').innerHTML = '<a href="'+otherurl+'">'+other
 let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
 
 // iNat UTFGrid-based density map scaled on opacity; set different scaleFactors at different zoom levels
-var l_utfgdm_opacity1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:100000,colorRGB:[255,0,0]}})
-var l_utfgdm_opacity2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:10000,colorRGB:[255,0,0]}})
-var l_utfgdm_opacity3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:1000,colorRGB:[255,0,0]}})
-var l_utfgdm_opacity4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:100,colorRGB:[255,0,0]}})
-var l_utfgdm_opacity5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:10,colorRGB:[255,0,0]}})
-var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:5,colorRGB:[255,0,0]}})
+var l_utfgdm_opacity1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[3]||100):100),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[4]||10):10),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[5]||5):5),colorRGB:[255,0,0]}})
 var g_utfgdm_opacity = L.layerGroup([l_utfgdm_opacity1,l_utfgdm_opacity2,l_utfgdm_opacity3,l_utfgdm_opacity4,l_utfgdm_opacity5,l_utfgdm_opacity6]);
 
 // iNat UTFGrid-based density map scaled on a gradient; set different scaleFactors at different zoom levels
-var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:100000},opacity:0.65})
-var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:10000},opacity:0.65})
-var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:1000},opacity:0.65})
-var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:100},opacity:0.65})
-var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:10},opacity:0.65})
-var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:5},opacity:0.65})
+var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
+var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||10000):10000)},opacity:0.65})
+var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||1000):1000)},opacity:0.65})
+var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100):100)},opacity:0.65})
+var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||10):10)},opacity:0.65})
+var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||5):5)},opacity:0.65})
 var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
 
 // other iNaturalist Observation Layers
