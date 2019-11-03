@@ -56,7 +56,7 @@ let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 var example = winurlparams.get('example')
-example = (example===null?1:example.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
+example = (example===null?1:example.split(',')[0]); // gets first value passed in the url "example" parameter, or else default to 1
 
 //function to create new elements
 function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null) {
@@ -111,32 +111,40 @@ let cxpx = cypx = 4;
 function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2; };
 
 //function to identify the right tiles to pull, given a bounding box defined by a SW point and NE point in GPS coordinates
-//this is not well-developed and not well-tested, but it seems to help pull in the right tiles (most of the time).
+//this is only somewhat tested, but it seems to help pull in the right tiles (most of the time?).
 function fmapextent(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
-   var w=bbox.swlng
-   var e=bbox.nelng
-   var n=bbox.nelat
-   var s=bbox.swlat
+   var w = bbox.swlng;
+   var e = bbox.nelng;
+   var n = bbox.nelat;
+   var s = bbox.swlat;
 
+   // get the height and width of the bounding box as proportions (0.0 to 1.0) of the height and width of the total world map, respectively
    dw = ((e>=w)?(e-w):(360-w+e))/360;
    dh = latidx(s)-latidx(n);
 
-   zoom = Math.floor( Math.log((1/((dw>dh)?dw/txnum:dh/tynum))) / Math.log(2) );
+   // estimate the maximum zoom level needed to get the entire bounding box in the map, with min zoom 2 and max zoom 20
+   // once zoom is determined, calculate tile x and y ranges for that zoom level
+   zoom = (dw<=0 && dh<=0) ? 20
+      : (dw<dh) ? Math.round( Math.log((tynum+1)/dh) / Math.log(2) + 0.25 ) - 1
+      : Math.round( Math.log((txnum+1)/dw) / Math.log(2) + 0.25 ) - 1;
    zoom = (zoom>20)?20:(zoom<2)?2:zoom;
-
    txmax = Math.pow(2,zoom)-1;
    tymax = Math.pow(2,zoom)-1;
 
-   var txw = Math.floor((180+(w<180?w:-180))/360*(txmax+1));
-   var txe = Math.floor((180+(e<180?e:-180))/360*(txmax+1));
-   var tyn = Math.floor(latidx(n)*Math.pow(2,zoom));
-   var tys = Math.floor(latidx(s)*Math.pow(2,zoom));
+   // at this zoom level, determine the number of tiles high and wide are needed to contain the bounding box
+   var txw = Math.floor((180+(w<180?w:-180))/360*(txmax+1))%(txmax+1);
+   var txe = Math.floor((180+(e<180?e:-180))/360*(txmax+1))%(txmax+1);
+   var tyn = Math.floor(latidx(n)*(tymax+1));
+   var tys = Math.floor(latidx(s)*(tymax+1));
    tyn = (tyn>tymax)?tymax:tyn;
    tys = (tys>tymax)?tymax:tys;
-
    var tw = ((e>=w)?(txe-txw):(txmax+1-txw+txe))+1;
    var th = tys-tyn+1;
 
+   // determine the top-left corner tile for this tileset.
+   // this will try to center the bounding box tiles in the tileset as much as possible, unless:
+   //   1. it makes more sense to display the whole world map
+   //   2. or the bounding box is near the N or S poles
    txnstart = (tw===(txmax+1))?0:(tw===txnum)?txw:txw-Math.floor((txnum/2-tw/2));
    txnstart = (txnstart>=0)?txnstart:txmax+txnstart+1;
    tynstart = (th===(tymax+1))?0:(th===tynum)?tyn:tyn-Math.floor((tynum/2-th/2));
@@ -351,6 +359,7 @@ function fcreatebaselayer(lseq,lurl,ldescr=null,lattr=null,visible=true,stylefil
    var icon = faddelem('div',entry,'keyicon',null,'🗺️');
    var text = faddelem('div',entry,'keytext',null,'Base Map: '+ldescr+(stylefilter?(' &rarr; '+stylefilter.replace(/ /g,' &rarr; ')):'')+'<br />Attribution: '+lattr);
    fsetvis(layer,visible);
+   return layer;
 };
 
 //function to create raster tile layer
@@ -364,11 +373,12 @@ function fcreatertlayer(lseq,lurl,ldescr=null,lattr=null,visible=true,stylefilte
    var icon = faddelem('div',entry,'keyicon',null,'🌐');
    var text = faddelem('div',entry,'keytext',null,'Layer '+lseq+': '+ldescr+(stylefilter?(' &rarr; '+stylefilter.replace(/ /g,' &rarr; ')):'')+'<br />Attribution: '+lattr);
    fsetvis(layer,visible);
+   return layer;
 };
 
-//function to create overlay layers
+//function to create UTFGrid-based density map overlay layers
 //it also creates a key entry on in the map details section. the icon in the key will match the styling of the markers (cells) used in the layer at 100% opacity.
-function fcreateutflayer(lseq,lurl,ldescr,lattr,visible=true,marker) {
+function fcreateutflayer(lseq,lurl,ldescr,lattr,visible=true,marker={type:'square_full',scaleType:'opacity',scaleFactor:1,colorRGB:[0,255,0]}) {
    var layer = fcreatelayer(lseq,'utfoverlay',lurl,marker);
    var entry = faddelem('div',keybody,'keyentry');
    var vis = faddelem('div',entry,'keyvis',null,'<input type="checkbox" value="'+layer.id+'"'+(visible?' checked':'')+' onchange="ftogglelayervis(this);"/>');
@@ -378,6 +388,42 @@ function fcreateutflayer(lseq,lurl,ldescr,lattr,visible=true,marker) {
    cell.style.position = 'relative';
    fstylecell(cell,[1.5,-1],(marker?(marker.scaleFactor||1):1),marker);
    fsetvis(layer,visible);
+   return layer;
+};
+
+//function to create point layers (untiled)
+//it also creates a key entry on in the map details section. the icon in the key will match the styling of the markers (cells) used in the layer at 100% opacity.
+function fcreateptlayer(lseq,lpoints,ldescr=null,lattr=null,visible=true,marker={type:'diamond_overlap',scaleType:'opacity',scaleFactor:1,colorRGB:[255,0,0]}) {
+   var layer = faddelem('div',map,'layer',fltcid(lseq));
+   layer.style.left='0px';
+   layer.style.top='0px';
+   for (p=0;p<lpoints.length;p++) {
+      var mapx = (lpoints[p].lng+180)/360*(txmax+1);
+      var mapy = latidx(lpoints[p].lat)*(tymax+1);
+      var tilex = Math.trunc(mapx) % (txmax+1);
+      var tiley = Math.trunc(mapy) % (tymax+1);
+      for (tsx=0;tsx<txnum;tsx++) {
+         var tilesetx = (txnstart+tsx) % (txmax+1);
+         if (tilex===tilesetx) {
+            for (tsy=0;tsy<tynum;tsy++) {
+               var tilesety = (tynstart+tsy) % (tymax+1);
+               if (tiley===tilesety) {
+                  var mappt = faddelem('div',layer,'cell');
+                  fstylecell(mappt,[(((tsx+(mapx%1))*txpx/cxpx)-0.5),(((tsy+(mapy%1))*typx/cypx)-0.5)],1,marker);
+               };
+            };
+         };
+      };
+   };
+   var entry = faddelem('div',keybody,'keyentry');
+   var vis = faddelem('div',entry,'keyvis',null,'<input type="checkbox" value="'+layer.id+'"'+(visible?' checked':'')+' onchange="ftogglelayervis(this);"/>');
+   var icon = faddelem('div',entry,'keyicon');
+   var text = faddelem('div',entry,'keytext',null,'Layer '+lseq+': '+(ldescr||((lpoints.length!=1)?'Untitled':(lpoints[0].descr||'Untitled')))+((lattr!=null)?('<br />Attribution: '+lattr):''));
+   var cell = faddelem('div',icon,'cell');
+   cell.style.position = 'relative';
+   fstylecell(cell,[1.5,-1],(marker?(marker.scaleFactor||1):1),marker);
+   fsetvis(layer,visible);
+   return layer;
 };
 
 //some basemaps
@@ -412,8 +458,13 @@ fmapextent({swlat:-48.287651245912166,swlng:109.47315585603962,nelat:9.033917886
 fmapextent({swlat:-5.663220447316494,swlng:-141.97235941886902,nelat:66.91145404319461,nelng:-48.80829691886902}); // Partial North America
 fmapextent({swlat:-5.316705319907759,swlng:-128.29067492857575,nelat:67.04758656179122,nelng:-3.719779495149851}); // Partial North America + Partial Europe
 fmapextent({swlat:3.0309559101643595,swlng:67.44079047157487,nelat:45.61413812981794,nelng:150.64420693828788}); // East Asia, Southeast Asia, and South Asia
-fmapextent({swlat:20.610355962999165,swlng:116.6253334376961,nelat:26.395377893932164,nelng:122.19673661515117}); // Taiwan
-fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:38.37686518217217,nelng:53.91939463596975}); // Africa
+fmapextent({swlat:-36.24407547872301,swlng:-19.965530715489194,nelat:38.65127535425379,nelng:54.68348971793671}); // Africa
+fmapextent({swlat:42.669869630725884,swlng:-5.488857263954401,nelat:50.91996456792671,nelng:10.082504665223837}); // France
+fmapextent({swlat:21.82346690013718,swlng:119.31561939040277,nelat:25.357987038672206,nelng:122.10253345290277}); // Taiwan
+fmapextent({swlat:-54.86843200395375,swlng:158.6226083792327,nelat:-54.43143711703443,nelng:159.1334726370452}); // Macquarie Island (small island south of Australia between Aus and NZ)
+fmapextent({swlat:-68.61560619019023,swlng:-84.11365377733978,nelat:-42.599747509562214,nelng:-51.4183412773397}); // S tip of S America + tip of Antarctica
+fmapextent({swlat:29.213602706283854,swlng:29.435832732502376,nelat:34.34711534926469,nelng:37.23612570125238}); // Cairo to Damascus
+fmapextent({swlat:-21.536290595226412,swlng:176.38660654698475,nelat:-13.0437465364643,nelng:-168.79308095301525}); // Fiji, Tonga, Samoa (crosses 180 deg long)
 */
 
 //function to add a description and notes to the map details section
@@ -444,13 +495,18 @@ function fgetexample(seq) {
 //  a map extent. (if not included, the map will default to the whole world)
 //  a base map definition. (technically you can define many basemap layers, but these examples each only have one.)
 //  one or more overlay layers
-if (fexample(1,'All Observations Worldwide','A basic map with green markers on a dark basemap. The opacity of the markers is scaled for a density factor. In this example, the density factor of Layer 1 is 100,000, which means that the cell that a given marker represents should have at least 100,000 observations in it if the marker is 100% opaque. Cells with fewer observations will be proportionately less opaque. The stock iNaturalist maps and a density map of iNaturalist observations from GBIF are included as layer options for comparison. (Click on the checkboxes below to toggle layers on/off.)')) {
+if (fexample(1,'All Observations Worldwide','A basic map with green markers on a dark basemap. The opacity of the markers is scaled for a density factor. In this example, the density factor of Layer 1 is 100,000, which means that the cell that a given marker represents should have at least 100,000 observations in it if the marker is 100% opaque. Cells with fewer observations will be proportionately less opaque. The stock iNaturalist maps and a density map of iNaturalist observations from GBIF are included as layer options for comparison. (Click on the checkboxes below to toggle layers on/off.) This map also has a red point that marks iNaturalist HQ just to show that points can also be mapped.')) {
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(25%)'); 
    fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'circle_med',scaleType:'opacity',scaleFactor:100000,colorRGB:[0,255,0]});
    fcreatertlayer(2,inat_points.url,inat_points.description,inat_points.attribution,false);
    fcreatertlayer(3,inat_circles.url,inat_circles.description,inat_circles.attribution,false);
    fcreatertlayer(4,inat_heat.url,inat_heat.description,inat_heat.attribution,false);
    fcreatertlayer(5,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
+   var lpoints = [
+      {lat:37.769772,lng:-122.466126,descr:'California Academy of Sciences (iNaturalist HQ)'},
+      // {lat:0,lng:0,descr:'center'},
+   ];
+   fcreateptlayer(6,lpoints,null,null,true,{type:'diamond_overlap',scaleType:'opacity',scaleFactor:1,colorRGB:[255,0,0]});
 };
 if (fexample(2,'Worldwide Observations by Year (2016-2019)','This shows observations for 4 different years using markers of 4 different colors on a dark basemap. The markers for the different years appear in different corners of a given cell so that all 4 years can be visually represented together without overlapping.')) {
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'brightness(25%) contrast(125%)');
@@ -508,7 +564,7 @@ if (fexample(8,"Observations in Australia, New Zealand, and Nearby Nations","Thi
    fcreatertlayer(5,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
 };
 if (fexample(9,"Observations in Africa","This is an attempt to achieve a logarithmic scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. A density map of iNaturalist observations from GBIF is included as a layer option for comparison. (Click on the checkboxes below to toggle layers on and off.)")) {
-   fmapextent({swlat:-37.04455076732297,swlng:-8.3660530807432,nelat:38.37686518217217,nelng:53.91939463596975}); // Africa
+   fmapextent({swlat:-36.24407547872301,swlng:-19.965530715489194,nelat:38.65127535425379,nelng:54.68348971793671}); // Africa
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'invert(100%) brightness(50%) sepia(100%) hue-rotate(205deg) saturate(160%)');
    fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'pixel',scaleType:'opacity',scaleFactor:10,colorRGB:[0,0,255]});
    fcreateutflayer(2,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'pixel',scaleType:'opacity',scaleFactor:100,colorRGB:[0,255,0]});
