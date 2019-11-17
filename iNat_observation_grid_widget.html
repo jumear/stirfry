@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observation Grid Widget" />
+<title>iNaturalist Observation Grid Widget</title>
+<style>
+   body { margin:0px; padding:0px; font:10pt Sans-Serif; }
+   img { margin:0px; padding:0px; border:0px; display:block; }
+   a { text-decoration:none; color:#006600; }
+   p { margin:15px; }
+   #grid { margin:0px; padding:0px; border:0px; }
+   .gridcell { position:absolute; background:#cccccc; text-align:center; display:flex; justify-content:center; align-items:center; }
+</style>
+</head>
+
+<body>
+<script>
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fshorten(num) { return num<10000 ? num : num<1000000 ? (num/1000).toFixed(1)+'K' : (num/1000000).toFixed(1)+'M'; };
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+
+//get parameters from the url
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr);
+var cellpx = winurlparams.get('cellpx') || 75;
+var spacerpx = winurlparams.get('spacerpx') || 2;
+var rows = winurlparams.get('rows') || 1;
+var columns = winurlparams.get('columns') || 2;
+var recsmax = columns * rows - 1;
+
+winurlparams.delete('cellpx');
+winurlparams.delete('spacerpx');
+winurlparams.delete('rows');
+winurlparams.delete('columns');
+var obsurlbase = 'https://www.inaturalist.org/observations';
+var obsurl = obsurlbase+'?'+winurlparams.toString();
+winurlparams.append('per_page',recsmax);
+var apiurlbase = 'https://api.inaturalist.org/v1/observations'
+var apiurl = apiurlbase+'?'+winurlparams.toString();
+
+function fresults(data) {
+   var results = data.results;
+   var recsfound = results ? results.length : 0;
+   var obsseq = 0; 
+   var grid = faddelem('div',document.body,null,'grid');
+   grid.style.height = cellpx+'px';
+   grid.style.width = cellpx+'px';
+   for (r=1;r<=rows;r++) {
+      for (c=1;c<=columns;c++) { 
+         var gcell = faddelem('div',grid,'gridcell');
+         gcell.style.height = cellpx+'px';
+         gcell.style.width = cellpx+'px';
+         gcell.style.top = ((r-1)*cellpx+(r<=1?0:r-1)*spacerpx)+'px';
+         gcell.style.left = ((c-1)*cellpx+(c<=1?0:c-1)*spacerpx)+'px';
+         if (recsfound===0&&data.total_results===0) { 
+            gcell.innerHTML = furl(famp(obsurl),'<span>no<br />data</span>');
+            break;
+            }
+         else if (recsfound===obsseq) {
+            gcell.innerHTML = furl(famp(obsurl),'<span>+'+(fshorten(data.total_results-obsseq))+'<br />more</span>');
+            obsseq = 0;
+            if (r===1&&c>1) { grid.style.width = (c*cellpx+(c-1)*spacerpx)+'px'; };
+            break;
+         }
+         else {
+            var photo = (results[obsseq].photos.length>0) ? '<img width="'+cellpx+'px" height="'+cellpx+'px" src="'+results[obsseq].photos[0].url+'" />' : '<span>❎</span>';
+            gcell.innerHTML = furl(famp(obsurlbase+'/'+results[obsseq].id),photo);
+            if (r===1&&c>1) { grid.style.width = (c*cellpx+(c-1)*spacerpx)+'px'; };
+            obsseq++;
+         };
+      };
+      if (r>1) { grid.style.height = (r*cellpx+(r-1)*spacerpx)+'px'; };
+      if (obsseq===0) { break; };
+   };
+};
+
+if (window.location.search==='') {
+   faddelem('p',document.body,null,null,'This is a quick and dirty example of a widget to display iNaturalist observations in a grid. It is based on the '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search API endpoint')+' and can accept any of the parameters for that endpoint. Additionally, it accepts 4 more parameters that will allow the grid to be customized: columns, rows, cellpx, and spacerpx.');
+   faddelem('p',document.body,null,null,'Suppose the address of this page is '+furl(winurlexsearchstr)+', and you want to see '+furl(famp(apiurlbase+'?taxon_id=3&place_id=9'),'birds in New Mexico')+' in a 3 (high) x 5 (wide) grid where each cell is 75px x 75px and where each cell is separated by a 2px spacer, then you would open '+furl(famp(winurlexsearchstr+'?rows=3&columns=5&cellpx=75&spacerpx=2&taxon_id=3&place_id=9'))+' in your browser.');
+   faddelem('p',document.body,null,null,'Note that the actual size of the image files is 75px x 75px. So setting the cellpx higher than 75 will make the images look blurry. Only the first photo in an observation will be shown, or else ❎ will be shown when an observation has no photos. The last cell in the grid will always be either a "no data" or "more" button. So a 3x5 grid will show only up to 14 observations.');
+}
+else {
+   fetch(apiurl)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+         return response.json();
+      })
+      .then((data) => { fresults(data); })
+      .catch((err) => {
+         console.error(err.message);
+         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+      });
+};
+
+
+</script>
+</body>
+
+</html>
