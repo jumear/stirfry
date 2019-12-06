@@ -142,6 +142,7 @@ var tweetarray = [
    {iid:'B5kwSBZni7G',tid:'1201520255102857217',lat:29.720247,lng:-95.391119,descr:'Reflection Pool'},
    {iid:'B5nfRD9gu-4',tid:'1201901368891584512',lat:29.719219,lng:-95.38491,descr:'Conservancy Office'},
    {iid:'B5qQlJTgH80',tid:'',lat:29.720619,lng:-95.387337,descr:'Rose Garden'},
+   {iid:'B5s_wbSpa5C',tid:'',lat:29.719197,lng:-95.392971,descr:'Japanese Garden'},
 ];
 
 let igpuburl = 'https://api.instagram.com/oembed/?url=http://instagr.am/p/{id}/';
@@ -155,7 +156,17 @@ function fgetightml(id) {
       .catch((err) => { console.error(err); });
 };
 
+/*
+let twttrpuburl = 'https://publish.twitter.com/oembed?url=https://twitter.com/hermannpark/status/{id}';
+async function fgettweethtml(id) {
+   await fetch(new Request(twttrpuburl.replace('{id}',id)));
+   let oembedTweet = oembedResponse.json();
+   return oembedTweet.html;
+};
+*/
+
 for (i=0;i<tweetarray.length;i++) {
+//   var test = fgettweethtml(tweetarray[i].tid);
    var prom0 = Promise.resolve(tweetarray[i]);
    var prom1 = fgetightml(tweetarray[i].iid);
    Promise.all([prom0,prom1]).then(function(values) {
