@@ -147,9 +147,11 @@ L.gridLayer.utfGridDensityMap = function (options) {
 <body>
 <div id="nav">
 <p>This is an example of an iNaturalist observation density map created using UTFgrid data and integrated as an extension of a Leaflet.js grid layer.</p>
-<p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). There are also other layers that may be useful for comparison purposes.</p>
+<p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). If you prefer to see gradient markers by default instead of opacity markers, use defaultstyle=gradient in your URL parameter string.</p>
+<p>There are also other layers that may be useful for comparison purposes. By default, these are hidden, but you can choose to show taxon place, taxon range, and place layers by default by using showtaxonplace=true, showtaxonrange=true, and showplace=true, respectively.</p>
 <p>The example returns all iNaturalist observations by default, but it will also handle filter parameters added to the URL. For example, to see only observations in 2019, add "?year=2019" to the end of the URL. Note, however, that the scaling factor of the markers is not dynamic. So filtering for, say, a taxon with very few observations may seem to return nothing in the opacity version of the density map at lower zoom levels. (The gradient version of the density map will still show the observations.)</p>
 <p>The scaling factor in this example is configured as 100,000 for zoom levels 0 to 2; 10,000 for levels 3 to 5; 1,000 for levels 6 to 7; 100 for levels 8 to 10; 10 for levels 11 to 12; and 5 for levels 13 and higher. It's also possible to pass in custom scale factors in the URL parameters. For example, to query for Rudbeckia amplexicaulis with an appropriate scale factor(s), I could add "?taxon_id=200073&amp;scale_factor=5,4,3,2,2,1" or "?taxon_id=200073&amp;scale_factor=5" to my URL.</p>
+<p>Default map center is 0,0 and default zoom is 2. You can change this by setting centerlat, centerlng, and defaultzoom parameters appropriately. Finally, you can hide the left pane by using hideleftpane=true.</p>
 <p>For more information and other examples of UTFgrid-based density maps (not integrated into Leaflet.js), see <span id='otherpage'></span></p>
 </div>
 <div id="mapid"></div>
@@ -161,15 +163,41 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-var taxon_id = winurlparams.get('taxon_id')
-taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
-var place_id = winurlparams.get('place_id')
-place_id = (place_id===null?null:place_id.split(',')[0]); // gets first value passed in the url "example" parameter, or else 1
-var scale_factor = winurlparams.get('scale_factor')
+var taxon_id = winurlparams.get('taxon_id');
+taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]);
+var place_id = winurlparams.get('place_id');
+place_id = (place_id===null?null:place_id.split(',')[0]);
+var scale_factor = winurlparams.get('scale_factor');
 if (scale_factor) {
    var sfarray = scale_factor.split(',');
-   for (sf=1;sf<6;sf++) { if (sfarray.length<=sf) {sfarray.push(sfarray[sf-1]);};}
-;};
+   for (sf=1;sf<6;sf++) { if (sfarray.length<=sf) {sfarray.push(sfarray[sf-1]);}; };
+};
+var centerlat = winurlparams.get('centerlat') || 0;
+var centerlng = winurlparams.get('centerlng') || 0;
+var defaultzoom = winurlparams.get('defaultzoom') || 2;
+var defaultstyle = winurlparams.get('defaultstyle') || 'opacity';
+var hideleftpane = winurlparams.get('hideleftpane') || 'false';
+var showtaxonplace = winurlparams.get('showtaxonplace') || 'false';
+var showtaxonrange = winurlparams.get('showtaxonrange') || 'false';
+var showplace = winurlparams.get('showplace') || 'false';
+
+if (hideleftpane==='true') {
+   var mapdiv = document.getElementById('mapid');
+   mapdiv.style.left = '0vw';
+   mapdiv.style.width = '100vw';
+   var navdiv = document.getElementById('nav');
+   navdiv.style.visibility = 'hidden';
+};
+
+winurlparams.delete('scale_factor');
+winurlparams.delete('centerlat');
+winurlparams.delete('centerlng');
+winurlparams.delete('defaultzoom');
+winurlparams.delete('defaultstyle');
+winurlparams.delete('hideleftpane');
+winurlparams.delete('showtaxonplace');
+winurlparams.delete('showtaxonrange');
+winurlparams.delete('showplace');
 
 var otherurl = winurlexsearchstr.replace('iNat_UTFgrid_based_density_map_for_Leaflet.html','iNat_UTFgrid_based_custom_density_map.html');
 document.getElementById('otherpage').innerHTML = '<a href="'+otherurl+'">'+otherurl+'</a>';
@@ -179,21 +207,21 @@ document.getElementById('otherpage').innerHTML = '<a href="'+otherurl+'">'+other
 let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
 
 // iNat UTFGrid-based density map scaled on opacity; set different scaleFactors at different zoom levels
-var l_utfgdm_opacity1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000),colorRGB:[255,0,0]}})
-var l_utfgdm_opacity2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000),colorRGB:[255,0,0]}})
-var l_utfgdm_opacity3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000),colorRGB:[255,0,0]}})
-var l_utfgdm_opacity4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[3]||100):100),colorRGB:[255,0,0]}})
-var l_utfgdm_opacity5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[4]||10):10),colorRGB:[255,0,0]}})
-var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[5]||5):5),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[3]||100):100),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[4]||10):10),colorRGB:[255,0,0]}})
+var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'circle',size:0.75,scaleType:'opacity',scaleFactor:(sfarray!=null?(sfarray[5]||5):5),colorRGB:[255,0,0]}})
 var g_utfgdm_opacity = L.layerGroup([l_utfgdm_opacity1,l_utfgdm_opacity2,l_utfgdm_opacity3,l_utfgdm_opacity4,l_utfgdm_opacity5,l_utfgdm_opacity6]);
 
 // iNat UTFGrid-based density map scaled on a gradient; set different scaleFactors at different zoom levels
-var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
-var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000)},opacity:0.65})
-var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000)},opacity:0.65})
-var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[3]||100):100)},opacity:0.65})
-var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[4]||10):10)},opacity:0.65})
-var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+winurlsearchstr,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[5]||5):5)},opacity:0.65})
+var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
+var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000)},opacity:0.65})
+var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000)},opacity:0.65})
+var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[3]||100):100)},opacity:0.65})
+var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[4]||10):10)},opacity:0.65})
+var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[5]||5):5)},opacity:0.65})
 var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
 
 // other iNaturalist Observation Layers
@@ -202,9 +230,9 @@ let inat_points = {url:inat_urlbase+'points/{z}/{x}/{y}.png',description:'iNatur
 let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
 let inat_heat = {url:inat_urlbase+'heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
 let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
-var l_inat_points = L.tileLayer(inat_points.url+winurlsearchstr,{maxZoom:20, attribution:inat_points.attribution});
-var l_inat_circles = L.tileLayer(inat_circles.url+winurlsearchstr,{maxZoom:20, attribution:inat_circles.attribution});
-var l_inat_heat = L.tileLayer(inat_heat.url+winurlsearchstr,{maxZoom:20, attribution:inat_heat.attribution});
+var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{maxZoom:20, attribution:inat_points.attribution});
+var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams,{maxZoom:20, attribution:inat_circles.attribution});
+var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams,{maxZoom:20, attribution:inat_heat.attribution});
 var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
 
 // Other iNaturalist Layers
@@ -237,11 +265,21 @@ var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxN
 //debug layer
 var l_debug = L.gridLayer.debugCoords();
 
+var defaultlayers = [l_stamen_toner];
+if (taxon_id!==null) {
+   if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
+   if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
+};
+if (place_id!==null) { 
+   if (showplace==='true') {defaultlayers.push(l_inat_place)};
+};
+defaultlayers.push(defaultstyle==='gradient'?g_utfgdm_gradient:g_utfgdm_opacity);
+
 // create map, and set default center coordinates, zoom level, and layers
 var mymap = L.map('mapid', {
-   center: [0,0],
-   zoom: 2,
-   layers: [l_stamen_toner, g_utfgdm_opacity],
+   center: [centerlat,centerlng],
+   zoom: defaultzoom,
+   layers: defaultlayers,
    doubleClickZoom: false
 });
 
