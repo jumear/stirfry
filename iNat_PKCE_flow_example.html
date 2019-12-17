@@ -129,7 +129,7 @@ if(q.code) {
             document.getElementById("start").classList = "hidden";
             document.getElementById("token").classList = "";
 */
-            fgetuser();
+            fgetuser(body);
             // Replace the history entry to remove the auth code from the browser address bar
             window.history.replaceState({}, null, "/");
         }, function(request, error) {
@@ -215,7 +215,7 @@ async function pkceChallengeFromVerifier(v) {
     return base64urlencode(hashed);
 }
 
-function fgetuser() {
+function fgetuser(body) {
    var endpoint = {method:'GET',url:'https://api.inaturalist.org/v1/users/me'};
    var hdr = new Headers();
    hdr.append('Content-Type','application/json');
