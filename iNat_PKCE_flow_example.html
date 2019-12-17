@@ -218,10 +218,11 @@ function fgetuser(body) {
    var hdr = new Headers();
    hdr.append('Content-Type','application/json');
 //   hdr.append('Content-Type','application/x-www-form-urlencoded; charset=UTF-8');
-//   hdr.append('Authorization',('Bearer '+body.access_token));
+   hdr.append('Authorization',('Bearer '+body.access_token));
 
    return fetch(endpoint.url, {
       method: endpoint.method,
+      credentials: 'include',
       headers: hdr,
    })
    .then((response) => {
