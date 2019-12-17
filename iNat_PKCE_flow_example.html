@@ -214,7 +214,7 @@ async function pkceChallengeFromVerifier(v) {
 }
 
 function fgetuser(body) {
-   var endpoint = {method:'GET',url:'https://www.inaturalist.org/users/api_token'};
+   var endpoint = {method:'POST',url:'https://www.inaturalist.org/users/api_token'};
    var hdr = new Headers();
 //   hdr.append('Content-Type','application/json');
    hdr.append('Content-Type','application/x-www-form-urlencoded; charset=UTF-8');
