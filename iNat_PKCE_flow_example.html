@@ -124,9 +124,12 @@ if(q.code) {
         }, function(request, body) {
             // Initialize your application now that you have an access token.
             // Here we just display it in the browser.
+/*
             document.getElementById("access_token").innerText = body.access_token;
             document.getElementById("start").classList = "hidden";
             document.getElementById("token").classList = "";
+*/
+            fgetuser();
             // Replace the history entry to remove the auth code from the browser address bar
             window.history.replaceState({}, null, "/");
         }, function(request, error) {
@@ -136,7 +139,6 @@ if(q.code) {
             document.getElementById("error").classList = "";
         });
     }
-
     // Clean these up since we don't need them anymore
     localStorage.removeItem("pkce_state");
     localStorage.removeItem("pkce_code_verifier");
@@ -191,7 +193,6 @@ function generateRandomString() {
 
 // Calculate the SHA256 hash of the input text. 
 // Returns a promise that resolves to an ArrayBuffer
-
 function sha256(plain) {
     const encoder = new TextEncoder();
     const data = encoder.encode(plain);
@@ -213,6 +214,30 @@ async function pkceChallengeFromVerifier(v) {
     hashed = await sha256(v);
     return base64urlencode(hashed);
 }
+
+function fgetuser() {
+   var endpoint = {method:'GET',url:'https://api.inaturalist.org/v1/users/me'};
+   var hdr = new Headers();
+   hdr.append('Content-Type','application/json');
+   hdr.append('Authorization',body.access_token);
+
+   return fetch(endpoint.url, {
+      method: endpoint.method,
+      headers: hdr,
+   })
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => {
+      document.getElementById("access_token").innerText = data.results.login; // body.access_token;
+      document.getElementById("start").classList = "hidden";
+      document.getElementById("token").classList = "";
+   })
+   .catch((error) => {
+      console.error(error);
+   });
+};
 
 </script>
 
