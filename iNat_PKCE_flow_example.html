@@ -129,7 +129,7 @@ if(q.code) {
             document.getElementById("token").classList = "";
             // Replace the history entry to remove the auth code from the browser address bar
             window.history.replaceState({}, null, "/");
-            fgetuser(body.access_token);
+            fgetuser(body);
         }, function(request, error) {
             // This could be an error response from the OAuth server, or an error because the 
             // request failed such as if the OAuth server doesn't allow CORS requests
@@ -214,7 +214,7 @@ async function pkceChallengeFromVerifier(v) {
 }
 
 function fgetuser(body) {
-   var endpoint = {method:'GET',url:'https://www.inaturalist.org/users/api_token'};
+   var endpoint = {method:'GET',url:'http://www.inaturalist.org/users/api_token'};
    var hdr = new Headers();
    hdr.append('Content-Type','application/json');
 //   hdr.append('Content-Type','application/x-www-form-urlencoded; charset=UTF-8');
@@ -222,7 +222,6 @@ function fgetuser(body) {
 
    return fetch(endpoint.url, {
       method: endpoint.method,
-      credentials: 'same-origin',
       headers: hdr,
    })
    .then((response) => {
