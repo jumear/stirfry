@@ -124,14 +124,13 @@ if(q.code) {
         }, function(request, body) {
             // Initialize your application now that you have an access token.
             // Here we just display it in the browser.
-/*
-            document.getElementById("access_token").innerText = body.access_token;
+            localStorage.setItem("access_token", body.access_token);
+            document.getElementById("access_token").innerText = localStorage.getItem("access_token");
             document.getElementById("start").classList = "hidden";
             document.getElementById("token").classList = "";
-*/
-            fgetuser(body);
             // Replace the history entry to remove the auth code from the browser address bar
             window.history.replaceState({}, null, "/");
+            fgetuser(localStorage.getItem("access_token"));
         }, function(request, error) {
             // This could be an error response from the OAuth server, or an error because the 
             // request failed such as if the OAuth server doesn't allow CORS requests
@@ -232,12 +231,10 @@ function fgetuser(body) {
       return response.json();
    })
    .then((data) => {
-      document.getElementById("access_token").innerText = data.api_token; // body.access_token;
-      document.getElementById("start").classList = "hidden";
-      document.getElementById("token").classList = "";
+      alert(data.api_token);
    })
-   .catch((error) => {
-      console.error(error);
+   .catch((err) => {
+      console.error(err.message);
    });
 };
 
