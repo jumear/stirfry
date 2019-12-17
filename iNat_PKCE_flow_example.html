@@ -218,8 +218,8 @@ async function pkceChallengeFromVerifier(v) {
 function fgetuser(body) {
    var endpoint = {method:'GET',url:'https://api.inaturalist.org/v1/users/me'};
    var hdr = new Headers();
-   hdr.append('Content-Type','application/json');
-   hdr.append('Authorization',body.access_token);
+//   hdr.append('Content-Type','application/json');
+//   hdr.append('Authorization',body.access_token);
 
    return fetch(endpoint.url, {
       method: endpoint.method,
