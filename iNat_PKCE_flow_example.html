@@ -140,7 +140,6 @@ async function pkceChallengeFromVerifier(v) {
 //////////////////////////////////////////////////////////////////////
 var urlbase_iNat = 'https://www.inaturalist.org';
 var urlbase_app = 'https://jumear.github.io/stirfry/iNat_PKCE_flow_example.html';
-//var testjwt = '2';
 
 function fcoreapp(jwt) {
    // Remove login link
@@ -150,10 +149,10 @@ function fcoreapp(jwt) {
    document.getElementById("token").classList = "";
 };
 
-if (testjwt) {
-   fcoreapp(testjwt);
-   exit;
-};
+// this section is only for testing purposes
+// var testjwt = '';
+// fcoreapp(testjwt);
+// exit;
 
 //////////////////////////////////////////////////////////////////////
 // PKCE flow -- Configure application and authorization server details
