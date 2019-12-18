@@ -8,8 +8,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>iNaturalist Single-Page App using PKCE OAuth flow and API v1</title>
 
-<!-- This example app is Application registered as #399 in iNaturalist:
-https://www.inaturalist.org/oauth/applications/399 
+<!-- This example app is registered as #399 in iNaturalist:
+https://www.inaturalist.org/oauth/applications/399
 
 It does 3 things:
 1. Gets access token via PKCE OAuth flow
@@ -17,7 +17,10 @@ It does 3 things:
 3. Uses the result of #2 to query the GET /user/me endpoint in the v1 API
 
 If everything is successful, the page should ask you to log in via the iNaturalist website (if you're not already logged in), and then display your user login.
-The page will not work with Edge / IE.
+
+Other Notes:
+1. The code for the PKCE flow will not work with Edge / IE.
+2. This example hits only relatively safe endpoints. If you adapt this to hit endpoints like GET /observations, you may want to handle cases where someone could, say, include malicious code in observation descriptions and comments. Be safe out there!
 //-->
 
 <!--//
@@ -272,7 +275,7 @@ if(q.code) {
          code_verifier: localStorage.getItem("pkce_code_verifier")
       }, function(request, body) {
          // Replace the history entry to remove the auth code from the browser address bar
-         window.history.replaceState({}, null, "/");
+         window.history.replaceState({}, null, config.redirect_uri); //"/");
          // Initialize your application now that you have an access token.
          fgetJWT(body.access_token)
          .then((jwt)=> { fcoreapp(jwt); });
