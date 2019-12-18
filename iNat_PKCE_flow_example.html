@@ -1,10 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
 <html>
 <head>
-<title>iNaturalist Single-Page App using PKCE OAuth flow and API v1</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Single-Page App using PKCE OAuth flow and API v1" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>iNaturalist Single-Page App using PKCE OAuth flow and API v1</title>
 
-<!-- this example app is Application registered as #399 in iNaturalist:
-https://www.inaturalist.org/oauth/applications/399 //-->
+<!-- This example app is Application registered as #399 in iNaturalist:
+https://www.inaturalist.org/oauth/applications/399 
+
+It does 3 things:
+1. Gets access token via PKCE OAuth flow
+2. Uses the result of #1 to get a JSON Web Token (JWT)
+3. Uses the result of #2 to query the GET /user/me endpoint in the v1 API
+
+If everything is successful, the page should ask you to log in via the iNaturalist website (if you're not already logged in), and then display your user login.
+The page will not work with Edge / IE.
+//-->
 
 <!--//
 Much of the code that handles the PKCE oAuth flow here is adpated from
@@ -128,6 +142,10 @@ async function pkceChallengeFromVerifier(v) {
          <h2>JSON Web Token</h2>
          <div id="access_token" class="code"></div>
       </div>
+      <div id="user" class="hidden">
+         <h2>iNaturalist User</h2>
+         <div id="user_id" class="code"></div>
+      </div>
       <div id="error" class="hidden">
          <h2>Error</h2>
          <div id="error_details" class="code"></div>
@@ -139,17 +157,45 @@ async function pkceChallengeFromVerifier(v) {
 
 //////////////////////////////////////////////////////////////////////
 var urlbase_iNat = 'https://www.inaturalist.org';
+var urlbase_iNat_v1 = 'https://api.inaturalist.org/v1';
 var urlbase_app = 'https://jumear.github.io/stirfry/iNat_PKCE_flow_example.html';
 
 function fcoreapp(jwt) {
    // Remove login link
    document.getElementById("login").classList = "hidden";
+/*
    // for now, just display the JWT
    document.getElementById("access_token").innerText = jwt;
    document.getElementById("token").classList = "";
+*/
+   fgetuser(jwt)
+   .then((data) => {
+      document.getElementById("user_id").innerText = data.results[0].login;
+      document.getElementById("user").classList = "";
+   });
+};
+
+function fgetuser(jwt) {
+   var endpoint = {method:'GET',url:urlbase_iNat_v1+'/users/me'};
+   var hdr = new Headers();
+   hdr.append('Content-Type','application/json');
+   hdr.append('Authorization',('Bearer '+jwt));
+
+   return fetch(endpoint.url, {
+      method: endpoint.method,
+      headers: hdr,
+   })
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .catch((err) => {
+      console.error(err.message);
+   });
 };
 
 // this section is only for testing purposes
+// it allows you to skip all the steps needed to get a JWT, if you already have one.
 // var testjwt = '';
 // fcoreapp(testjwt);
 // exit;
