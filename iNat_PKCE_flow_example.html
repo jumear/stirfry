@@ -246,7 +246,7 @@ function fgetJWT(accesstoken) {
    var endpoint = {method:'GET',url:urlbase_iNat+'/users/api_token'};
    var hdr = new Headers();
    hdr.append('Content-Type','application/json');
-   hdr.append('Authorization',('Bearer '+acesstoken));
+   hdr.append('Authorization',('Bearer '+accesstoken));
 
    return fetch(endpoint.url, {
       method: endpoint.method,
