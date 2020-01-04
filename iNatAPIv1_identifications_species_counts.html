@@ -34,6 +34,7 @@ function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
 function fresults(xobj) {
    faddelem('p',document.body,null,null,furl(famp(apiurl)));
    var results = xobj.results;
+   var obsurl = 'https://www.inaturalist.org/observations?taxon_id='
    if (results) {
       faddelem('p',document.body,null,null,'total leaf taxa: '+xobj.total_results);
       var table = faddelem('table',document.body,null,'main');
@@ -56,8 +57,8 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,results[i].taxon.name);
          faddelem('td',brow,null,null,results[i].taxon.preferred_common_name);
          faddelem('td',brow,null,null,results[i].taxon.rank);
-         faddelem('td',brow,'tar',null,results[i].count);
-         faddelem('td',brow,'tar',null,results[i].taxon.observations_count);
+         faddelem('td',brow,'tar',null,furl(famp(obsurl+results[i].taxon.id+window.location.search.replace('?','&').replace('user_id','ident_user_id')),results[i].count));
+         faddelem('td',brow,'tar',null,furl(obsurl+results[i].taxon.id,results[i].taxon.observations_count));
       };
    }
    else { faddelem('p',document.body,null,null,'No results returned.'); };
