@@ -3,8 +3,8 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="iNaturalist API Get Identification Leaf Taxa Counts" />
-<title>iNaturalist API Get Identification Leaf Taxa Counts</title>
+<meta name="description" content="iNaturalist API Get Identifiers" />
+<title>iNaturalist API Get Identifiers</title>
 <style>
    body { font:10pt Sans-Serif; }
    .tar { text-align:right; }
@@ -23,6 +23,13 @@
 <script>
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fdate(str) {
+//   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+//   str = str.replace(/z/i,' GMT'); //replaces Z (case insensitve) with GMT
+//   str = str.replace(/([+-]\d{2}\:?\d{2})/,' GMT$1'); //adds GMT prefix to timezone offset
+//   return str;
+   return str.substring(0,10);
+};
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
@@ -34,39 +41,38 @@ function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
 function fresults(xobj) {
    faddelem('p',document.body,null,null,furl(famp(apiurl)));
    var results = xobj.results;
-   var obsurl = 'https://www.inaturalist.org/observations?taxon_id='
    if (results) {
-      faddelem('p',document.body,null,null,'total leaf taxa: '+xobj.total_results);
+      faddelem('p',document.body,null,null,'total identifiers: '+xobj.total_results);
       var table = faddelem('table',document.body,null,'main');
       var thead = faddelem('thead',table);
       var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'#');
-      faddelem('td',hrow,null,null,'id');
-      faddelem('td',hrow,null,null,'photo');
-      faddelem('td',hrow,null,null,'name');
-      faddelem('td',hrow,null,null,'common name');
       faddelem('td',hrow,null,null,'rank');
-      faddelem('td',hrow,'tar',null,'taxon obs/id count');
-      faddelem('td',hrow,'tar',null,'taxon ttl obs count');
+      faddelem('td',hrow,null,null,'icon');
+      faddelem('td',hrow,null,null,'user id');
+      faddelem('td',hrow,null,null,'login id');
+      faddelem('td',hrow,null,null,'user name');
+      faddelem('td',hrow,null,null,'joined date');
+      faddelem('td',hrow,'tar',null,'ids');
+      faddelem('td',hrow,'tar',null,'all ids (for others only)');
       var tbody = faddelem('tbody',table);
       for (var i=0; i<results.length; i++) {
          var brow = faddelem('tr',tbody);
          faddelem('td',brow,null,null,i+1);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].taxon.id,results[i].taxon.id));
-         faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].taxon.default_photo.square_url+'" />');
-         faddelem('td',brow,null,null,results[i].taxon.name);
-         faddelem('td',brow,null,null,results[i].taxon.preferred_common_name);
-         faddelem('td',brow,null,null,results[i].taxon.rank);
-         faddelem('td',brow,'tar',null,furl(famp(obsurl+results[i].taxon.id+window.location.search.replace('?','&').replace('user_id','ident_user_id')),results[i].count));
-         faddelem('td',brow,'tar',null,furl(obsurl+results[i].taxon.id,results[i].taxon.observations_count));
+         faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].user.icon+'" />');
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/users/'+results[i].user_id,results[i].user_id));
+         faddelem('td',brow,null,null,results[i].user.login);
+         faddelem('td',brow,null,null,results[i].user.name);
+         faddelem('td',brow,null,null,fdate(results[i].user.created_at));
+         faddelem('td',brow,'tar',null,results[i].count);
+         faddelem('td',brow,'tar',null,results[i].user.identifications_count);
       };
    }
    else { faddelem('p',document.body,null,null,'No results returned.'); };
 };
-var apiurl = 'https://api.inaturalist.org/v1/identifications/species_counts'+window.location.search;
+var apiurl = 'https://api.inaturalist.org/v1/identifications/identifiers'+window.location.search;
 if (window.location.search==='') {
-   faddelem('p',document.body,null,null,'This page displays the results of a request to the iNaturalist Identification Species Counts API in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_species_counts')+' for available query parameters.');
-   faddelem('p',document.body,null,null,'Suppose the address of this page is '+window.location+', <br />and you want to see the results of '+furl(famp(apiurl+'?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in a friendly format, <br />then you would open '+furl(famp(window.location+'?user_id=bob&current=true&order=desc&order_by=created_at&taxon_of=identification'))+' in your browser.');
+   faddelem('p',document.body,null,null,'This page displays the results of a request to the iNaturalist Identifiers API in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_identifiers')+' for available query parameters.');
+   faddelem('p',document.body,null,null,'Suppose the address of this page is '+window.location+', <br />and you want to see the results of '+furl(famp(apiurl+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in a friendly format, <br />then you would open '+furl(famp(window.location+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in your browser.');
 }
 else {
    fetch(apiurl)
@@ -79,9 +85,7 @@ else {
          console.error(err.message);
          faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
       });
-};
+}
 </script>
 </body>
-
-
 </html>
