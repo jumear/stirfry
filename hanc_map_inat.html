@@ -1,0 +1,605 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observations at the Houston Arboretum & Nature Center" />
+<title>iNaturalist Observations at the Houston Arboretum & Nature Center</title>
+
+<style>
+   body { height:100vh; margin:0px; }
+   #mapid { height:100%; background:beige; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
+
+<script>
+/*
+https://github.com/mapbox/corslite
+BSD 2-Clause License
+
+Copyright (c) 2017, Mapbox
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+function corslite(url, callback, cors) {
+    var sent = false;
+
+    if (typeof window.XMLHttpRequest === 'undefined') {
+        return callback(Error('Browser not supported'));
+    }
+
+    if (typeof cors === 'undefined') {
+        var m = url.match(/^\s*https?:\/\/[^\/]*/);
+        cors = m && (m[0] !== location.protocol + '//' + location.hostname +
+                (location.port ? ':' + location.port : ''));
+    }
+
+    var x = new window.XMLHttpRequest();
+
+    function isSuccessful(status) {
+        return status >= 200 && status < 300 || status === 304;
+    }
+
+    if (cors && !('withCredentials' in x)) {
+        // IE8-9
+        x = new window.XDomainRequest();
+
+        // Ensure callback is never called synchronously, i.e., before
+        // x.send() returns (this has been observed in the wild).
+        // See https://github.com/mapbox/mapbox.js/issues/472
+        var original = callback;
+        callback = function() {
+            if (sent) {
+                original.apply(this, arguments);
+            } else {
+                var that = this, args = arguments;
+                setTimeout(function() {
+                    original.apply(that, args);
+                }, 0);
+            }
+        }
+    }
+
+    function loaded() {
+        if (
+            // XDomainRequest
+            x.status === undefined ||
+            // modern browsers
+            isSuccessful(x.status)) callback.call(x, null, x);
+        else callback.call(x, x, null);
+    }
+
+    // Both `onreadystatechange` and `onload` can fire. `onreadystatechange`
+    // has [been supported for longer](http://stackoverflow.com/a/9181508/229001).
+    if ('onload' in x) {
+        x.onload = loaded;
+    } else {
+        x.onreadystatechange = function readystate() {
+            if (x.readyState === 4) {
+                loaded();
+            }
+        };
+    }
+
+    // Call the callback with the XMLHttpRequest object as an error and prevent
+    // it from ever being called again by reassigning it to `noop`
+    x.onerror = function error(evt) {
+        // XDomainRequest provides no evt parameter
+        callback.call(this, evt || true, null);
+        callback = function() { };
+    };
+
+    // IE9 must have onprogress be set to a unique function.
+    x.onprogress = function() { };
+
+    x.ontimeout = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
+
+    x.onabort = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
+
+    // GET is the only supported HTTP Verb by XDomainRequest and is the
+    // only one supported here.
+    x.open('GET', url, true);
+
+    // Send the request. Sending data is not supported.
+    x.send(null);
+    sent = true;
+
+    return x;
+}
+
+if (typeof module !== 'undefined') module.exports = corslite;
+</script>
+
+<script>
+/*
+https://github.com/consbio/Leaflet.UTFGrid/blob/master/L.UTFGrid.js
+Copyright (c) 2015 - 2017, Conservation Biology Institute
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
+//heavily modified from: https://raw.githubusercontent.com/danzel/Leaflet.utfgrid/leaflet-master/src/leaflet.utfgrid.js
+//depends on corslite
+
+L.UTFGrid = L.TileLayer.extend({
+	options: {
+		resolution: 4,
+		pointerCursor: true,
+        mouseInterval: 66  // Delay for mousemove events
+	},
+
+	_mouseOn: null,
+    _mouseOnTile: null,
+    _tileCharCode: null, // '<tileKey>:<charCode>' or null
+    _cache: null, // {<tileKey>: <utfgrid>}
+    _idIndex: null, // {<featureID>: {<tileKey1>: true, ...<tileKeyN>: true} }
+    _throttleMove: null, // holds throttled mousemove handler
+    //_throttleConnectEventHandlers: null, // holds throttled connection setup function
+
+    _updateCursor: function(){ }, //no-op, overridden below
+
+	onAdd: function (map) {
+        this._cache = {};
+        this._idIndex = {};
+
+        L.TileLayer.prototype.onAdd.call(this, map);
+
+        this._throttleMove = L.Util.throttle(this._move, this.options.mouseInterval, this);
+
+        if (this.options.pointerCursor) {
+            this._updateCursor = function(cursor) { this._container.style.cursor = cursor; }
+        }
+
+        map.on('boxzoomstart', this._disconnectMapEventHandlers, this);
+        // have to throttle or we get an immediate click event on boxzoomend
+        map.on('boxzoomend', this._throttleConnectEventHandlers, this);
+        this._connectMapEventHandlers();
+	},
+
+	onRemove: function () {
+		var map = this._map;
+        map.off('boxzoomstart', this._disconnectMapEventHandlers, this);
+        map.off('boxzoomend', this._throttleConnectEventHandlers, this);
+        this._disconnectMapEventHandlers();
+		this._updateCursor('');
+        L.TileLayer.prototype.onRemove.call(this, map);
+	},
+
+    createTile: function(coords) {
+        this._loadTile(coords);
+        return document.createElement('div');  // empty DOM node, required because this overrides L.TileLayer
+	},
+
+    setUrl: function(url, noRedraw) {
+        this._cache = {};
+        return L.TileLayer.prototype.setUrl.call(this, url, noRedraw);
+    },
+
+    _connectMapEventHandlers: function(){
+        this._map.on('click', this._onClick, this);
+        this._map.on('mousemove', this._throttleMove, this);
+    },
+
+    _disconnectMapEventHandlers: function(){
+        this._map.off('click', this._onClick, this);
+		this._map.off('mousemove', this._throttleMove, this);
+    },
+
+    _throttleConnectEventHandlers: function() {
+        setTimeout(this._connectMapEventHandlers.bind(this), 100);
+    },
+
+    _update: function (center, zoom) {
+        L.TileLayer.prototype._update.call(this, center, zoom);
+    },
+
+    _loadTile: function (coords) {
+        var url = this.getTileUrl(coords);
+		var key = this._tileCoordsToKey(coords);
+		var self = this;
+        if (this._cache[key]) { return }
+        corslite(url, function(err, response){
+            if (err) {
+                self.fire('error', {error: err});
+                return;
+            }
+            var data = JSON.parse(response.responseText);
+            self._cache[key] = data;
+            L.Util.bind(self._handleTileLoad, self)(key, data);
+        }, true);
+	},
+
+    _handleTileLoad: function(key, data) {
+        // extension point
+    },
+
+	_onClick: function (e) {
+		this.fire('click', this._objectForEvent(e));
+	},
+
+	_move: function (e) {
+        if (e.latlng == null){ return }
+
+		var on = this._objectForEvent(e);
+
+        if (on._tileCharCode !== this._tileCharCode) {
+			if (this._mouseOn) {
+				this.fire('mouseout', {
+                    latlng: e.latlng,
+                    data: this._mouseOn,
+                    _tile: this._mouseOnTile,
+                    _tileCharCode: this._tileCharCode
+                });
+				this._updateCursor('');
+			}
+			if (on.data) {
+				this.fire('mouseover', on);
+				this._updateCursor('pointer');
+			}
+
+			this._mouseOn = on.data;
+            this._mouseOnTile = on._tile;
+            this._tileCharCode = on._tileCharCode;
+		} else if (on.data) {
+			this.fire('mousemove', on);
+		}
+	},
+
+	_objectForEvent: function (e) {
+	    if (!e.latlng) return;  // keyboard <ENTER> events also pass through as click events but don't have latlng
+
+        var map = this._map,
+		    point = map.project(e.latlng),
+		    tileSize = this.options.tileSize,
+		    resolution = this.options.resolution,
+		    x = Math.floor(point.x / tileSize),
+		    y = Math.floor(point.y / tileSize),
+		    gridX = Math.floor((point.x - (x * tileSize)) / resolution),
+		    gridY = Math.floor((point.y - (y * tileSize)) / resolution),
+			max = map.options.crs.scale(map.getZoom()) / tileSize;
+
+        x = (x + max) % max;
+        y = (y + max) % max;
+
+        var tileKey = this._tileCoordsToKey({z: map.getZoom(), x: x, y: y});
+
+		var data = this._cache[tileKey];
+		if (!data) {
+			return {
+                latlng: e.latlng,
+                data: null,
+                _tile: null,
+                _tileCharCode: null
+            };
+		}
+
+        var charCode = data.grid[gridY].charCodeAt(gridX);
+		var idx = this._utfDecode(charCode),
+		    key = data.keys[idx],
+		    result = data.data[key];
+
+		if (!data.data.hasOwnProperty(key)) {
+			result = null;
+		}
+
+		return {
+            latlng: e.latlng,
+            data: result,
+            id: (result)? result.id: null,
+            _tile: tileKey,
+            _tileCharCode: tileKey + ':' + charCode
+        };
+	},
+
+    _dataForCharCode: function (tileKey, charCode) {
+        var data = this._cache[tileKey];
+        var idx = this._utfDecode(charCode),
+		    key = data.keys[idx],
+		    result = data.data[key];
+
+		if (!data.data.hasOwnProperty(key)) {
+			result = null;
+		}
+        return result;
+    },
+
+	_utfDecode: function (c) {
+		if (c >= 93) {
+			c--;
+		}
+		if (c >= 35) {
+			c--;
+		}
+		return c - 32;
+	},
+
+    _utfEncode: function (c) {
+        //reverse of above, returns charCode for c
+        //derived from: https://github.com/mapbox/glower/blob/mb-pages/src/glower.js#L37
+        var charCode = c + 32;
+        if (charCode >= 34) {
+            charCode ++;
+        }
+        if (charCode >= 92) {
+            charCode ++;
+        }
+        return charCode;
+    }
+});
+
+L.utfGrid = function (url, options) {
+	return new L.UTFGrid(url, options);
+};
+</script>
+
+</head>
+
+<body>
+<div id="mapid"></div>
+<script>
+
+// create map, and set default center coordinates, zoom level
+//   center: [29.762801,-95.452861],
+var mymap = L.map('mapid', {
+   center: [29.761801,-95.452861],
+   zoom: 16,
+   doubleClickZoom: false
+});
+
+mymap.createPane('base');
+mymap.createPane('hancmap');
+// see this for default zIndex: https://github.com/Leaflet/Leaflet/blob/v1.0.0/dist/leaflet.css#L87
+mymap.getPane('base').style.zIndex = 198; 
+mymap.getPane('hancmap').style.zIndex = 199;
+
+// Stamen layers
+var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
+var s_stamen_urlbase = 'https://stamen-tiles-{s}.a.ssl.fastly.net/';
+var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{maxZoom:20, pane:'base', attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
+var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{maxNativeZoom:16, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_terrainbg = L.tileLayer(s_stamen_urlbase+'terrain-background/{z}/{x}/{y}.jpg',{maxNativeZoom:16, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_terrainlines = L.tileLayer(s_stamen_urlbase+'terrain-lines/{z}/{x}/{y}.jpg',{maxNativeZoom:16, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_terrainlabels = L.tileLayer(s_stamen_urlbase+'terrain-labels/{z}/{x}/{y}.jpg',{maxNativeZoom:16, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_toner = L.tileLayer(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_tonerlite = L.tileLayer(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_tonerbg = L.tileLayer(s_stamen_urlbase+'toner-background/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_tonerhybrid = L.tileLayer(s_stamen_urlbase+'toner-hybrid/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_tonerlines = L.tileLayer(s_stamen_urlbase+'toner-lines/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+var l_stamen_tonerlabels = L.tileLayer(s_stamen_urlbase+'toner-labels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_stamen_copyright});
+
+// Carto layers (also designed by Stamen for Carto)
+var s_carto_copyright = 'Map tiles by <a href="https://carto.com">Carto</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under ODbL.';
+var s_carto_urlbase = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/'
+var l_carto_light = L.tileLayer(s_carto_urlbase+'light_all/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_lightbg = L.tileLayer(s_carto_urlbase+'light_nolabels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_lightlabels = L.tileLayer(s_carto_urlbase+'light_only_labels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_dark = L.tileLayer(s_carto_urlbase+'dark_all/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_darkbg = L.tileLayer(s_carto_urlbase+'dark_nolabels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_darklabels = L.tileLayer(s_carto_urlbase+'dark_only_labels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_voyager = L.tileLayer(s_carto_urlbase+'rastertiles/voyager/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_voyagerbg = L.tileLayer(s_carto_urlbase+'rastertiles/voyager_nolabels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_voyagerlabels = L.tileLayer(s_carto_urlbase+'rastertiles/voyager_only_labels/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+var l_carto_voyagerunder = L.tileLayer(s_carto_urlbase+'rastertiles/voyager_labels_under/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:s_carto_copyright});
+
+// USGS maps (US only)
+var s_usgs_urlbase = 'https://basemap.nationalmap.gov/arcgis/rest/services/'
+var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, pane:'base', attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data; Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model'});
+var l_usgs_img = L.tileLayer(s_usgs_urlbase+'USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, pane:'base', attribution:'<a href="'+s_usgs_urlbase+'USGSImageryOnly/MapServer">USGS The National Map</a>: Orthoimagery'});
+var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, pane:'base', attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
+var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, pane:'base', attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
+var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, pane:'base', attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
+
+// OpenStreetMaps & OpenTopoMap
+var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {maxZoom:20, pane:'base', attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
+var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19, pane:'base', attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
+var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17, pane:'base', attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+
+// University of Wisconsin Real Earth layers (selected from over 500 sets available)
+var s_re_urlbase = 'https://realearth.ssec.wisc.edu/'
+var l_re_globalvis = L.tileLayer(s_re_urlbase+'tiles/globalvis/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:'<a href="'+s_re_urlbase+'products/globalvis">RealEarth</a> by SSEC &#64; University of Wisconsin-Madison'});
+var l_re_globalir = L.tileLayer(s_re_urlbase+'tiles/globalir-rr/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:'<a href="'+s_re_urlbase+'products/globalir-rr">RealEarth</a> by SSEC &#64; University of Wisconsin-Madison'});
+var l_re_globalwv = L.tileLayer(s_re_urlbase+'tiles/globalwv/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:'<a href="'+s_re_urlbase+'products/globalwv">RealEarth</a> by SSEC &#64; University of Wisconsin-Madison'});
+var l_re_viirsmask = L.tileLayer(s_re_urlbase+'tiles/VIIRS-MASK-54000x27000/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:'<a href="'+s_re_urlbase+'products/VIIRS-MASK-54000x27000">RealEarth</a> by SSEC &#64; University of Wisconsin-Madison'});
+var l_re_nightlights = L.tileLayer(s_re_urlbase+'tiles/NightLightsColored/{z}/{x}/{y}.png',{maxZoom:20, pane:'base', attribution:'<a href="'+s_re_urlbase+'products/NightLightsColored">RealEarth</a> by SSEC &#64; University of Wisconsin-Madison'});
+
+// Wikipedia
+//var l_wiki_hillshading = L.tileLayer('http://c.tiles.wmflabs.org/hillshading/{z}/{x}/{y}.png',{maxNativeZoom:14, pane:'base', attribution:'NASA'});
+//https://tiles.wmflabs.org/bw-mapnik/${z}/{x}/{y}.png
+//https://tiles.wmflabs.org/osm-no-labels/{z}/{x}/{y}.png
+
+// NASA World Wind
+// https://worldwind.arc.nasa.gov/
+
+// ==================
+// iNaturalist Layers
+// ==================
+var s_inat_url = 'https://api.inaturalist.org/v1/'
+var inat_place_id = '94453'; //integer
+var inat_query_string = '';
+
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var taxon_id = winurlparams.get('taxon_id');
+
+if (winurlsearchstr === '') {
+   var thirtydaysago = new Date();
+   thirtydaysago.setDate(thirtydaysago.getDate()-30);
+   var thirtydaysagostr = thirtydaysago.getFullYear() + '-' + (thirtydaysago.getMonth()+1) + '-' + thirtydaysago.getDate()
+   inat_query_string = '?place_id='+inat_place_id+'&d1='+thirtydaysagostr;
+}
+else {
+   inat_query_string = winurlsearchstr;
+};
+
+// Create iNat observation image tileset layers
+var l_inat_pts = L.tileLayer(s_inat_url+'points/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'});
+var l_inat_cheat = L.tileLayer(s_inat_url+'colored_heatmap/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'});
+var l_inat_heat = L.tileLayer(s_inat_url+'heatmap/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'});
+
+// Create iNaturalist UTFGrids and pair each with an observation tileset from above (skip heatmap, since there aren't distinct points in that)
+function fpopup(obs) {
+   var s = (obs.photos.length==0) ? '[No Photo]' : '<img src="'+obs.photos[0].url+'" />';
+   s += (obs.photos.length>1) ? ' ['+obs.photos.length+']' : '';
+   s += '<br />observation #: <a target="_blank" href="'+obs.uri+'">'+obs.id+'</a> (grade: '+obs.quality_grade+')';
+   s += '<br />taxon: ' + ((obs.taxon==null) ? '[Unknown]' : (obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'));
+   s += '<br />observer: '+obs.user.login;
+//   s += '<br />location: '+obs.place_guess;
+   s += '<br />coordinates: '+Math.round(obs.geojson.coordinates[1]*1000000)/1000000+', '+Math.round(obs.geojson.coordinates[0]*1000000)/1000000;
+   s += (obs.positional_accuracy==null) ? '' : ' ('+Math.round(obs.positional_accuracy*10)/10+'m)';
+   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : obs.time_observed_at.replace('T',' '));
+   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : obs.created_at.replace('T',' '));
+   s += '<br />last updated: '+obs.updated_at.replace('T',' ');
+   if (obs.description==null) {}
+   else if (obs.description.length < 200) {s += '<br />'+obs.description }
+   else {s += '<br />'+(obs.description.substring(0,200)+'... (more)')};
+   L.popup().setLatLng([obs.geojson.coordinates[1],obs.geojson.coordinates[0]])
+      .setContent(s).openOn(mymap);
+};
+
+var u_inat_pts = L.utfGrid(s_inat_url+'points/{z}/{x}/{y}.grid.json'+inat_query_string,{maxZoom:20});//no attribution here because it won't ever exist on its own
+u_inat_pts.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(s_inat_url+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
+});
+var g_inat_pts = L.layerGroup([l_inat_pts, u_inat_pts]); // pair the UTFGrid with its map tile set.
+
+var u_inat_cheat = L.utfGrid(s_inat_url+'colored_heatmap/{z}/{x}/{y}.grid.json'+inat_query_string,{maxZoom:20});//no attribution here because it won't ever exist on its own
+u_inat_cheat.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(s_inat_url+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
+});
+var g_inat_cheat = L.layerGroup([l_inat_cheat, u_inat_cheat]);
+
+// iNaturalist Place Layer
+var l_inat_place = L.tileLayer(s_inat_url+'places/'+inat_place_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
+
+// iNaturalist Taxon Places Checklist and Range Layers
+var inat_taxon_id = taxon_id; //integer 
+var l_inat_taxonplace = L.tileLayer(s_inat_url+'taxon_places/'+inat_taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Polygon_Tiles/get_taxon_places_taxon_id_zoom_x_y_png">iNaturalist taxon place checklist data</a>'});
+var l_inat_taxonrange = L.tileLayer(s_inat_url+'taxon_ranges/'+inat_taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Polygon_Tiles/get_taxon_ranges_taxon_id_zoom_x_y_png">iNaturalist taxon range data</a>'});
+
+// HANC map image
+//var hancmapurl = 'hanc_map.png';
+//var hancmapbounds = [[29.76875, -95.4593], [29.7556, -95.4485]];
+var hancmapurl = 'hanc_map.svg';
+var hancmapbounds = [[29.76835, -95.457], [29.7558, -95.4473]];
+var l_hanc_map = L.imageOverlay(hancmapurl,hancmapbounds,{pane:'hancmap', attribution:'<a href="https://houstonarboretum.org/visit/plan-your-visit/map">Houston Arboretum &amp; Nature Center</a>'})
+
+// default layers
+l_usgs_topo.addTo(mymap);
+l_hanc_map.addTo(mymap);
+g_inat_pts.addTo(mymap);
+
+// define available basemaps (can view only one at a time)
+var basemaps = {
+   "Carto Light": l_carto_light,
+   "Carto Light Background": l_carto_lightbg,
+   "Carto Dark": l_carto_dark,
+   "Carto Dark Background": l_carto_darkbg,
+   "Carto Voyager": l_carto_voyager,
+   "Carto Voyager Background": l_carto_voyagerbg,
+   "Carto Voyager Labels Under": l_carto_voyagerunder,
+   "Stamen Watercolor": l_stamen_watercolor,
+   "Stamen Terrain Terrain": l_stamen_terrain,
+   "Stamen Terrain Background": l_stamen_terrainbg,
+   "Stamen Toner": l_stamen_toner,
+   "Stamen Toner Background": l_stamen_tonerbg,
+   "Stamen Toner Lite": l_stamen_tonerlite,
+   "OpenTopoMap": l_otm,
+   "OpenStreetMap France": l_osm_fr,
+   "OpenStreetMap Humanitarian": l_osm_hot,
+   "USGS Imagery": l_usgs_img,
+   "USGS Topo": l_usgs_topo,
+   "USGS Imagery + Topo": l_usgs_imgtopo,
+   "USGS Relief": l_usgs_relief,
+   "RealEarth Global Visible": l_re_globalvis,
+   "RealEarth Global Water Vapor": l_re_globalwv,
+   "RealEarth Global Black Marble": l_re_viirsmask,
+};
+
+// define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
+var overlaymaps = {
+   "USGS Hydro": l_usgs_hydro,
+   "RealEarth Global Night Lights": l_re_nightlights,
+   "RealEarth Global Rain Rate": l_re_globalir,
+   "Stamen Terrain Lines": l_stamen_terrainlines,
+   "Stamen Toner Lines": l_stamen_tonerlines,
+   "Stamen Toner Hybrid": l_stamen_tonerhybrid,
+   "Carto Light Labels": l_carto_lightlabels,
+   "Carto Dark Labels": l_carto_darklabels,
+   "Carto Voyager Labels": l_carto_voyagerlabels,
+   "Stamen Terrain Labels": l_stamen_terrainlabels,
+   "Stamen Toner Labels": l_stamen_tonerlabels,
+   "HANC Map": l_hanc_map,
+   "iNaturalist Taxon Range": l_inat_taxonrange,
+   "iNaturalist Taxon Places": l_inat_taxonplace,
+   "iNaturalist Place": l_inat_place,
+   "iNaturalist Heatmap": l_inat_heat,
+   "iNaturalist Circles": g_inat_cheat,
+   "iNaturalist Points": g_inat_pts,
+};
+
+// add a layer selector control and scale bar
+L.control.layers(basemaps, overlaymaps).addTo(mymap);
+L.control.scale().addTo(mymap);
+
+</script>
+</body>
+
+</html>
