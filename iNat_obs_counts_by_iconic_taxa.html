@@ -22,6 +22,16 @@
 
 <body>
 <script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+winurlparams.delete('per_page');
+winurlparams.delete('only_id');
+winurlparams.delete('verifiable');
+winurlparams.delete('quality_grade');
+winurlparams.delete('iconic_taxa');
+
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
@@ -50,7 +60,7 @@ function fgetcount(url) {
       .catch((err) => { console.error(err); });
 };
 
-var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=1&only_id=true';
+var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=1&only_id=true'+((winurlparams!='')?('&'+winurlparams):'');
 var ary_it = [
    {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒"},
    {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅"},
@@ -65,7 +75,7 @@ var ary_it = [
    {icon_taxa:"Fungi",disp_name:"Fungi",icon:"🍄"},
    {icon_taxa:"Chromista",disp_name:"Chromista"},
    {icon_taxa:"Protozoa",disp_name:"Protozoa"},
-   {icon_taxa:"unknown",disp_name:"Unknown*"},
+   {icon_taxa:"unknown",disp_name:"Unknown<sup>1</sup>"},
    {icon_taxa:"All",disp_name:"All",icon:"🌐"},
 ];
 
@@ -104,8 +114,10 @@ for (i=0;i<ary_it.length;i++) {
    faddelem('td',trow,'tar',str_it+'_va');
 };
 faddelem('p',document.body,null,null,'Notes:<br />'
-   +'* Unknown includes things like Bacteria.<br />'
-   +'** Because numbers are pulled asynchronously, they may not all tie exactly.');
+   +'1. Unknown includes things like Bacteria.<br />'
+   +'2. Because these numbers may be retrieved at slightly different times, they may not all tie exactly.<br />'
+   +'3. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search')+' endpoint.)'
+);
 
 // pull data into table
 // (this is separate from the creation of the table structure just in case there are failures while pulling data)
