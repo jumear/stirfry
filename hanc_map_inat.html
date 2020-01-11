@@ -599,6 +599,43 @@ var overlaymaps = {
 L.control.layers(basemaps, overlaymaps).addTo(mymap);
 L.control.scale().addTo(mymap);
 
+// add control to get geolocation
+var geolocation = {};
+function onLocationFound(e) {
+    var radius = e.accuracy;
+    if (geolocation.hasOwnProperty('marker')) { mymap.removeLayer(geolocation.marker); };
+    if (geolocation.hasOwnProperty('circle')) { mymap.removeLayer(geolocation.circle); };
+    geolocation['marker'] = L.marker(e.latlng).addTo(mymap)
+       .bindPopup("You are within " + radius + " meters from this point").openPopup();
+    geolocation['circle'] = L.circle(e.latlng, radius).addTo(mymap);
+}
+function onLocationError(e) {
+    alert(e.message);
+}
+mymap.on('locationfound', onLocationFound);
+mymap.on('locationerror', onLocationError);
+L.Control.Geolocation = L.Control.extend({
+   onAdd: function(mymap) {
+      var button = L.DomUtil.create('button');
+      button.innerHTML = '&#9678';
+      button.style.height = '35px';
+      button.style.width = '35px';
+      button.style.border = '2px solid lightgray';
+      button.style.fontSize = '18px';
+      button.style.background = 'white';
+      button.style.borderRadius = '3px';
+      button.onclick = function() { mymap.locate({setView: true, maxZoom: 16}); };
+      return button;
+   },
+   onRemove: function(mymap) {
+      // Nothing to do here
+   }
+});
+L.control.geolocation = function(opts) {
+   return new L.Control.Geolocation(opts);
+}
+L.control.geolocation({position:'topleft'}).addTo(mymap);
+
 </script>
 </body>
 
