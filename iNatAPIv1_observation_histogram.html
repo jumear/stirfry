@@ -43,7 +43,7 @@ function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
 function fpct(d,p=1) {
-   x = (d*100*(10^p))/(10^p);
+   x = d*100;
    return x.toFixed(p);
 };
 
@@ -100,7 +100,7 @@ function fresults(xobj) {
       faddelem('td',frow,null,null,'Total');
       faddelem('td',frow,null,null,'');
       faddelem('td',frow,'tar',null,fcomnum(t));
-      faddelem('td',frow,'tar',null,fpct(t/t));
+      faddelem('td',frow,'tar',null,fpct(t/t,2));
       faddelem('td',frow,'tar',null,'');
       document.getElementById('maxint').innerHTML=ms;
    }

@@ -35,10 +35,11 @@ winurlparams.delete('iconic_taxa');
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function fpct(d) {
-   x = Math.round(d*1000)/10;
-   return x.toFixed(1);
+function fpct(d,p=1) {
+   x = d*100;
+   return x.toFixed(p);
 };
+
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
