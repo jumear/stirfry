@@ -42,9 +42,9 @@ var l_interval = ( p_interval==='year' ) ? 'Year'
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function fpct(d) {
-   x = Math.round(d*1000)/10;
-   return x.toFixed(1);
+function fpct(d,p=1) {
+   x = (d*100*(10^p))/(10^p);
+   return x.toFixed(p);
 };
 
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
@@ -81,6 +81,7 @@ function fresults(xobj) {
       faddelem('td',hrow,null,null,l_date_field+' '+l_interval);
       faddelem('td',hrow,'tar',null,'Count');
       faddelem('td',hrow,'tar',null,'% of Total');
+      faddelem('td',hrow,'tar',null,'% of Max');
       var tbody = faddelem('tbody',table);
       var i=0;
       for (const property in robj) {
@@ -91,7 +92,8 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,i);
          faddelem('td',brow,null,null,property);
          faddelem('td',brow,'tar',null,fcomnum(c));
-         faddelem('td',brow,'tar',null,fpct(c/t));
+         faddelem('td',brow,'tar',null,fpct(c/t,2));
+         faddelem('td',brow,'tar',null,fpct(c/m));
       };
       var tfoot = faddelem('tfoot',table);
       var frow = faddelem('tr',tfoot);
@@ -99,6 +101,7 @@ function fresults(xobj) {
       faddelem('td',frow,null,null,'');
       faddelem('td',frow,'tar',null,fcomnum(t));
       faddelem('td',frow,'tar',null,fpct(t/t));
+      faddelem('td',frow,'tar',null,'');
       document.getElementById('maxint').innerHTML=ms;
    }
    else { faddelem('p',document.body,null,null,'No results returned.'); };
