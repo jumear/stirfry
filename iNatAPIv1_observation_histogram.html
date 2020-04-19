@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observation Histogram" />
+<title>iNaturalist Observation Histogram</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tfoot tr { font-weight:600; background:black; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+
+var p_date_field = winurlparams.get('date_field');
+var l_date_field = ( p_date_field==='created' ) ? 'Created' : 'Observed'; // default is observed
+
+var p_interval = winurlparams.get('interval');
+var l_interval = ( p_interval==='year' ) ? 'Year'
+   : ( p_interval==='month' ) ? 'Month'
+   : ( p_interval==='week' ) ? 'Week'
+   : ( p_interval==='day' ) ? 'Day'
+   : ( p_interval==='hour' ) ? 'Hour'
+   : ( p_interval==='week_of_year' ) ? 'Week of Year'
+   : 'Month of Year'; // default is month_of_year
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fpct(d) {
+   x = Math.round(d*1000)/10;
+   return x.toFixed(1);
+};
+
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function fresults(xobj) {
+//   faddelem('p',document.body,null,null,furl(famp(apiurl)));
+   var results = xobj.results;
+   if (results) {
+      var intdesc = l_date_field+' '+l_interval;
+      var robj = results[Object.keys(results)[0]];
+      var t=0;
+      var m=0;
+      var ms='';
+      for (const property in robj) {
+         var c=robj[property];
+         t=t+c; // total count
+         m=c>m?c:m; // max count
+      };
+      faddelem('p',document.body,null,null,'total records: '+fcomnum(xobj.total_results)+'<br />'
+         +'total observation count: '+fcomnum(t)+'<br />'
+         +intdesc.toLowerCase()+' max count: '+fcomnum(m)+'<br />'
+         +'max '+ intdesc.toLowerCase()+': <span id="maxint"></span>'
+         );
+      var table = faddelem('table',document.body,null,'main');
+      var thead = faddelem('thead',table);
+      var hrow = faddelem('tr',thead);
+      faddelem('td',hrow,null,null,'#');
+      faddelem('td',hrow,null,null,l_date_field+' '+l_interval);
+      faddelem('td',hrow,'tar',null,'Count');
+      faddelem('td',hrow,'tar',null,'% of Total');
+      var tbody = faddelem('tbody',table);
+      var i=0;
+      for (const property in robj) {
+         i++;
+         var c = robj[property];
+         ms=c<m?ms:(ms===''?property:ms+', '+property); // max day(s)
+         var brow = faddelem('tr',tbody);
+         faddelem('td',brow,null,null,i);
+         faddelem('td',brow,null,null,property);
+         faddelem('td',brow,'tar',null,fcomnum(c));
+         faddelem('td',brow,'tar',null,fpct(c/t));
+      };
+      var tfoot = faddelem('tfoot',table);
+      var frow = faddelem('tr',tfoot);
+      faddelem('td',frow,null,null,'Total');
+      faddelem('td',frow,null,null,'');
+      faddelem('td',frow,'tar',null,fcomnum(t));
+      faddelem('td',frow,'tar',null,fpct(t/t));
+      document.getElementById('maxint').innerHTML=ms;
+   }
+   else { faddelem('p',document.body,null,null,'No results returned.'); };
+};
+
+var apibase = 'https://api.inaturalist.org/v1/observations/histogram';
+var apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+var apirefurl = furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_histogram','Observation Histogram');
+faddelem('h1',document.body,null,null,'iNaturalist Observation Count by '+l_date_field+' '+l_interval);
+
+if (winurlsearchstr==='') {
+   faddelem('p',document.body,null,null,'This page will present results from the iNaturalist '+apirefurl+' API endpoint in a friendly format. This page requires that you append some parameters to your URL.');
+   faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?interval=day&d1=2010-01-01&user_id=bob'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?interval=day&d1=2010-01-01&user_id=bob'))+' in your browser.');
+   faddelem('p',document.body,null,null,"Note that if you use interval=day and date_field=observed, you can set a beginning date (ex. d1=2010-01-01) to pull back more than just the last year's observed days.<br />Similarly, if you use interval=day and date_field=created, you can set a beginning date (created_d1) to pull back more than just the last year's created days.");
+}
+else {
+   faddelem('p',document.body,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist '+apirefurl+' API endpoint.)');
+   fetch(apiurl)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+         return response.json();
+      })
+      .then((data) => { fresults(data); })
+      .catch((err) => {
+         console.error(err.message);
+         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+      });
+};
+
+</script>
+</body>
+
+</html>
