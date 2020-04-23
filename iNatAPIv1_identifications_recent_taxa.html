@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Identification Recent Taxa" />
+<title>iNaturalist Identification Recent Taxa</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tfoot tr { font-weight:600; background:black; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+
+var p_per_page = winurlparams.get('per_page') || 10;
+var p_page = winurlparams.get('page') || 1;
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fpct(d,p=1) {
+   x = d*100;
+   return x.toFixed(p);
+};
+//reformat an ISO formatted date string
+function fdate(str) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   str = str.replace(/z/i,' GMT'); //replaces Z (case insensitve) with GMT
+   str = str.replace(/([+-]\d{2}\:?\d{2})/,' GMT$1'); //adds GMT prefix to timezone offset
+   return str;
+};
+
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function fresults(xobj) {
+//   faddelem('p',document.body,null,null,furl(famp(apiurl)));
+   var results = xobj.results;
+   if (results) {
+      faddelem('p',document.body,null,null,'total records: '+fcomnum(xobj.total_results)+'<br />'
+         +'page: '+fcomnum(xobj.page)+'<br />'
+         +'per page: '+fcomnum(xobj.per_page)+'<br />'
+         +'all results available: '+xobj.all_results_available
+         );
+      var table = faddelem('table',document.body,null,'main');
+      var thead = faddelem('thead',table);
+      var hrow = faddelem('tr',thead);
+      faddelem('td',hrow,null,null,'taxon photo');
+      faddelem('td',hrow,null,null,'taxon name');
+      faddelem('td',hrow,null,null,'taxon common name');
+      faddelem('td',hrow,null,null,'taxon rank');
+      faddelem('td',hrow,null,null,'taxon = ID taxon');
+      faddelem('td',hrow,null,null,'ID #');
+      faddelem('td',hrow,null,null,'ID user photo');
+      faddelem('td',hrow,null,null,'ID user login');
+      //faddelem('td',hrow,null,null,'ID user name');
+      faddelem('td',hrow,null,null,'ID datetime');
+      faddelem('td',hrow,null,null,'ID category');
+      faddelem('td',hrow,null,null,'ID via computer vision');
+      faddelem('td',hrow,null,null,'ID on own obs');
+      faddelem('td',hrow,null,null,'Obs #');
+      //faddelem('td',hrow,null,null,'Obs user photo');
+      //faddelem('td',hrow,null,null,'Obs user login');
+      //faddelem('td',hrow,null,null,'Obs user name');
+      faddelem('td',hrow,null,null,'Obs observed');
+      faddelem('td',hrow,null,null,'Obs submitted');
+      faddelem('td',hrow,null,null,'Obs taxon photo');
+      faddelem('td',hrow,null,null,'Obs taxon name');
+      //faddelem('td',hrow,null,null,'Obs taxon common name');
+      //faddelem('td',hrow,null,null,'Obs taxon rank');
+      faddelem('td',hrow,null,null,'ID taxon = Obs taxon');
+
+      var tbody = faddelem('tbody',table);
+      for (i=0;i<results.length;i++) {
+         var brow = faddelem('tr',tbody);
+         faddelem('td',brow,null,null,'<img class="icon" src="'+(results[i].taxon.default_photo?results[i].taxon.default_photo.square_url:'')+'" />');
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].taxon_id,results[i].taxon.name));
+         faddelem('td',brow,null,null,results[i].taxon.preferred_common_name);
+         faddelem('td',brow,null,null,results[i].taxon.rank);
+         faddelem('td',brow,null,null,(results[i].taxon_id===results[i].identification.taxon.id?'✔':'❌'));
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/identifications/'+results[i].identification.id,results[i].identification.id));
+         faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].identification.user.icon+'" />');
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/people/'+results[i].identification.user.login,results[i].identification.user.login));
+         //faddelem('td',brow,null,null,results[i].identification.user.name);
+         faddelem('td',brow,null,null,fdate(results[i].identification.created_at));
+         faddelem('td',brow,null,null,results[i].identification.category);
+         faddelem('td',brow,null,null,(results[i].identification.vision?'✔':'❌'));
+         faddelem('td',brow,null,null,(results[i].identification.own_observation?'✔':'❌'));
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations/'+results[i].identification.observation.id,results[i].identification.observation.id));
+         //faddelem('td',brow,null,null,'');
+         //faddelem('td',brow,null,null,furl('https://www.inaturalist.org/people/'+results[i].identification.observation.user.login,results[i].identification.observation.user.login));
+         //faddelem('td',brow,null,null,results[i].identification.observation.user.name);
+         faddelem('td',brow,null,null,fdate(results[i].identification.observation.time_observed_at));
+         faddelem('td',brow,null,null,fdate(results[i].identification.observation.created_at));
+         faddelem('td',brow,null,null,'<img class="icon" src="'+(results[i].identification.observation.taxon.default_photo?results[i].identification.observation.taxon.default_photo.url:'')+'" />');
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].identification.observation.taxon.id,results[i].identification.observation.taxon.name));
+         //faddelem('td',brow,null,null,'');
+         //faddelem('td',brow,null,null,results[i].identification.observation.taxon.rank);
+         faddelem('td',brow,null,null,(results[i].identification.taxon.id===results[i].identification.observation.taxon.id?'✔':'❌'));
+      };
+   }
+   else { faddelem('p',document.body,null,null,'No results returned.'); };
+};
+
+var apibase = 'https://api.inaturalist.org/v1/identifications/recent_taxa';
+var apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+var apirefurl = furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_recent_taxa','Identification Recent Taxa');
+faddelem('h1',document.body,null,null,'iNaturalist Identification Recent Taxa');
+
+if (winurlsearchstr==='') {
+   faddelem('p',document.body,null,null,'This page will present results from the iNaturalist '+apirefurl+' API endpoint in a friendly format. This page requires that you append some parameters to your URL.');
+   faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?taxon_id=47126&place_id=35&quality_grade=needs_id,research&rank=species&category=improving,leading&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=47126&place_id=35&quality_grade=needs_id,research&rank=species&category=improving,leading&per_page=200'))+' in your browser.');
+   faddelem('p',document.body,null,null,"Note that by default the API will return 10 records per page. You can override that by setting a per_page parameter in the URL up to 200. I plan to add Next and Prev page buttons or links at some point, but for now, you can get the page you're interested in by setting the page parameter in the URL.");
+}
+else {
+   faddelem('p',document.body,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist '+apirefurl+' API endpoint.)');
+   fetch(apiurl)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+         return response.json();
+      })
+      .then((data) => { fresults(data); })
+      .catch((err) => {
+         console.error(err.message);
+         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+      });
+};
+
+</script>
+</body>
+
+</html>
