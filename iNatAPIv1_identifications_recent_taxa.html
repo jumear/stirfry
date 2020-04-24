@@ -17,8 +17,8 @@
    .icon { height:48px; width:48px; border-radius:50%; }
    img { margin:0px; padding:0px; border:0px; }
    a { text-decoration:none; }
-   .button { font-size:16pt; }
-   .button_inactive { font-size:16pt; opacity:0.5; }
+   .button { font-size:18pt; }
+   .button_inactive { font-size:18pt; opacity:0.5; }
 </style>
 </head>
 
@@ -76,8 +76,8 @@ function fresults(xobj) {
       var page_next = ((page_curr<page_max)?page_curr+1:null);
 
       faddelem('p',document.body,null,null,'total records: '+fcomnum(total_results)+'<br />'
-         +'page: '+fcomnum(page_curr)+'<br />'
          +'per page: '+fcomnum(per_page)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
          +'all results available: '+xobj.all_results_available
          );
 
@@ -85,32 +85,33 @@ function fresults(xobj) {
       var table = faddelem('table',document.body,null,'main');
       var thead = faddelem('thead',table);
       var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'rec #');
-      faddelem('td',hrow,null,null,'taxon photo');
-      faddelem('td',hrow,null,null,'taxon name');
-      faddelem('td',hrow,null,null,'taxon common name');
-      faddelem('td',hrow,null,null,'taxon rank');
-      faddelem('td',hrow,null,null,'taxon = ID taxon');
+      faddelem('td',hrow,null,null,'Rec #');
+      faddelem('td',hrow,null,null,'Taxon Photo');
+      faddelem('td',hrow,null,null,'Taxon Name');
+      faddelem('td',hrow,null,null,'Taxon Common Name');
+      faddelem('td',hrow,null,null,'Taxon Rank');
+      faddelem('td',hrow,null,null,'Taxon = ID Taxon');
       faddelem('td',hrow,null,null,'ID #');
-      faddelem('td',hrow,null,null,'ID user photo');
-      faddelem('td',hrow,null,null,'ID user login');
-      //faddelem('td',hrow,null,null,'ID user name');
-      faddelem('td',hrow,null,null,'ID datetime');
-      faddelem('td',hrow,null,null,'ID category');
-      faddelem('td',hrow,null,null,'ID via taxon change');
-      faddelem('td',hrow,null,null,'ID via comp vision');
-      faddelem('td',hrow,null,null,'ID on own obs');
+      faddelem('td',hrow,null,null,'ID User Photo');
+      faddelem('td',hrow,null,null,'ID User Login');
+      //faddelem('td',hrow,null,null,'ID User Name');
+      faddelem('td',hrow,null,null,'ID Datetime');
+      faddelem('td',hrow,null,null,'ID Category');
+      //faddelem('td',hrow,null,null,'ID via Taxon Change');
+      faddelem('td',hrow,null,null,'ID via Comp Vision');
+      faddelem('td',hrow,null,null,'ID on Own Obs');
       faddelem('td',hrow,null,null,'Obs #');
-      //faddelem('td',hrow,null,null,'Obs user photo');
-      //faddelem('td',hrow,null,null,'Obs user login');
-      //faddelem('td',hrow,null,null,'Obs user name');
-      faddelem('td',hrow,null,null,'Obs observed');
-      faddelem('td',hrow,null,null,'Obs submitted');
-      faddelem('td',hrow,null,null,'Obs taxon photo');
-      faddelem('td',hrow,null,null,'Obs taxon name');
-      //faddelem('td',hrow,null,null,'Obs taxon common name');
-      //faddelem('td',hrow,null,null,'Obs taxon rank');
-      faddelem('td',hrow,null,null,'ID taxon = Obs taxon');
+      faddelem('td',hrow,null,null,'Obs Grade');
+      //faddelem('td',hrow,null,null,'Obs User Photo');
+      //faddelem('td',hrow,null,null,'Obs User Login');
+      //faddelem('td',hrow,null,null,'Obs User Name');
+      faddelem('td',hrow,null,null,'Obs Observed');
+      faddelem('td',hrow,null,null,'Obs Submitted');
+      faddelem('td',hrow,null,null,'Obs Taxon Photo');
+      faddelem('td',hrow,null,null,'Obs Taxon Name');
+      //faddelem('td',hrow,null,null,'Obs Taxon Common Name');
+      //faddelem('td',hrow,null,null,'Obs Taxon Rank');
+      faddelem('td',hrow,null,null,'ID Taxon = Obs Taxon');
 
       // table rows
       var tbody = faddelem('tbody',table);
@@ -128,10 +129,11 @@ function fresults(xobj) {
          //faddelem('td',brow,null,null,results[i].identification.user.name);
          faddelem('td',brow,null,null,fdate(results[i].identification.created_at));
          faddelem('td',brow,null,null,results[i].identification.category);
-         faddelem('td',brow,null,null,(results[i].identification.taxon_change?'✔':'❌'));
+         //faddelem('td',brow,null,null,(results[i].identification.taxon_change?'✔':'❌'));
          faddelem('td',brow,null,null,(results[i].identification.vision?'✔':'❌'));
          faddelem('td',brow,null,null,(results[i].identification.own_observation?'✔':'❌'));
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations/'+results[i].identification.observation.id,results[i].identification.observation.id));
+         faddelem('td',brow,null,null,results[i].identification.observation.quality_grade);
          //faddelem('td',brow,null,null,'');
          //faddelem('td',brow,null,null,furl('https://www.inaturalist.org/people/'+results[i].identification.observation.user.login,results[i].identification.observation.user.login));
          //faddelem('td',brow,null,null,results[i].identification.observation.user.name);
@@ -162,7 +164,7 @@ faddelem('h1',document.body,null,null,'iNaturalist Identification Recent Taxa');
 if (winurlsearchstr==='') {
    faddelem('p',document.body,null,null,'This page will present results from the iNaturalist '+apirefurl+' API endpoint in a friendly format. This page requires that you append some parameters to your URL.');
    faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?taxon_id=47126&place_id=35&quality_grade=needs_id,research&rank=species&category=improving,leading&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=47126&place_id=35&quality_grade=needs_id,research&rank=species&category=improving,leading&per_page=200'))+' in your browser.');
-   faddelem('p',document.body,null,null,"Note that by default the API will return 10 records per page. You can override that by setting a per_page parameter in the URL up to 500. You can get the page you're interested in by setting the page parameter in the URL or using the buttons at the bottom of the page.");
+   faddelem('p',document.body,null,null,"Note that by default this API endpoint will return 10 records per page. You can override that by setting a per_page parameter in the URL up to 500. You can get the page you're interested in by setting the page parameter in the URL or by using the buttons at the bottom of the page.");
 }
 else {
    faddelem('p',document.body,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist '+apirefurl+' API endpoint.)');
