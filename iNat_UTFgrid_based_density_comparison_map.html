@@ -93,6 +93,7 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
          for (cx=0;cx<cellsPerTile.x/2;cx++) {
             //for (cy=0;cy<cellsPerTile.y;cy++) {
             for (cy=0;cy<cellsPerTile.y/2;cy++) {
+               //var cell = {x:cx,y:cy};
                var cell = {x:cx*2+1,y:cy*2+1};
                //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
                var d = [];
@@ -108,7 +109,7 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
                //var circleRadius = cellSize.x/2*marker.size;
                //ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
                var circleRadius = cellSize.x*marker.size;
-               ctx.arc(cell.x*cellSize.x+cellSize.x/2-2+offset.x,cell.y*cellSize.y+cellSize.y/2-2+offset.y,circleRadius,0,2*Math.PI,false);
+               ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
                if ( (d[0]===0) && (d[1]===0) ) { markerColor = 'rgba(128,128,128,0.15)'; } // light gray
                else if ( d[1]<=0 ) {markerColor = 'rgba(192,0,0,0.50)'; } // dull red
                else if ( d[0]<=0 ) { markerColor = 'rgba(0,0,192,0.50)'; } // dull blue
@@ -140,7 +141,7 @@ L.gridLayer.utfGridDensityMap = function (options) {
 </head>
 <body>
 <div id="nav">
-<p>This compares observation density between 2 time periods.</p>
+<p>This map compares iNaturalist observation density between 2 time periods.</p>
 <p>The current time period is defined by the paramters d1 (beginning observation date) and d2 (ending observation date), and the time period for comparison is defined by parameters d1b and d2b. You must input valid dates for all 4 of these parameters for this page to function properly. For example, this compares observations in 2019 to observations in 2018: <span id='exampleurl'></span>.</p>
 <p>This will also handle other filter parameters added to the URL. For example, to see just bird observations, add "&taxon_id=3" to the end of the URL.</p>
 <p>The comparison is visualized on a log base 10 scale, where a value of 1 (1000% current vs comparison period) or more is red, a value of 0.5 (~316%) is yellow, a value of 0 (100%, or no change) is green, a value of -0.5 (~32%) is cyan, and a value of -1 (10%) or less is blue. In locations where there are no observations in the current time period, there will be a blue ring (unfilled circle). In cases where the comparison time period has no observations, there will be a red ring in that location.</p>
@@ -287,10 +288,10 @@ var overlaymaps = {
    "iNaturalist Taxon Places": l_inat_taxonplace,
    "iNaturalist Place": l_inat_place,
    "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
+   "iNaturalist Observations Grid": l_inat_grid,
    "iNaturalist Observations Heatmap": l_inat_heat,
    "iNaturalist Observations Circles": l_inat_circles,
    "iNaturalist Observations Points": l_inat_points,
-   "iNaturalist Observations Grid": l_inat_grid,
    "iNaturalist Observations Change":l_utfgdm,
    "Debug Grid":l_debug,
 };

@@ -89,9 +89,16 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
       // draw markers on a canvas object
       .then((utfgrid) => {
          //draw markers on the tile canvas
-         for (cx=0;cx<cellsPerTile.x;cx++) {
-            for (cy=0;cy<cellsPerTile.y;cy++) {
-               var cell = {x:cx,y:cy};
+         //note that this code was originally written to assume a 64x64 UTFgrid.
+         //although the UTFgrid is still 64x64, the associated "grid tile" is actually only 32x32.
+         //theoretically, a 2x2 set of cells from the UTFgrid should correspond to a single cell from the "grid tile"; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
+         //so this code attempts to mimic a 32x32 "grid tile" by using the bottom-right cell from each 2x2 set of UTFgrid cells. 
+         //for (cx=0;cx<cellsPerTile.x;cx++) {
+         for (cx=0;cx<cellsPerTile.x/2;cx++) {
+            //for (cy=0;cy<cellsPerTile.y;cy++) {
+            for (cy=0;cy<cellsPerTile.y/2;cy++) {
+               //var cell = {x:cx,y:cy};
+               var cell = {x:cx*2+1,y:cy*2+1};
                //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
                var i = utfgrid.grid[cell.y].charCodeAt(cell.x);
                i = i-((i>=93)?34:(i>=35)?33:32);
@@ -110,8 +117,10 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
                   };
                   if (['circle','ring'].includes(markerType)) {
                      ctx.beginPath();
-                     var circleRadius = cellSize.x/2*marker.size;
-                     ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
+                     //var circleRadius = cellSize.x/2*marker.size;
+                     //ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
+                     var circleRadius = cellSize.x*marker.size;
+                     ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
                      if (markerType==='ring') {
                         ctx.strokeStyle = markerColor;
                         ctx.stroke();
@@ -123,7 +132,7 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
                   }
                   else { // default = if(markerType==='square')
                      ctx.fillStyle = markerColor;
-                     ctx.fillRect(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,cellSize.x*marker.size,cellSize.y*marker.size);
+                     ctx.fillRect(cell.x*cellSize.x-cellSize.x+offset.x,cell.y*cellSize.y-cellSize.y+offset.y,cellSize.x*marker.size*2,cellSize.y*marker.size*2);
                   };
                };
             };
@@ -146,6 +155,7 @@ L.gridLayer.utfGridDensityMap = function (options) {
 </head>
 <body>
 <div id="nav">
+<p>Note: This was originally created before the introduction of iNaturalist's Grid style tiles, which are conceptually the same kind of visualization as provided here. Unless you have a need for customization not available with the Grid tiles, it will be better to use those tiles in most cases.</p>
 <p>This is an example of an iNaturalist observation density map created using UTFgrid data and integrated as an extension of a Leaflet.js grid layer.</p>
 <p>By default, this example shows a version of the density map that scales on opacity. There is also a version that uses a color gradient, which can be selected in the layer selector (in the top-right corner of the map). If you prefer to see gradient markers by default instead of opacity markers, use defaultstyle=gradient in your URL parameter string.</p>
 <p>There are also other layers that may be useful for comparison purposes. By default, these are hidden, but you can choose to show taxon place, taxon range, and place layers by default by using showtaxonplace=true, showtaxonrange=true, and showplace=true, respectively.</p>
@@ -216,12 +226,12 @@ var l_utfgdm_opacity6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+wi
 var g_utfgdm_opacity = L.layerGroup([l_utfgdm_opacity1,l_utfgdm_opacity2,l_utfgdm_opacity3,l_utfgdm_opacity4,l_utfgdm_opacity5,l_utfgdm_opacity6]);
 
 // iNat UTFGrid-based density map scaled on a gradient; set different scaleFactors at different zoom levels
-var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
-var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000)},opacity:0.65})
-var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000)},opacity:0.65})
-var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[3]||100):100)},opacity:0.65})
-var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[4]||10):10)},opacity:0.65})
-var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.75,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[5]||5):5)},opacity:0.65})
+var l_utfgdm_gradient1 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:0,maxZoom:2,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[0]||100000):100000)},opacity:0.65})
+var l_utfgdm_gradient2 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:3,maxZoom:5,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[1]||10000):10000)},opacity:0.65})
+var l_utfgdm_gradient3 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:6,maxZoom:7,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[2]||1000):1000)},opacity:0.65})
+var l_utfgdm_gradient4 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:8,maxZoom:10,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[3]||100):100)},opacity:0.65})
+var l_utfgdm_gradient5 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:11,maxZoom:12,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[4]||10):10)},opacity:0.65})
+var l_utfgdm_gradient6 = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,minZoom:13,maxZoom:20,attribution:utfgridapi.attr,marker:{type:'square',size:0.9,scaleType:'grad_rainbow',scaleFactor:(sfarray!=null?(sfarray[5]||5):5)},opacity:0.65})
 var g_utfgdm_gradient = L.layerGroup([l_utfgdm_gradient1,l_utfgdm_gradient2,l_utfgdm_gradient3,l_utfgdm_gradient4,l_utfgdm_gradient5,l_utfgdm_gradient6]);
 
 // other iNaturalist Observation Layers
@@ -229,10 +239,12 @@ let inat_urlbase = 'https://api.inaturalist.org/v1/';
 let inat_points = {url:inat_urlbase+'points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'};
 let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
 let inat_heat = {url:inat_urlbase+'heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
+let inat_grid = {url:inat_urlbase+'grid/{z}/{x}/{y}.png',description:'iNaturalist Observations (Grid)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist observation data</a>'};
 let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
 var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{maxZoom:20, attribution:inat_points.attribution});
 var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams,{maxZoom:20, attribution:inat_circles.attribution});
 var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams,{maxZoom:20, attribution:inat_heat.attribution});
+var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{maxZoom:20, attribution:inat_grid.attribution});
 var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
 
 // Other iNaturalist Layers
@@ -306,12 +318,13 @@ var overlaymaps = {
    "iNaturalist Taxon Range": l_inat_taxonrange,
    "iNaturalist Taxon Places": l_inat_taxonplace,
    "iNaturalist Place": l_inat_place,
-   "iNaturalist Observations Density (opacity)":g_utfgdm_opacity,
-   "iNaturalist Observations Density (gradient)":g_utfgdm_gradient,
    "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
+   "iNaturalist Observations Grid": l_inat_grid,
    "iNaturalist Observations Heatmap": l_inat_heat,
    "iNaturalist Observations Circles": l_inat_circles,
    "iNaturalist Observations Points": l_inat_points,
+   "iNaturalist Observations Density (opacity)":g_utfgdm_opacity,
+   "iNaturalist Observations Density (gradient)":g_utfgdm_gradient,
    "Debug Grid":l_debug,
 };
 if (taxon_id===null) {
