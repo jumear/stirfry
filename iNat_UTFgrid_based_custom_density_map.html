@@ -29,6 +29,7 @@
 <body>
 <div id='nav'>
    <h3>Examples of Custom iNaturalist Observation Density Maps Based on UTFGrids</h3>
+   <p>Note: This was originally created before the introduction of iNaturalist's Grid style tiles, which are conceptually the same kind of visualization as provided here. Unless you have a need for customization not available with the Grid tiles, it will be better to use those tiles in most cases.</p>
    <p>iNaturalist provides <a href="https://api.inaturalist.org/v1/docs/#/Observation_Tiles">3 built-in types</a> of observation maps: point maps, circle heatmaps, and regular heatmaps. While useful, these maps have limited formatting options. It's possible to create custom maps using downloaded observation data, but that approach can be resource-intensive, especially for large datasets.</p>
    <p>But there's an alternative. iNaturalist provides <a href="https://api.inaturalist.org/v1/docs/#/UTFGrid">UTFgrids</a> which usually are paired with its map tiles to enhance user interactions. But these UTFgrids also contain observation counts per unique UTFgrid cell (aka cellcount) which can be used to produce ad hoc observation density maps.</p>
    <p>This page provides examples of such maps, representing only the tip of the iceberg of possibilities. Select examples from the list below or by specifying an example in the URL.</p>
@@ -174,111 +175,177 @@ function fstylecell(cell,cxy=[0,0],cvalue=1,marker={type:'square_full',scaleType
    };
 
    var cstyle = marker.type||'square_full';
-   var cxyspx = [4,4];
+   //var cxyspx = [4,4];
+   var cxyspx = [8,8];
    var cxyopx = [0,0];
 
    if (cstyle==='square') {
-      cxyspx = [2,2];
-      cxyopx = [1,1];
+      //cxyspx = [2,2];
+      //cxyopx = [1,1];
+      cxyspx = [4,4];
+      cxyopx = [2,2];
    }        
    else if (cstyle==='square_med') {
-      cxyspx = [3,3];
+      //cxyspx = [3,3];
+      cxyspx = [6,6];
+      cxyopx = [1,1];
    }
    else if (cstyle==='square_full') {
-      cxyspx = [4,4];
+      //cxyspx = [4,4];
+      cxyspx = [8,8];
    }
    else if (cstyle==='square_overlap') {
-      cxyspx = [6,6];
-      cxyopx = [-1,-1];
+      //cxyspx = [6,6];
+      //cxyopx = [-1,-1];
+      cxyspx = [12,12];
+      cxyopx = [-2,-2];
    }
    else if (cstyle==='square_tl') {
-      cxyspx = [2,2];
+      //cxyspx = [2,2];
+      cxyspx = [4,4];
       cxyopx = [0,0];
    }
    else if (cstyle==='square_tr') {
-      cxyspx = [2,2];
-      cxyopx = [2,0];
+      //cxyspx = [2,2];
+      //cxyopx = [2,0];
+      cxyspx = [4,4];
+      cxyopx = [4,0];
    }
    else if (cstyle==='square_bl') {
-      cxyspx = [2,2];
-      cxyopx = [0,2];
+      //cxyspx = [2,2];
+      //cxyopx = [0,2];
+      cxyspx = [4,4];
+      cxyopx = [0,4];
    }
    else if (cstyle==='square_br') {
+      //cxyspx = [2,2];
+      //cxyopx = [2,2];
+      cxyspx = [4,4];
+      cxyopx = [4,4];
+   }
+   else if (cstyle==='square_sm_tl') {
+      cxyspx = [3,3];
+      cxyopx = [1,1];
+   }
+   else if (cstyle==='square_sm_tr') {
+      cxyspx = [3,3];
+      cxyopx = [4,1];
+   }
+   else if (cstyle==='square_sm_bl') {
+      cxyspx = [3,3];
+      cxyopx = [1,4];
+   }
+   else if (cstyle==='square_sm_br') {
+      cxyspx = [3,3];
+      cxyopx = [4,4];
+   }
+   else if (cstyle==='pixel') {
+      //cxyspx = [1,1];
+      //cxyopx = [1,1];
+      cxyspx = [2,2];
+      cxyopx = [3,3];
+   }
+   else if (cstyle==='pixel_tl') {
+      //cxyspx = [1,1];
+      //cxyopx = [1,1];
       cxyspx = [2,2];
       cxyopx = [2,2];
    }
-   else if (cstyle==='pixel') {
-      cxyspx = [1,1];
-      cxyopx = [1,1];
-   }
-   else if (cstyle==='pixel_tl') {
-      cxyspx = [1,1];
-      cxyopx = [1,1];
-   }
    else if (cstyle==='pixel_tr') {
-      cxyspx = [1,1];
-      cxyopx = [3,1];
+      //cxyspx = [1,1];
+      //cxyopx = [3,1];
+      cxyspx = [2,2];
+      cxyopx = [4,2];
    }
    else if (cstyle==='pixel_bl') {
-      cxyspx = [1,1];
-      cxyopx = [1,3];
+      //cxyspx = [1,1];
+      //cxyopx = [1,3];
+      cxyspx = [2,2];
+      cxyopx = [2,4];
    }
    else if (cstyle==='pixel_br') {
-      cxyspx = [1,1];
-      cxyopx = [3,3];
+      //cxyspx = [1,1];
+      //cxyopx = [3,3];
+      cxyspx = [2,2];
+      cxyopx = [4,4];
    }
    else if (cstyle==='diamond') {
-      cxyspx = [2,2];
-      cell.style.transform = "rotate(45deg)";
-   }
-   else if (cstyle==='diamond_med') {
-      cxyspx = [2.5,2.5];
-      cell.style.transform = "rotate(45deg)";
-   }
-   else if (cstyle==='diamond_overlap') {
+      //cxyspx = [2,2];
       cxyspx = [4,4];
       cell.style.transform = "rotate(45deg)";
    }
+   else if (cstyle==='diamond_med') {
+      //cxyspx = [2.5,2.5];
+      cxyspx = [6,6];
+      cell.style.transform = "rotate(45deg)";
+   }
+   else if (cstyle==='diamond_overlap') {
+      //cxyspx = [4,4];
+      cxyspx = [8,8];
+      cell.style.transform = "rotate(45deg)";
+   }
    else if (cstyle==='circle') {
-      cxyspx = [2,2];
-      cxyopx = [1,1];
-      cell.style.borderRadius = '1px';
+      //cxyspx = [2,2];
+      //cxyopx = [1,1];
+      //cell.style.borderRadius = '1px';
+      cxyspx = [4,4];
+      cxyopx = [2,2];
+      cell.style.borderRadius = '2px';
    }
    else if (cstyle==='circle_med') {
-      cxyspx = [3,3];
-      cell.style.borderRadius = '1.5px';
+      //cxyspx = [3,3];
+      //cell.style.borderRadius = '1.5px';
+      cxyspx = [6,6];
+      cxyopx = [1,1];
+      cell.style.borderRadius = '3px';
    }
    else if (cstyle==='circle_overlap') {
-      cxyspx = [6,6];
-      cxyopx = [-1,-1];
-      cell.style.borderRadius = '3px';
+      //cxyspx = [6,6];
+      //cxyopx = [-1,-1];
+      //cell.style.borderRadius = '3px';
+      cxyspx = [12,12];
+      cxyopx = [-2,-2];
+      cell.style.borderRadius = '6px';
    }
    else if (cstyle==='ring') {
-      cxyspx = [2,2];
-      cell.style.borderRadius = '2px';
-      cell.style.borderWidth = '1px';
-      cell.style.borderColor = ccolor;
-      cell.style.borderStyle = 'solid';
-   }
-   else if (cstyle==='ring_square') {
-      cxyspx = [2,2];
-      cell.style.borderWidth = '1px';
-      cell.style.borderColor = ccolor;
-      cell.style.borderStyle = 'solid';
-   }
-   else if (cstyle==='ring_overlap') {
-      cxyspx = [2,2];
-      cxyopx = [-1,-1];
-      cell.style.borderRadius = '3px';
+      //cxyspx = [2,2];
+      //cell.style.borderRadius = '2px';
+      //cell.style.borderWidth = '1px';
+      cxyspx = [4,4];
+      cell.style.borderRadius = '4px';
       cell.style.borderWidth = '2px';
       cell.style.borderColor = ccolor;
       cell.style.borderStyle = 'solid';
    }
+   else if (cstyle==='ring_square') {
+      //cxyspx = [2,2];
+      //cell.style.borderWidth = '1px';
+      cxyspx = [4,4];
+      cell.style.borderWidth = '2px';
+      cell.style.borderColor = ccolor;
+      cell.style.borderStyle = 'solid';
+   }
+   else if (cstyle==='ring_overlap') {
+      //cxyspx = [2,2];
+      //cxyopx = [-1,-1];
+      //cell.style.borderRadius = '3px';
+      //cell.style.borderWidth = '2px';
+      cxyspx = [4,4];
+      cxyopx = [-2,-2];
+      cell.style.borderRadius = '6px';
+      cell.style.borderWidth = '4px';
+      cell.style.borderColor = ccolor;
+      cell.style.borderStyle = 'solid';
+   }
    else if (cstyle==='circle_big_blur') {
-      cxyspx = [6,6];
-      cxyopx = [-1,-1];
-      cell.style.borderRadius = '3px';
-      cell.style.filter = "blur(4px)";
+      //cxyspx = [6,6];
+      //cxyopx = [-1,-1];
+      //cell.style.borderRadius = '3px';
+      //cell.style.filter = "blur(4px)";
+      cxyspx = [12,12];
+      cxyopx = [-2,-2];
+      cell.style.borderRadius = '6px';
+      cell.style.filter = "blur(8px)";
    };
    cell.style.left=(cxpx*(cxy?cxy[0]:0)+cxyopx[0])+'px';
    cell.style.top=(cypx*(cxy?cxy[1]:0)+cxyopx[1])+'px';
@@ -297,6 +364,11 @@ function ftogglelayervis(checkbox) {
 };
 
 //this is the main function that creates tiles and cells and puts them into the document
+//note that this code was originally written to assume a 64x64 UTFgrid.
+//although the UTFgrid is still 64x64, the associated "grid tile" is actually only 32x32.
+//theoretically, a 2x2 set of cells from the UTFgrid should correspond to a single cell from the "grid tile"; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
+//so this code attempts to mimic a 32x32 "grid tile" by using the bottom-right cell from each 2x2 set of UTFgrid cells. 
+
 function fcreatelayer(lseq,ltype,lurl,marker=null) {
    var layer = faddelem('div',map,'layer',fltcid(lseq));
    layer.style.left='0px';
@@ -321,10 +393,13 @@ function fcreatelayer(lseq,ltype,lurl,marker=null) {
                var tx = data[0][1];
                var ty = data[0][2];
                var utfgrid = data[1];
-               for (cy=0;cy<=(cynum-1);cy++) {
-                  for (cx=0;cx<=(cxnum-1);cx++) {
+               //for (cy=0;cy<=(cynum-1);cy++) {
+               for (cy=0;cy<cynum/2;cy++) {
+                  //for (cx=0;cx<=(cxnum-1);cx++) {
+                  for (cx=0;cx<cxnum/2;cx++) {
                      //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
-                     var i = utfgrid.grid[cy].charCodeAt(cx);
+                     //var i = utfgrid.grid[cy].charCodeAt(cx);
+                     var i = utfgrid.grid[(cy*2+1)].charCodeAt(cx*2+1);
                      i = i-((i>=93)?34:(i>=35)?33:32);
                      var d = utfgrid.data[utfgrid.keys[i]];
                      if (d!=null) {
@@ -334,8 +409,10 @@ function fcreatelayer(lseq,ltype,lurl,marker=null) {
                      //Specifically, a cell from one tile can overlap another tile. Also, I could (in the future) allow the user to click on the div to trigger an action.
                      //However, the downside of the divs is that they are resource hungry, and maps with lots of these divs with complicated styles will easily overwhelm browsers like Edge.
                      //I have another page that has an example of UTFgrid-based density maps which uses canvas. That example integrates with Leaflet.js.
-                     var cell = faddelem('div',tile,'cell',fltcid(lseq,tx,ty,cx,cy));
-                     fstylecell(cell,[cx,cy],d.cellCount,marker);
+                     //var cell = faddelem('div',tile,'cell',fltcid(lseq,tx,ty,cx,cy));
+                     var cell = faddelem('div',tile,'cell',fltcid(lseq,tx,ty,cx*2,cy*2));
+                     //fstylecell(cell,[cx,cy],d.cellCount,marker);
+                     fstylecell(cell,[cx*2,cy*2],d.cellCount,marker);
                      };
                   };
                }; 
@@ -434,13 +511,15 @@ let bm_s_toner_lite = {url:'https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}
 let bm_s_terrain = {url:'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png',description:'Stamen Terrain',attribution:s_stamen_copyright};
 
 //the main iNat UTFGrid API
-//note that iNat technically provides 3 UTFGrid endpoints, but as far as I can tell, they provide identical functionality.
+// note that iNat provides 4 UTFGrid endpoints. the grid and heatmap endpoints are interchangeable and the ones to use for this application.
+// this was originally written when the heatmap utfgrid was like the colored_heatmap utfgrid. although it is still possible to use the colored_heatmap utfgrid, the results provided by that utfgrid are less consistently precise.
 let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
 
 //various tile layers
 let inat_points = {url:'https://api.inaturalist.org/v1/points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist</a>'};
 let inat_circles = {url:'https://api.inaturalist.org/v1/colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist</a>'};
 let inat_heat = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist</a>'};
+let inat_grid = {url:'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.png',description:'iNaturalist Observations (Grid)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist</a>'};
 let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF</a>'};
 
 /*
@@ -497,23 +576,28 @@ function fgetexample(seq) {
 //  one or more overlay layers
 if (fexample(1,'All Observations Worldwide','A basic map with green markers on a dark basemap. The opacity of the markers is scaled for a density factor. In this example, the density factor of Layer 1 is 100,000, which means that the cell that a given marker represents should have at least 100,000 observations in it if the marker is 100% opaque. Cells with fewer observations will be proportionately less opaque. The stock iNaturalist maps and a density map of iNaturalist observations from GBIF are included as layer options for comparison. (Click on the checkboxes below to toggle layers on/off.) This map also has a red point that marks iNaturalist HQ just to show that points can also be mapped.')) {
    fcreatebaselayer(0,bm_s_toner.url,bm_s_toner.description,bm_s_toner.attribution,true,'brightness(25%)'); 
-   fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'circle_med',scaleType:'opacity',scaleFactor:100000,colorRGB:[0,255,0]});
    fcreatertlayer(2,inat_points.url,inat_points.description,inat_points.attribution,false);
    fcreatertlayer(3,inat_circles.url,inat_circles.description,inat_circles.attribution,false);
    fcreatertlayer(4,inat_heat.url,inat_heat.description,inat_heat.attribution,false);
-   fcreatertlayer(5,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
+   fcreatertlayer(5,inat_grid.url,inat_grid.description,inat_grid.attribution,false);
+   fcreatertlayer(6,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
+   fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'circle_med',scaleType:'opacity',scaleFactor:100000,colorRGB:[0,255,0]});
    var lpoints = [
       {lat:37.769772,lng:-122.466126,descr:'California Academy of Sciences (iNaturalist HQ)'},
       // {lat:0,lng:0,descr:'center'},
    ];
-   fcreateptlayer(6,lpoints,null,null,true,{type:'diamond_overlap',scaleType:'opacity',scaleFactor:1,colorRGB:[255,0,0]});
+   fcreateptlayer(7,lpoints,null,null,true,{type:'diamond_overlap',scaleType:'opacity',scaleFactor:1,colorRGB:[255,0,0]});
 };
 if (fexample(2,'Worldwide Observations by Year (2016-2019)','This shows observations for 4 different years using markers of 4 different colors on a dark basemap. The markers for the different years appear in different corners of a given cell so that all 4 years can be visually represented together without overlapping.')) {
    fcreatebaselayer(0,bm_s_toner_lite.url,bm_s_toner_lite.description,bm_s_toner_lite.attribution,true,'brightness(25%) contrast(125%)');
-   fcreateutflayer(1,utfgridapi.url+'?year=2019','Observations in 2019',utfgridapi.attr,true,{type:'square_tl',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,0,0]});
-   fcreateutflayer(2,utfgridapi.url+'?year=2018','Observations in 2018',utfgridapi.attr,true,{type:'square_tr',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,255,0]});
-   fcreateutflayer(3,utfgridapi.url+'?year=2017','Observations in 2017',utfgridapi.attr,true,{type:'square_bl',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,255,0]});
-   fcreateutflayer(4,utfgridapi.url+'?year=2016','Observations in 2016',utfgridapi.attr,true,{type:'square_br',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,0,255]});
+//   fcreateutflayer(1,utfgridapi.url+'?year=2019','Observations in 2019',utfgridapi.attr,true,{type:'square_tl',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,0,0]});
+//   fcreateutflayer(2,utfgridapi.url+'?year=2018','Observations in 2018',utfgridapi.attr,true,{type:'square_tr',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,255,0]});
+//   fcreateutflayer(3,utfgridapi.url+'?year=2017','Observations in 2017',utfgridapi.attr,true,{type:'square_bl',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,255,0]});
+//   fcreateutflayer(4,utfgridapi.url+'?year=2016','Observations in 2016',utfgridapi.attr,true,{type:'square_br',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,0,255]});
+   fcreateutflayer(1,utfgridapi.url+'?year=2019','Observations in 2019',utfgridapi.attr,true,{type:'square_sm_tl',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,0,0]});
+   fcreateutflayer(2,utfgridapi.url+'?year=2018','Observations in 2018',utfgridapi.attr,true,{type:'square_sm_tr',scaleType:'opacity',scaleFactor:20000,colorRGB:[255,255,0]});
+   fcreateutflayer(3,utfgridapi.url+'?year=2017','Observations in 2017',utfgridapi.attr,true,{type:'square_sm_bl',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,255,0]});
+   fcreateutflayer(4,utfgridapi.url+'?year=2016','Observations in 2016',utfgridapi.attr,true,{type:'square_sm_br',scaleType:'opacity',scaleFactor:20000,colorRGB:[0,0,255]});
 };
 if (fexample(3,'2019 Observations in Western Europe (and Nearby Areas), Highlighting City Nature Challenge 2019 Observations','The previous map (Example 2) seemed to show high numbers of observations in a lot of new places Western Europe in 2019. This map uses 2 different markers to show where CNC 2019 observations coincided with all 2019 observations. The markers use the same opacity scale (density factor). Where CNC 2019 obervations were not associated with one of the high-observations areas, the map may give an idea of places to promote CNC in 2020.')) {
    fmapextent({swlat:29.24411828132679,swlng:-12.73389295962346,nelat:61.69814729146579,nelng:49.55155475708949});
@@ -529,7 +613,8 @@ if (fexample(4,'Observations in South / East Asia','This map shows the same data
    fcreatertlayer(3,inat_points.url,inat_points.description,inat_points.attribution,false);
    fcreatertlayer(4,inat_circles.url,inat_circles.description,inat_circles.attribution,false);
    fcreatertlayer(5,inat_heat.url,inat_heat.description,inat_heat.attribution,false);
-   fcreatertlayer(6,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
+   fcreatertlayer(6,inat_grid.url,inat_grid.description,inat_grid.attribution,false);
+   fcreatertlayer(7,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
 };
 if (fexample(5,'Monarch Observations by Month (July 2019 to October 2019), aka Fall 2019 Monarch Migration','This applies some concepts from previous example maps, along with a filter on a specific taxon, to show geographic shifts in observations for that taxon over time.')) {
    fmapextent({swlat:13.290435858313753,swlng:-125.83712134009516,nelat:52.407256269196154,nelng:-63.551673623382214}); // Continental US + Mexico
@@ -542,11 +627,16 @@ if (fexample(5,'Monarch Observations by Month (July 2019 to October 2019), aka F
 if (fexample(6,'Observations of Different Kinds of Organisms in the Greater Houston Area (Houston, TX, USA)','This uses the 4-corners-of-a-cell technique from previous example maps to visualize observations for 4 different kinds of organisms. It also uses a terrain basemap just for fun. This is similar to the pin maps that iNaturalist provides (included below as a layer option), but instead of each marker representing a single random observation, they represent a group of observations in a given cell on the map, with opacity scaled for observation density. (Click on the checkboxes below to toggle layers on/off.)')) {
    fmapextent({swlat:28.779301713220775,swlng:-96.61523133516312,nelat:30.609263330698013,nelng:-94.20131103135645}); // Greater Houston
    fcreatebaselayer(0,bm_s_terrain.url,bm_s_terrain.description,bm_s_terrain.attribution,true,'brightness(80%) saturate(50%)'); 
-   fcreateutflayer(1,utfgridapi.url+'?taxon_id=47126','Observations of Plants',utfgridapi.attr,true,{type:'square_tl',scaleType:'opacity',scaleFactor:75,colorRGB:[0,255,0]}); // plants
-   fcreateutflayer(2,utfgridapi.url+'?taxon_id=47170','Observations of Fungi',utfgridapi.attr,true,{type:'square_bl',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,255]}); // fungi
-   fcreateutflayer(3,utfgridapi.url+'?taxon_id=1&without_taxon_id=355675','Observations of Invertebrates (Animals not Vertebrates)',utfgridapi.attr,true,{type:'square_tr',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,0]}); // invertebrates (non-vertebrate animals)
-   fcreateutflayer(4,utfgridapi.url+'?taxon_id=355675','Observations of Vertebrates',utfgridapi.attr,true,{type:'square_br',scaleType:'opacity',scaleFactor:75,colorRGB:[0,0,255]}); // vertebrates
+//   fcreateutflayer(1,utfgridapi.url+'?taxon_id=47126','Observations of Plants',utfgridapi.attr,true,{type:'square_tl',scaleType:'opacity',scaleFactor:75,colorRGB:[0,255,0]}); // plants
+//   fcreateutflayer(2,utfgridapi.url+'?taxon_id=47170','Observations of Fungi',utfgridapi.attr,true,{type:'square_bl',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,255]}); // fungi
+//   fcreateutflayer(3,utfgridapi.url+'?taxon_id=1&without_taxon_id=355675','Observations of Invertebrates (Animals not Vertebrates)',utfgridapi.attr,true,{type:'square_tr',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,0]}); // invertebrates (non-vertebrate animals)
+//   fcreateutflayer(4,utfgridapi.url+'?taxon_id=355675','Observations of Vertebrates',utfgridapi.attr,true,{type:'square_br',scaleType:'opacity',scaleFactor:75,colorRGB:[0,0,255]}); // vertebrates
+   fcreateutflayer(1,utfgridapi.url+'?taxon_id=47126','Observations of Plants',utfgridapi.attr,true,{type:'pixel_tl',scaleType:'opacity',scaleFactor:75,colorRGB:[0,255,0]}); // plants
+   fcreateutflayer(2,utfgridapi.url+'?taxon_id=47170','Observations of Fungi',utfgridapi.attr,true,{type:'pixel_bl',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,255]}); // fungi
+   fcreateutflayer(3,utfgridapi.url+'?taxon_id=1&without_taxon_id=355675','Observations of Invertebrates (Animals not Vertebrates)',utfgridapi.attr,true,{type:'pixel_tr',scaleType:'opacity',scaleFactor:75,colorRGB:[255,0,0]}); // invertebrates (non-vertebrate animals)
+   fcreateutflayer(4,utfgridapi.url+'?taxon_id=355675','Observations of Vertebrates',utfgridapi.attr,true,{type:'pixel_br',scaleType:'opacity',scaleFactor:75,colorRGB:[0,0,255]}); // vertebrates
    fcreatertlayer(5,inat_points.url+'?taxon_id=47126,47170,1',inat_points.description+' &ndash; Plants, Fungi, and Animals',inat_points.attribution,false);
+   fcreatertlayer(6,inat_grid.url+'?taxon_id=47126,47170,1',inat_grid.description+' &ndash; Plants, Fungi, and Animals',inat_grid.attribution,false);
 };
 if (fexample(7,"A Single User's Contribution to Observations in Memorial Park (Houston, TX, USA)","This overlays a single user's observations on top of all observations in an area to show how that user's observations contributed to overall observations in the area. Relatively large markers with dark colors are used in this map to allow for maximum visibility on top of a white basemap. This particular marker will overlap with neighboring markers, providing extra emphasis to cells that have neighboring cells with observations.")) {
    fmapextent({swlat:29.75417166016996,swlng:-95.45843155123293,nelat:29.7783586056903,nelng:-95.42147004045546}); // Memorial Park (Houston, TX)
@@ -561,7 +651,8 @@ if (fexample(8,"Observations in Australia, New Zealand, and Nearby Nations","Thi
    fcreatertlayer(2,inat_points.url,inat_points.description,inat_points.attribution,false);
    fcreatertlayer(3,inat_circles.url,inat_circles.description,inat_circles.attribution,false);
    fcreatertlayer(4,inat_heat.url,inat_heat.description,inat_heat.attribution,false);
-   fcreatertlayer(5,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
+   fcreatertlayer(5,inat_grid.url,inat_grid.description,inat_grid.attribution,false);
+   fcreatertlayer(6,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
 };
 if (fexample(9,"Observations in Africa","This is an attempt to achieve a logarithmic scale gradient using 5 increasingly larger overlapping different-colored opacity-scaled markers on the same data set but different linear scales. A density map of iNaturalist observations from GBIF is included as a layer option for comparison. (Click on the checkboxes below to toggle layers on and off.)")) {
    fmapextent({swlat:-36.24407547872301,swlng:-19.965530715489194,nelat:38.65127535425379,nelng:54.68348971793671}); // Africa
@@ -569,7 +660,8 @@ if (fexample(9,"Observations in Africa","This is an attempt to achieve a logarit
    fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'pixel',scaleType:'opacity',scaleFactor:10,colorRGB:[0,0,255]});
    fcreateutflayer(2,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'pixel',scaleType:'opacity',scaleFactor:100,colorRGB:[0,255,0]});
    fcreateutflayer(3,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'square',scaleType:'opacity',scaleFactor:1000,colorRGB:[255,255,0]});
-   fcreateutflayer(4,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'square',scaleType:'opacity',scaleFactor:10000,colorRGB:[255,0,0]});
+//   fcreateutflayer(4,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'square',scaleType:'opacity',scaleFactor:10000,colorRGB:[255,0,0]});
+   fcreateutflayer(4,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'square_med',scaleType:'opacity',scaleFactor:10000,colorRGB:[255,0,0]});
    fcreateutflayer(5,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'diamond_overlap',scaleType:'opacity',scaleFactor:100000,colorRGB:[255,0,255]});
    fcreatertlayer(6,gbif_density_point_py.url,gbif_density_point_py.description,gbif_density_point_py.attribution,false);
 };
@@ -579,6 +671,7 @@ if (fexample(10,"Observations in South America","The markers in this example are
    fcreateutflayer(1,utfgridapi.url,'All Observations',utfgridapi.attr,true,{type:'circle_big_blur',scaleType:'opacity',scaleFactor:7500,colorRGB:[192,64,0]});
    fcreatertlayer(2,inat_heat.url,inat_heat.description,inat_heat.attribution,false);
    fcreatertlayer(3,inat_circles.url,inat_circles.description,inat_circles.attribution,false);
+   fcreatertlayer(4,inat_grid.url,inat_grid.description,inat_grid.attribution,false);
 };
 if (elist.value==='nosel') { faddelem('p',mddescr,null,null,'No example found with the requested ID. Please specify another example ID or choose an example from the list above.'); };
 
