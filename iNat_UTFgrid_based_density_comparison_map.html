@@ -57,10 +57,11 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
       var ctx = tile.getContext('2d');
 
       // default marker setups
-      var dmarker = {offset:{x:0,y:0},size:0.75};
+      var dmarker = {type:'relative',offset:{x:0,y:0},size:0.75};
       var marker = null;
       if (this.options.marker) {
          marker = this.options.marker;
+         marker.type = marker.type || dmarker.type;
          marker.size = marker.size || dmarker.size;
          marker.offset = marker.offset || dmarker.offset;
       }
@@ -103,25 +104,59 @@ L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
                   d.push(utfgrid[u].data[utfgrid[u].keys[i]]);
                };
                for (j=0;j<d.length;j++) { d[j] = d[j] ? d[j].cellCount||0 : 0; } // set d = cellCount (set to 0 if undefined)
-
                var markerColor = 0; // default to black
-               ctx.beginPath();
-               //var circleRadius = cellSize.x/2*marker.size;
-               //ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
-               var circleRadius = cellSize.x*marker.size;
-               ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
-               if ( (d[0]===0) && (d[1]===0) ) { markerColor = 'rgba(128,128,128,0.15)'; } // light gray
-               else if ( d[1]<=0 ) {markerColor = 'rgba(192,0,0,0.50)'; } // dull red
-               else if ( d[0]<=0 ) { markerColor = 'rgba(0,0,192,0.50)'; } // dull blue
+               if (marker.type==='absolute') {
+                  ctx.beginPath();
+                  //var circleRadius = cellSize.x/2*marker.size;
+                  //ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
+                  var circleRadius = cellSize.x*marker.size;
+                  ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
+                  var dd = d[0]-d[1];
+                  if ( (d[0]===0) && (d[1]===0) ) { // light gray
+                     markerColor = 'rgba(128,128,128,0.15)';
+                     ctx.strokeStyle = markerColor;
+                  } 
+                  else if ( dd===0 ) { // dull gray
+                     markerColor = 'rgba(64,64,64,0.50)';
+                     ctx.strokeStyle = 'rgba(64,64,64,0.50)';
+                  } 
+                  else if ( dd<0 ) {
+                     var f = Math.log10(-dd);
+                     f = (f>4)?4:f;
+                     markerColor = 'hsla('+(120+(f*120/3))+',100%,50%,0.5)'; // green is -1, cyan is -10, greenish blue is -100, blue is -1000 
+                     ctx.fillStyle = markerColor;
+                     ctx.fill();
+                     ctx.strokeStyle = 'rgba(64,64,64,0.50)'
+                  }
+                  else {
+                     var f = Math.log10(dd);
+                     f = (f>4)?4:f;
+                     markerColor = 'hsla('+(120-(f*120/3))+',100%,50%,0.5)'; // green is +1, yellow is +10, orange is +100, red is +1000 
+                     ctx.fillStyle = markerColor;
+                     ctx.fill();
+                     ctx.strokeStyle = markerColor;
+                  };
+                  ctx.stroke();
+               }
                else {
-                  var f = Math.log10(d[0]/d[1]);
-                  f = (f<-1)?-1:(f>1)?1:f;
-                  markerColor = 'hsla('+(120-(f*120))+',100%,50%,0.5)'; // green is no change (x1), high increase (x10) is red, high decrease (x0.1) is blue
-                  ctx.fillStyle = markerColor;
-                  ctx.fill();
+                  ctx.beginPath();
+                  //var circleRadius = cellSize.x/2*marker.size;
+                  //ctx.arc(cell.x*cellSize.x+cellSize.x/2+offset.x,cell.y*cellSize.y+cellSize.y/2+offset.y,circleRadius,0,2*Math.PI,false);
+                  var circleRadius = cellSize.x*marker.size;
+                  ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
+                  if ( (d[0]===0) && (d[1]===0) ) { markerColor = 'rgba(128,128,128,0.15)'; } // light gray
+                  else if ( d[1]<=0 ) {markerColor = 'rgba(192,0,0,0.50)'; } // dull red
+                  else if ( d[0]<=0 ) { markerColor = 'rgba(0,0,192,0.50)'; } // dull blue
+                  else {
+                     var f = Math.log10(d[0]/d[1]);
+                     f = (f<-1)?-1:(f>1)?1:f;
+                     markerColor = 'hsla('+(120-(f*120))+',100%,50%,0.5)'; // green is no change (x1), high increase (x10) is red, high decrease (x0.1) is blue
+                     ctx.fillStyle = markerColor;
+                     ctx.fill();
+                  };
+                  ctx.strokeStyle = markerColor;
+                  ctx.stroke();
                };
-               ctx.strokeStyle = markerColor;
-               ctx.stroke();
             };
          };
       });  
@@ -144,7 +179,8 @@ L.gridLayer.utfGridDensityMap = function (options) {
 <p>This map compares iNaturalist observation density between 2 time periods.</p>
 <p>The current time period is defined by the paramters d1 (beginning observation date) and d2 (ending observation date), and the time period for comparison is defined by parameters d1b and d2b. You must input valid dates for all 4 of these parameters for this page to function properly. For example, this compares observations in 2019 to observations in 2018: <span id='exampleurl'></span>.</p>
 <p>This will also handle other filter parameters added to the URL. For example, to see just bird observations, add "&taxon_id=3" to the end of the URL.</p>
-<p>The comparison is visualized on a log base 10 scale, where a value of 1 (1000% current vs comparison period) or more is red, a value of 0.5 (~316%) is yellow, a value of 0 (100%, or no change) is green, a value of -0.5 (~32%) is cyan, and a value of -1 (10%) or less is blue. In locations where there are no observations in the current time period, there will be a blue ring (unfilled circle). In cases where the comparison time period has no observations, there will be a red ring in that location.</p>
+<p>By default, the comparison is relative (A/B), and it is visualized on a log base 10 scale, where a value of 1 (1000% current vs comparison period) or more is red, a value of 0.5 (~316%) is yellow, a value of 0 (100%, or no change) is green, a value of -0.5 (~32%) is cyan, and a value of -1 (10%) or less is blue. In locations where there are no observations in the current time period, there will be a blue ring (unfilled circle). In cases where the comparison time period has no observations, there will be a red ring in that location.</p>
+<p>There is also an optional absolute comparison (A-B), and it can be selected in the layer selector (in the top-right corner of the map). If you prefer absolute comparison by default instead of relative, use defaultstyle=absolute in your URL parameter string. Increases (A-B>0) are visualized on a log base 10 scale where a value of 0 (+1) is green, 1 (+10) is yellow-green, 2 (+100) is orange, 3 (+1000) is red, and 4 (+10000) or more is magenta. Decreases (A-B>0) have a gray ring and are fill-colored on an opposite log base 10 scale where 0 (-1) is green, 1 (-10) is blue-green, 2 (-100) is light blue, 3 (-1000) is dark blue, and 4 (-10000) or more is magenta. Zero change is denoted by a gray ring with no fill.</p>
 <p>Default map center is 0,0 and default zoom is 2. You can change this by setting centerlat, centerlng, and defaultzoom parameters appropriately. Finally, you can hide the left pane by using hideleftpane=true.</p>
 <p>For more information and other examples of UTFgrid-based density maps, see <span id='otherpage'></span></p>
 </div>
@@ -169,6 +205,7 @@ if (scale_factor) {
 var centerlat = winurlparams.get('centerlat') || 0;
 var centerlng = winurlparams.get('centerlng') || 0;
 var defaultzoom = winurlparams.get('defaultzoom') || 2;
+var defaultstyle = winurlparams.get('defaultstyle') || 'relative';
 var hideleftpane = winurlparams.get('hideleftpane') || 'false';
 var showtaxonplace = winurlparams.get('showtaxonplace') || 'false';
 var showtaxonrange = winurlparams.get('showtaxonrange') || 'false';
@@ -186,6 +223,7 @@ winurlparams.delete('scale_factor');
 winurlparams.delete('centerlat');
 winurlparams.delete('centerlng');
 winurlparams.delete('defaultzoom');
+winurlparams.delete('defaultstyle');
 winurlparams.delete('hideleftpane');
 winurlparams.delete('showtaxonplace');
 winurlparams.delete('showtaxonrange');
@@ -201,7 +239,8 @@ document.getElementById('exampleurl').innerHTML = '<a href="'+exampleurl+'">'+ex
 let utfgridapi = {url:'https://api.inaturalist.org/v1/heatmap/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_heatmap_zoom_x_y_grid_json">iNaturalist</a>'};
 
 // iNat UTFGrid-based density map
-var l_utfgdm = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75}})
+var l_utfgdm_rel = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{type:'relative', size:0.75}})
+var l_utfgdm_abs = L.gridLayer.utfGridDensityMap({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{type:'absolute', size:0.75}});
 
 // other iNaturalist Observation Layers
 let inat_urlbase = 'https://api.inaturalist.org/v1/';
@@ -254,7 +293,7 @@ if (taxon_id!==null) {
 if (place_id!==null) { 
    if (showplace==='true') {defaultlayers.push(l_inat_place)};
 };
-defaultlayers.push(l_utfgdm);
+defaultlayers.push(defaultstyle==='absolute'?l_utfgdm_abs:l_utfgdm_rel);
 
 // create map, and set default center coordinates, zoom level, and layers
 var mymap = L.map('mapid', {
@@ -292,7 +331,8 @@ var overlaymaps = {
    "iNaturalist Observations Heatmap": l_inat_heat,
    "iNaturalist Observations Circles": l_inat_circles,
    "iNaturalist Observations Points": l_inat_points,
-   "iNaturalist Observations Change":l_utfgdm,
+   "iNaturalist Observations Relative Comparison":l_utfgdm_rel,
+   "iNaturalist Observations Absolute Comparison":l_utfgdm_abs,
    "Debug Grid":l_debug,
 };
 if (taxon_id===null) {
