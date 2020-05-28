@@ -1,0 +1,35 @@
+<html>
+<head>
+</head>
+<style>
+   body { margin:10px; }
+   h2 { margin:30px 10px 10px 10px; padding:0px; font:15pt sans-serif; }
+   p { margin:10px; padding:0px; font:10pt sans-serif; }
+   .highlight { color:orange; }
+</style>
+
+<body>
+
+<h2>Default Audio Control</h2>
+<p>
+   &lt;audio controls preload="none"&gt;<br />
+   &lt;source src="https://static.inaturalist.org/sounds/93996.wav" type="audio/x-wav"&gt;<br />
+   &lt;/audio&gt;<br />
+</p>
+<audio controls preload="none">
+<source src="https://static.inaturalist.org/sounds/93996.wav" type="audio/x-wav">
+</audio>
+
+<h2>Audio Control with Nodownload Option</h2>
+<!--// see https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/controlsList //-->
+<p>
+   &lt;audio controls <span class="highlight">controlsList="nodownload"</span> preload="none"&gt;<br />
+   &lt;source src="https://static.inaturalist.org/sounds/93996.wav" type="audio/x-wav"&gt;<br />
+   &lt;/audio&gt;<br />
+</p>
+<audio controls controlsList="nodownload" preload="none">
+<source src="https://static.inaturalist.org/sounds/93996.wav" type="audio/x-wav">
+</audio>
+
+</body>
+</html>
