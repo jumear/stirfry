@@ -1,0 +1,695 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="Print-Friendly iNaturalist Observations" />
+<title>Print-Friendly iNaturalist Observations</title>
+
+<style>
+   @media print {
+      .no-print, .no-print * { display:none !important; height:0px; }
+      .obsdiv { position:relative; page-break-after:always; }
+   }
+   @media screen {
+      .obsdiv { margin: 1em 1em 0em 1em; }
+      .no-print { background: beige; }
+   }
+   body { margin:0px; padding:0px; font:10pt sans-serif; }
+   h1 { margin:0px; padding:0px; font-size:16pt; }
+   p { margin:0px; padding:0px; font-size:10pt; padding-left:1.5em; text-indent:-1.5em; }
+   ul, dl { font-size:10pt; margin:0px; padding-left:1.5em; }
+   a { text-decoration:none; color:green; }
+   .label { font-size:10pt; }
+   .withdrawn { text-decoration:line-through; }
+   .intext { width:100%; }
+   .smtext {font-size:8pt; vertical-align:baseline;}
+   div { break-inside:avoid-page; }
+   figure { display:inline-grid; margin:0em; break-inside:avoid-page; border:1px dotted black; padding:0.5em; }
+   #settings { padding:0.25em; }
+   .grade { font-size:10pt; font-weight:500; }
+   .obsthumb { position:absolute; right:1em; margin:0px; }
+   .placedivs { display:flex; }
+   .placeulc { margin-right:10px; }
+   .placespanmt { width:50px; }
+   dt { display:list-item; list-style-type:disc; }
+   dd { display:list-item; list-style-type:circle; margin-left:1em; }
+   .mapdiv { height:3.5in; width:5in; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
+</head>
+
+<body>
+<div class="no-print" id="settings">
+<p>
+This is *intended* to pull observations from iNaturalist into an easy-to-print format, given parameters input below.
+Sections in beige will not be printed.
+</p><br />
+<p>
+To work within iNaturalist API limits, this will retrieve data in sets of up to 30 records at a time. To get each additional set of 30 records, scroll to the end of the page.
+To clear results so that you can query with new parameters, refresh the page using your browser controls.
+</p><br />
+<p>
+To do in future versions of this page:
+<br />1. Add additional parameter fields
+<br />2. *Try* to add page numbering and other footer/header items. (HTML doesn't seem to support this very well as of 2020.)
+<br />3. Code the map thumbnail a little more elegantly. (Right now, printing it requires that background images be printed.)
+<br />4. Improve miscellanous formatting and coding
+</p>
+<br />
+<form action="javascript:fquery()">
+   <fieldset>
+      <legend>Query Parameters (separate multiple values with commas)</legend> 
+      Observation IDs:<br /><input type="text" name="inobs" id="inobs" class="intext" /><br />
+      User IDs:<br /><input type="text" name="inuser" id="inuser" class="intext" /><br />
+      Place IDs:<br /><input type="text" name="inplace" id="inplace" class="intext" /><br />
+      Project IDs:<br /><input type="text" name="inproj" id="inproj" class="intext" /><br />
+      Taxon IDs:<br /><input type="text" name="intaxon" id="intaxon" class="intext" /><br />
+      Observed From YYYY/MM/DD:<br /><input type="text" name="inobsdtfrom" id="inobsdtfrom" class="intext" /><br />
+      Observed To YYYY/MM/DD:<br /><input type="text" name="inobsdtto" id="inobsdtto" class="intext" />
+      Sort by ID:
+         <input type="radio" name="inorder" value="asc" id="inorderasc" class="inradio" checked />Asc
+         <input type="radio" name="inorder" value="desc" id="inorderdesc" class="inradio" />Desc<br /><br />
+      Include:
+         <input type="checkbox" name="inget" value="ic" id="ingetic" class="incheckbox" checked />Identifications and Comments
+         <input type="checkbox" name="inget" value="tag" id="ingettag" class="incheckbox" checked />Tags
+         <input type="checkbox" name="inget" value="photo" id="ingetphoto" class="incheckbox" checked />Photos
+         <input type="checkbox" name="inget" value="sound" id="ingetsound" class="incheckbox" checked />Sounds
+         <input type="checkbox" name="inget" value="proj" id="ingetproj" class="incheckbox" checked />Projects
+         <input type="checkbox" name="inget" value="annot" id="ingetannot" class="incheckbox" checked />Annotations
+         <input type="checkbox" name="inget" value="obsfld" id="ingetobsfld" class="incheckbox" checked />Observation Fields
+         <input type="checkbox" name="inget" value="ic" id="ingetdqa" class="incheckbox" checked />Data Quality Assessments
+         <input type="checkbox" name="inget" value="fave" id="ingetfave" class="incheckbox" checked />Faves
+         <input type="checkbox" name="inget" value="map" id="ingetmapt" class="incheckbox" />Map (Thumbnail)
+         <input type="checkbox" name="inget" value="map" id="ingetmap" class="incheckbox" />Map (Detail)
+      <br /><br />
+      <input type="submit" name="submit" id="submit" value="Query" />
+   </fieldset>
+</form>
+</div>
+<script>
+var g_page = 1; // page to pull back; start at 1 and increment after each query
+var g_perset = 30; // records returned per page
+var g_enable_query = true;
+var g_enable_query_addtl = false;
+var g_recs_expected = -1;
+var g_recs_remaining = 0;
+var g_recs_retrieved = 0;
+var g_sort_order = 'asc'; // set to asc by default
+var g_query_string = '';
+
+var g_get_photo = true;
+var g_get_sound = true;
+var g_get_proj = true;
+var g_get_annot = true;
+var g_get_dqa = true;
+var g_get_obsfld = true;
+var g_get_ic = true;
+var g_get_fave = true;
+var g_get_tag = true;
+var g_get_mapt = true;
+var g_get_map = true;
+
+var g_place = [];
+//g_place.push({id:1,admin_level:0,name:'United States'});
+//g_place.push({id:18,admin_level:1,name:'Texas'});
+//g_place.push({id:2701,admin_level:2,name:'Harris'});
+
+var g_project = [];
+//g_project.push({id:544,title:'Plants of Texas'});
+
+function flabel(label) { return '<span class="label">'+label+':</span> '; };
+//function fidlink(suburl,typeid) { return ' (#<a href="https://www.inaturalist.org/'+suburl+'/'+typeid+'">'+typeid+'</a>)'; };
+function fidlink(suburl,typeid) { return ' <span class="smtext">[<a href="https://www.inaturalist.org/'+suburl+'/'+typeid+'">'+typeid+'</a>]</span>'; };
+function furl(url) { return '<a href="'+url+'">'+url+'</a>'; };
+function fphotourl(url) {
+   var s = ftruncparam(url);
+   s = s.replace('static.','www.');
+   s = s.substring(0,s.search('/small'));
+   return s;
+};
+function ftruncparam(url) {
+   var p = url.search('\\?');
+   if (p>=0) { return url.substring(0,p); };
+   return url;
+};
+//translate date string to date value (for date comparison)
+function fdateval(str) {
+   var x = new Date(str);
+   return x;
+};
+//reformat an ISO formatted date string
+function fdate(str) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+   str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace('+00:00','±00:00');
+   return str;
+};
+function ftaxon(obj,addinfo=false) { 
+   if (obj) {
+      var s = obj.rank?'('+obj.rank+') ':'';
+      s += obj.name+fidlink('taxa',obj.id);
+      s += obj.preferred_common_name?' / '+obj.preferred_common_name:'';
+      if (addinfo) { s += (obj.native?' (native)':'')+(obj.endemic?' (endemic)':'')+(obj.introduced?' (introduced)':'')+(obj.threatened?' (threatened)':''); };
+      return s;
+   };
+   return '[unknown]';
+};
+function fuser(obj) {
+   if (obj) {
+      var s = obj.login+fidlink('users',obj.id);
+      if (obj.name&&obj.name!='') { s += ' / '+obj.name; };
+      return s;
+   };
+   return '[unknown]';
+};
+function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   if (etext!==null) { eobj.innerText = etext };
+   if (eparent!==null) { eparent.appendChild(eobj); };
+   return eobj;
+};
+//a quick and dirty attempt to turn HTML into plaintext
+function ftext(txt) {
+   var tmp = faddelem('p',null,null,null,null,txt);
+   var newtxt = tmp.innerHTML;
+   tmp.innerHTML = null;
+   tmp.remove();
+   tmp = null;
+   return newtxt;
+};
+function faryget(ary,key) {
+   var obj = ary.find(o=>o.id===key);
+   return obj;
+};
+// find existing object matching on key and replace with new object
+function faryset(ary,key,newobj) {
+   var obj = ary.find((o,i) => {
+      if (o.id===key) {
+         ary[i] = newobj;
+         return true;
+      };
+   });
+   return obj;
+};
+function farymerge(aryfrom,aryto) {
+   if (aryfrom.length==0) { return 0; }
+   var count = 0;
+   for (i=0;i<aryfrom.length;i++) {
+      var key = aryfrom[i];
+      var o = faryget(aryto,key);
+      if (!o) {
+         aryto.push({id:key});
+         count++;
+      };
+   };
+};
+//Encompassing Places (Country, State, County only)
+function faddplaces(eparent,ary) {
+   if (ary.length==0) {return;};
+   var adminlevels = ['Country','State','County'];
+   for (k=0;k<=2;k++) {
+      var s = '[unknown]'
+      for (m=0;m<ary.length;m++) {
+         var o = faryget(g_place,ary[m]);
+         if (o&&o.admin_level!==null&&o.admin_level==k) {
+            s=o.name+fidlink('places',o.id);
+            break;
+         };
+      };
+      faddelem('li',eparent,adminlevels[k],null,flabel(adminlevels[k])+s);
+   };
+};
+//Projects
+function faddprojs(eparent,ary) {
+   if (ary.length==0) {return;};
+   var projul = faddelem('ul',eparent,'projlist');
+   for (m=0;m<ary.length;m++) {
+      var o = faryget(g_project,ary[m]);
+      faddelem('li',projul,null,null,(o?(o.title||'')+fidlink('projects',o.id):fidlink('projects',ary[m])));
+   };
+};
+//Identifications + Comments
+function faddic(eparent,obj) {
+   var obji = obj.identifications;
+   var objc = obj.comments;
+   var ary = [];
+   if (obji&&obji.length>0) {
+      for (j=0;j<obji.length;j++) {
+         ary.push({
+            created_at: obji[j].created_at,
+            type: 'id',
+            id: obji[j].id,
+            user: obji[j].user,
+            body: (obji[j].body==null?null:obji[j].body),
+            current: (obji[j].current==null?null:obji[j].current),
+            category: (obji[j].category==null?null:obji[j].category),
+            disagreement: (obji[j].disagreement==null?null:obji[j].disagreement),
+            taxon: obji[j].taxon,
+            taxon_change: (obji[j].taxon_change==null?null:obji[j].taxon_change),
+            vision: (obji[j].vision==null?null:obji[j].vision)
+         });
+      };
+   };
+   if (objc&&objc.length>0) {
+      for (k=0;k<objc.length;k++) {
+         ary.push({
+            created_at: objc[k].created_at,
+            type: 'comment',
+            id: objc[k].id,
+            user: objc[k].user,
+            body: (objc[k].body==null?null:objc[k].body),
+            current: null,
+            category: null,
+            disagreement: null,
+            taxon: null,
+            taxon_change: null,
+            vision: null
+         });
+      };
+   };
+   ary.sort(function(a, b) {
+       if(fdateval(a.created_at) < fdateval(b.created_at)) { return -1; }
+       if(fdateval(a.created_at) > fdateval(b.created_at)) { return 1; }
+       return 0;
+   });
+   if (ary&&ary.length>0) {
+      var icdl = faddelem('dl',eparent,'iclist');      
+      for (m=0;m<ary.length;m++) {
+         if (ary[m].type=='id') {
+            faddelem('dt',icdl,null,null,fdate(ary[m].created_at)+ ' Identification #'+ary[m].id+' by '+fuser(ary[m].user));
+            faddelem('dd',icdl,(ary[m].current?null:'withdrawn'),null,ftaxon(ary[m].taxon)+(ary[m].category==null?'':(' ('+ary[m].category+')'))+(ary[m].disagreement==true?' (disagreement)':'')+(ary[m].vision?' (computer vision assisted)':'')+(ary[m].taxon_change?' (taxon change)':''));
+            if (ary[m].body != null && ary[m].body.trim() !='' ) { faddelem('dd',icdl,null,null,null,ary[m].body); };
+         }
+         else if (ary[m].type=='comment') {
+            faddelem('dt',icdl,null,null,fdate(ary[m].created_at)+' Comment #'+ary[m].id+' by '+fuser(ary[m].user));
+            faddelem('dd',icdl,null,null,null,ary[m].body);
+         };				
+      };
+   };
+};
+//Observation Fields
+function faddobsflds(eparent,obj) {
+   if (obj&&obj.length>0) {
+      var ofdl = faddelem('dl',eparent,'oflist');
+      for (m=0;m<obj.length;m++) {
+         faddelem('dt',ofdl,null,null,'Observation Field Entry #'+obj[m].id+' by '+fuser(obj[m].user));
+         faddelem('dd',ofdl,null,null,flabel(obj[m].name+fidlink('observation_fields',obj[m].field_id))+(obj[m].datatype=='taxon'?ftaxon(obj[m].taxon):ftext(obj[m].value)));
+      };
+   };
+};
+//Annotations
+function faddannot(eparent,obj) {
+   if (obj&&obj.length>0) {
+      var annotdl = faddelem('dl',eparent,'oflist');
+      for (m=0;m<obj.length;m++) {
+         faddelem('dt',annotdl,null,null,obj[m].controlled_attribute.label+' > '+obj[m].controlled_value.label+' by '+fuser(obj[m].user));
+         if (obj[m].votes&&obj[m].votes.length>0) {
+            var agree = [];
+            var disagree = [];
+            for (n=0;n<obj[m].votes.length;n++) {
+               var s = fuser(obj[m].votes[n].user);
+               if (obj[m].votes[n].vote_flag == true) { agree.push(s); }
+               else if (obj[m].votes[n].vote_flag == false) { disagree.push(s); };
+            };
+            if (agree.length>0) { faddelem('dd',annotdl,null,null,flabel('Agree')+agree); };
+            if (disagree.length>0) { faddelem('dd',annotdl,null,null,flabel('Disagree')+disagree); };
+         };
+      };
+   };
+};
+//Data Quality Assessment
+function fadddqa(eparent,obj) {
+   if (obj&&obj.length>0) {
+      obj.sort(function(a, b) {
+          if(a.id < b.id) { return -1; }
+          if(a.id > b.id) { return 1; }
+          return 0;
+      });
+      obj.sort(function(a, b) {
+          if(a.metric < b.metric) { return -1; }
+          if(a.metric > b.metric) { return 1; }
+          return 0;
+      });
+      var dqaul = faddelem('ul',eparent,'dqalist');
+      for (m=0;m<obj.length;m++) {
+         faddelem('li',dqaul,null,null,'DQA #'+obj[m].id+' '+obj[m].metric+'='+obj[m].agree+' by '+fuser(obj[m].user));
+      };
+   };
+};
+//Favorites
+function faddfaves(eparent,obj) {
+   if (obj&&obj.length>0) {
+      var s = '';
+      for (m=0;m<obj.length;m++) {
+         if (m>0) { s+=', '; };
+         s+= fuser(obj[m].user);
+      };
+      if (s!='') { faddelem('p',eparent,'faves',null,flabel('Faved By')+s); };
+   };
+};
+//Photos
+function faddphotos(eparent,obj) {
+   if (obj&&obj.length>0) {
+//      var photobox = faddelem('figbox',eparent,'photobox');      
+      for (m=0;m<obj.length;m++) {
+         var photofig = faddelem('figure',eparent,'photofig');
+         var photo = faddelem('img',photofig,'photo');
+         var url = obj[m].url.replace('square','small');
+         photo.src = url;         
+         var photocaption = faddelem('figcaption',photofig,'photocaption');
+         faddelem('p',photocaption,'photoattr',null,obj[m].attribution);
+         faddelem('p',photocaption,'photourl',null,furl(fphotourl(url)));
+         faddelem('p',photocaption,'photodim',null,'Original Dimensions (px): '+obj[m].original_dimensions.height+'x'+obj[m].original_dimensions.width);
+      };
+   };
+};
+//Sounds
+function faddsounds(eparent,obj) {
+   if (obj&&obj.length>0) {
+      var soundul = faddelem('ul',eparent,'soundlist');
+      for (m=0;m<obj.length;m++) {
+         faddelem('li',soundul,null,null,flabel(obj[m].file_content_type)+furl(ftruncparam(obj[m].file_url))+(obj[m].attribution?', '+obj[m].attribution:''));
+      };
+      //for (m=0;m<obj.length;m++) {
+      //   var soundfig = faddelem('figure',eparent,'soundfig');
+      //   faddelem('p',soundfig,'soundurl',null,flabel(obj[m].file_content_type)+furl(ftruncparam(obj[m].file_url)));
+      //   var soundcaption = faddelem('figcaption',soundfig,'soundcaption',null,null);
+      //   faddelem('p',soundcaption,'soundattr',null,obj[m].attribution);
+      //};
+   };
+};
+//Outlinks
+function foutlinks(eparent,obj) {
+   if (obj&&obj.length>0) {
+      for (m=0;m<obj.length;m++) { faddelem('p',eparent,'outlink',null,flabel(obj[m].source+' URL')+furl(obj[m].url)); };
+   };
+};
+//Community ID + Opt Out indicator
+function fcid(eparent,obj) {
+   var optout_userlvl = (obj.user.preferences.prefers_community_taxa==null ? false : !obj.user.preferences.prefers_community_taxa);
+   var optout_obslvl = (obj.preferences.prefers_community_taxon==null ? false : !obj.preferences.prefers_community_taxon);
+   if ( optout_userlvl || optout_obslvl ) {
+      var ary = [];
+      if (optout_userlvl) { ary.push('[User]'); };
+      if (optout_obslvl) { ary.push('[Observation]'); };
+      faddelem('p',eparent,'cidtaxon',null,flabel('Community Taxon')+ftaxon(obj.community_taxon));
+      faddelem('p',eparent,'cidoptout',null,flabel('Community ID Opt Out Level')+ary);       
+   };
+};
+//need to do some geometry to figure out the vertical position of a point at given lattitude on a Mercator projection
+//this is not necessary for longitudes
+function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2; };
+
+//this adds a small map with a point marker
+function faddmapthumb (eparent,lat,lng) {
+   var mappx = 40;
+   var mapx = (lng+180)/360*mappx;
+   var mapy = latidx(lat)*mappx;
+
+   var map = faddelem('div',eparent);
+   map.style.height = mappx+'px';
+   map.style.width = mappx+'px';
+   map.style.position = 'absolute';
+   map.style.border = '0.75px solid black';
+   map.style.borderRadius = (mappx*0.25)+'px';
+   map.style.overflow = 'hidden';
+   map.style.marginTop = '2px';
+
+   var basemap = faddelem('div',map);
+   basemap.style.height = mappx+'px';
+   basemap.style.width = mappx+'px';
+   //basemap.style.filter = 'invert(65%) brightness(85%)';
+   basemap.style.background = 'url(https://stamen-tiles.a.ssl.fastly.net/toner-lite/0/0/0.png)';
+   basemap.style.backgroundSize = mappx+'px '+mappx+'px';
+   basemap.style.backgroundPosition = (mappx/2-mapx)+'px 0px';
+
+   var marker = faddelem('div',map);
+   marker.style.height = '3px';
+   marker.style.width = '3px';
+   marker.style.filter = 'none';
+   marker.style.borderRadius ='1.5px';
+   marker.style.position = 'absolute';
+   marker.style.left = (mappx/2-1)+'px';
+   marker.style.top = (mapy-1)+'px';
+   marker.style.background = '#000000';
+};
+//Map
+function fmap(obsid,eparent,obj) {
+   if (obj&&obj.coordinates[0]&&obj.coordinates[1]) {
+      // OpenStreetMaps & OpenTopoMap layers
+      // var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
+      var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
+      // var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+
+      var mapdiv = faddelem('div',eparent,'mapdiv');
+      var mapid = 'map'+obsid;
+      mapdiv.id = mapid;
+      var obsmap = L.map(mapid, {
+         center: [obj.coordinates[1], obj.coordinates[0]],
+         zoom: 10,
+         layers: [l_osm_hot],
+         doubleClickZoom: false
+      });
+      L.marker([obj.coordinates[1], obj.coordinates[0]]).addTo(obsmap);
+      L.control.scale().addTo(obsmap);
+   };
+};
+//Tags
+function faddtags(eparent,obj) {
+   var s = '';
+   if (obj.length==0) { s='[none]'; }
+   else {
+      for (m=0;m<obj.length;m++) { s+=(m>0?', ':'')+obj[m]; };
+   };
+   faddelem('p',eparent,'tags',null,flabel('Tags')+s);
+};
+
+function fparams() {
+   g_get_photo = document.getElementById('ingetphoto').checked;
+   g_get_sound = document.getElementById('ingetsound').checked;
+   g_get_proj = document.getElementById('ingetproj').checked;
+   g_get_annot = document.getElementById('ingetannot').checked;
+   g_get_dqa = document.getElementById('ingetdqa').checked;
+   g_get_obsfld = document.getElementById('ingetobsfld').checked;
+   g_get_ic = document.getElementById('ingetic').checked;
+   g_get_fave = document.getElementById('ingetfave').checked;
+   g_get_tag = document.getElementById('ingettag').checked;
+   g_get_mapt = document.getElementById('ingetmapt').checked;
+   g_get_map = document.getElementById('ingetmap').checked;
+
+   var inobs = document.getElementById('inobs').value;
+// /*test ids*/ var inobs = '26587418,24119813,21074456,1741463,21361717,21361718,21361719,23953914,22659829,21587563,12852214,12630249,21074456,26685929,18365372,13311978,21073094';
+   var inuser = document.getElementById('inuser').value;
+   var inplace = document.getElementById('inplace').value;
+   var inproj = document.getElementById('inproj').value;
+   var intaxon = document.getElementById('intaxon').value;
+   var inobsdtfrom = document.getElementById('inobsdtfrom').value;
+   var inobsdtto = document.getElementById('inobsdtto').value;
+   g_sort_order = document.getElementById('inorderdesc').checked?document.getElementById('inorderdesc').value:document.getElementById('inorderasc').value;
+
+   var onlyid = 'only_id=true';
+   var orderby = '&order_by=id&order='+g_sort_order;
+   var perpage = '&per_page='+g_perset;
+
+   var qparam = (inobs==''?'':('&id='+inobs))+(inuser==''?'':('&user_id='+inuser))+(inplace==''?'':('&place_id='+inplace))+(inproj==''?'':('&project_id='+inproj))+(intaxon==''?'':('&taxon_id='+intaxon))+(inobsdtfrom==''?'':('&d1='+inobsdtfrom))+(inobsdtto==''?'':('&d2='+inobsdtto));   
+   if (qparam=='') {
+      alert('Please enter at least one query parameter.');
+      return false;
+      }
+   else {
+      g_query_string = 'https://api.inaturalist.org/v1/observations?'+onlyid+orderby+qparam+perpage;
+      return true;
+   };
+};
+function enablequery(b) {
+   g_enable_query = b;
+   document.getElementById("submit").disabled = !g_enable_query;
+};
+function enablequeryaddtl(b) {
+    g_enable_query_addtl = b;
+};
+window.onscroll = function(ev) {
+   if (g_enable_query_addtl && (window.innerHeight+window.pageYOffset+5) >= document.body.offsetHeight) {
+      fquery();
+   };
+};
+function fquery() {
+   enablequeryaddtl(false);
+   if (g_recs_expected==-1 && fparams()==false) { return; };
+   if (g_recs_expected!=-1 && g_recs_remaining<=0) { return; };
+   enablequery(false);
+   fetch(g_query_string+'&page='+g_page)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .then((obsset) => {
+      var ttlresults = obsset.total_results;
+      if (ttlresults==0 && g_recs_expected==-1) {
+         alert('No observations returned for these parameters.');
+         g_recs_remaining=0;
+         enablequery(true);
+      }
+      else if (ttlresults>0) {
+         if (g_recs_expected==-1) {
+            g_recs_expected = ttlresults;
+            g_recs_remaining = ttlresults;
+         };
+         var aryset = [];
+         for (t=0;t<obsset.results.length;t++) { aryset.push(obsset.results[t].id); };
+         g_recs_remaining-=aryset.length;
+         g_page++;
+         fqueryset(aryset,g_sort_order);
+      };
+      return true;
+   })
+   .then((finishedok) => {
+      if(finishedok) { enablequeryaddtl(true); };
+      return true;
+   })
+   .catch((err) => {
+      console.error(err);
+      if (g_recs_expected==-1) {
+         alert('No observations returned for these parameters. One or more of the parameter values may be invalid.');
+         g_recs_remaining=0;
+         enablequery(true);
+      };
+   });
+};
+function fjson(url) {
+   return fetch(url)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .catch((err) => { console.error(err); });
+};
+function fqueryset(obsset,order) {
+   var prom0 = fjson('https://api.inaturalist.org/v1/observations/'+obsset);
+   var prom1 = Promise.resolve(order);
+   Promise.all([prom0,prom1])
+   .then(values=>{
+      var obsdata = values[0];
+      var ofactor = (values[1]=='asc' ? 1 : -1);
+      obsdata.results.sort(function(a, b) {
+         if(a.id < b.id) { return -ofactor; }
+         if(a.id > b.id) { return ofactor; }
+         return 0;
+      });
+      return obsdata;
+   })
+   .then(async obsdata=>{
+      for (j=0;j<obsdata.results.length;j++) {
+         var obs = obsdata.results[j];
+         farymerge(obs.place_ids,g_place);
+         farymerge(obs.project_ids,g_project);
+      };
+      var newplace = [];
+      for (k=0;k<g_place.length;k++) {
+         if (!g_place[k].name) { newplace.push(g_place[k].id); };
+      };
+      var newproject = [];
+      for (l=0;l<g_project.length;l++) {
+         if (!g_project[l].title) { newproject.push(g_project[l].id); };
+      };
+      var promprop = (newplace.length===0)?Promise.resolve(null):fjson('https://api.inaturalist.org/v1/places/'+newplace);
+      var promproj = (newproject.length===0)?Promise.resolve(null):fjson('https://api.inaturalist.org/v1/projects/'+newproject);
+      await Promise.all([promprop,promproj]).then(data=>{
+         if (data[0]&&data[0].results&&data[0].results.length>0) {
+            for (p=0;p<data[0].results.length;p++) {
+               var prop = data[0].results[p];
+               faryset(g_place,prop.id,{id:prop.id,admin_level:prop.admin_level,name:prop.name});
+            };
+         };
+         if (data[1]&&data[1].results&&data[1].results.length>0) {
+            for (q=0;q<data[1].results.length;q++) {
+               var proj = data[1].results[q];
+               faryset(g_project,proj.id,{id:proj.id,title:proj.title});
+            };
+         };
+      });
+      return obsdata;
+   })
+   .then(obsdata=>{
+      for (i=0; i<obsdata.results.length; i++) { 
+         var obs = obsdata.results[i];
+         var obsid = obs.id;
+         var obsdiv = faddelem('div',document.body,'obsdiv',obsid);
+         var obsthumb = faddelem('div',obsdiv,'obsthumb',null,((obs.photos&&obs.photos.length>0)?'<img src="'+obs.photos[0].url+'" />':null));
+         faddelem('h1',obsdiv,'obsid',null,'Observation #'+obs.id+' <span class="grade">('+flabel('Grade')+obs.quality_grade+')</span>');
+         faddelem('p',obsdiv,'url',null,flabel('iNaturalist URL')+furl(obs.uri||'https://www.inaturalist.org/observations/'+obs.id));
+         foutlinks(obsdiv,obs.outlinks);
+         faddelem('p',obsdiv,'observer',null,flabel('Observer')+fuser(obs.user));
+         faddelem('p',obsdiv,'license',null,flabel('Observation License')+(obs.license_code||'[none] (all rights reserved)'));
+         faddelem('p',obsdiv,'obsddt',null,flabel('Observed')+(obs.time_observed_at?fdate(obs.time_observed_at):(obs.observed_on||'[unknown]')));
+         faddelem('p',obsdiv,'createdt',null,flabel('Created')+(fdate(obs.created_at||obs.created_at_details.date)));
+         faddelem('p',obsdiv,'updatedt',null,flabel('Last Updated')+fdate(obs.updated_at));
+         faddelem('p',obsdiv,'taxon',null,flabel('Taxon')+ftaxon(obs.taxon,true));
+         fcid(obsdiv,obs);
+         var placediv = faddelem('div',obsdiv,'placediv');
+         faddelem('p',placediv,'privacy',null,flabel('Observation / Taxon Geoprivacy')+((obs.geoprivacy||'[open]')+' / '+(obs.taxon_geoprivacy||'[open]')));
+         if (g_get_map) { fmap(obsid,placediv,obs.geojson); };
+         faddelem('p',placediv,'location',null,flabel('Location')+ftext(obs.place_guess||'[unknown]'));
+         var placedivs = faddelem('div',placediv,'placedivs');
+         if (g_get_mapt && obs.geojson) {
+            var placespanmt = faddelem('span',placedivs,'placespanmt');
+            faddmapthumb(placespanmt,obs.geojson.coordinates[1],obs.geojson.coordinates[0]);
+         };
+         var placeulc = faddelem('ul',placedivs,'placeulc');
+         faddelem('li',placeulc,'lat',null,flabel('Latitude')+(obs.geojson?obs.geojson.coordinates[1]:'[unknown]'));
+         faddelem('li',placeulc,'lng',null,flabel('Longitude')+(obs.geojson?obs.geojson.coordinates[0]:'[unknown]'));
+         faddelem('li',placeulc,'acc',null,flabel('Accuracy')+(obs.positional_accuracy?(obs.positional_accuracy+'m'):'[unknown]'));
+         var placeule = faddelem('ul',placedivs,'placeule');
+         faddplaces(placeule,obs.place_ids);
+         faddelem('p',obsdiv,'descr',null,flabel('Description')+(obs.description==null ? '[not provided]' : ftext(obs.description)));
+         if (g_get_tag) { faddtags(obsdiv,obs.tags); };
+         if (g_get_proj) {
+            var projdiv = faddelem('div',obsdiv,'projdiv');
+            faddelem('p',projdiv,'projcount',null,flabel('Projects')+(obs.project_ids?obs.project_ids.length:'[none]'));
+            faddprojs(projdiv,obs.project_ids);
+         };
+         if (g_get_ic) {
+            faddelem('p',obsdiv,'iccount',null,flabel('Identifications + Comments')+((obs.identifications?obs.identifications.length:'[none]')+' + '+(obs.comments?obs.comments.length:'[none]')));
+            faddic(obsdiv,obs);
+         };
+         if (g_get_annot) {
+            var annotdiv = faddelem('div',obsdiv,'annotdiv');
+            faddelem('p',annotdiv,'annotcount',null,flabel('Annotations')+(obs.annotations?obs.annotations.length:'[none]'));
+            faddannot(annotdiv,obs.annotations);
+         };
+         if (g_get_obsfld) {
+            var obsflddiv = faddelem('div',obsdiv,'obsflddiv');
+            faddelem('p',obsflddiv,'obsfldcount',null,flabel('Observation Fields')+(obs.ofvs?obs.ofvs.length:'[none]'));
+            faddobsflds(obsflddiv,obs.ofvs);
+         };
+         if (g_get_dqa) {
+            var dqadiv = faddelem('div',obsdiv,'dqadiv');
+            faddelem('p',dqadiv,'dqacount',null,flabel('Data Quality Assessments')+(obs.quality_metrics?obs.quality_metrics.length:'[none]'));
+            fadddqa(dqadiv,obs.quality_metrics);
+         };
+         if (g_get_photo) {
+            var photodiv = faddelem('div',obsdiv,'photodiv');
+            faddelem('p',photodiv,'photos',null,flabel('Photos')+(obs.photos?obs.photos.length:'[none]'));
+            faddphotos(photodiv,obs.photos);
+         };
+         if (g_get_sound) {
+            var sounddiv = faddelem('div',obsdiv,'sounddiv');
+            faddelem('p',sounddiv,'sounds',null,flabel('Sounds')+(obs.sounds?obs.sounds.length:'[none]'));
+            faddsounds(sounddiv,obs.sounds);
+         };
+         if (g_get_fave) { faddfaves(obsdiv,obs.faves); }; 
+
+         g_recs_retrieved++;
+         faddelem('p',obsdiv,'no-print',null,'page break -- '+g_recs_retrieved+' of '+g_recs_expected+' recs retrieved.');
+      };
+   });
+};
+</script>
+</body>
+</html>
