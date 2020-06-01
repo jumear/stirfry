@@ -168,6 +168,7 @@ if (window.location.search==='') {
    faddelem('p',header,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to visualize the results of '+furl(famp(apibase+'?introduced=true&place_id=49610&quality_grade=research'))+', <br />then you would open '+furl(famp(winurlexsearchstr+'?introduced=true&place_id=49610&quality_grade=research'))+' in your browser.');
    faddelem('p',header,null,null,'Several page-specific parameters are also available:<br />"&size=" defines a custom visualization size in pixels<br />"&color=" defines a custom color for the circles<br />"&label=common_name" will use common names for the labels<br />"&style=1" orders the circles by iconic taxon before visualizing<br />"&style=2" groups packed circles into iconic taxon groups');
    faddelem('p',header,null,null,'Note that a single request to this API endpoint will return no more than 500 records. Although it is possible to make multiple requests, a visualization with more than 500 circles is very busy. So this page will stick with the endpoint limit and visualize only up to 500 circles.');
+   faddelem('p',header,null,null,'The idea for this kind of visualization came from Alexis Garretson. Her R code to produce a similar visualization is available here: '+furl('https://alexis-catherine.github.io/visualization/inaturalist-invasive-bubble-plot/')+'.');
 }
 else {
    faddelem('p',header,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)');
