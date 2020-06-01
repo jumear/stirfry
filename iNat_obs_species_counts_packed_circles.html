@@ -173,8 +173,8 @@ else {
    faddelem('p',header,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)');
    p_size = p_size || ((window.innerWidth>(window.innerHeight-header.offsetHeight)?(window.innerHeight-header.offsetHeight):window.innerWidth)-20); // fill the window, if size was not specified
    var main = document.getElementById('main');
-   main.style.width = p_size;
-   main.style.height = p_size;
+   main.style.width = p_size+'px';
+   main.style.height = p_size+'px';
    fetch(apiurl)
    .then((response) => {
       if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
