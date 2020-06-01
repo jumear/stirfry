@@ -18,6 +18,7 @@
    img { margin:0px; padding:0px; border:0px; }
    a { text-decoration:none; }
 </style>
+<script src="https://d3js.org/d3.v5.min.js"></script>
 </head>
 
 <body>
@@ -46,7 +47,6 @@ function fpct(d,p=1) {
    x = d*100;
    return x.toFixed(p);
 };
-
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
@@ -56,55 +56,129 @@ function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    return eobj;
 };
 function fresults(xobj) {
-//   faddelem('p',document.body,null,null,furl(famp(apiurl)));
    var results = xobj.results;
-   if (results) {
-      var intdesc = l_date_field+' '+l_interval;
-      var robj = results[Object.keys(results)[0]];
-      var t=0;
-      var m=0;
-      var ms='';
-      for (const property in robj) {
-         var c=robj[property];
-         t=t+c; // total count
-         m=c>m?c:m; // max count
+   var robj = results[Object.keys(results)[0]];
+   if (!robj || !robj[Object.keys(robj)[0]]) {
+      faddelem('p',document.body,null,null,'No results returned.');
+      return false;
+   };
+   var intdesc = l_date_field+' '+l_interval;
+   var t=0;
+   var m=0;
+   var ms='';
+   var data = [];
+   for (const property in robj) {
+      var c=robj[property];
+      t=t+c; // total count
+      m=c>m?c:m; // max count
+      data.push({interval:property,count:c});
+   };
+   faddelem('p',document.body,null,null,'total records: '+fcomnum(xobj.total_results)+'<br />'
+      +'total observation count: '+fcomnum(t)+'<br />'
+      +intdesc.toLowerCase()+' max count: '+fcomnum(m)+'<br />'
+      +'max '+ intdesc.toLowerCase()+': <span id="maxint"></span>'
+   );
+   fvisualize(data); // add chart
+   //table headers
+   var table = faddelem('table',document.body,null,'main');
+   var thead = faddelem('thead',table);
+   var hrow = faddelem('tr',thead);
+   faddelem('td',hrow,null,null,'#');
+   faddelem('td',hrow,null,null,l_date_field+' '+l_interval);
+   faddelem('td',hrow,'tar',null,'Count');
+   faddelem('td',hrow,'tar',null,'% of Total');
+   faddelem('td',hrow,'tar',null,'% of Max');
+   //table rows
+   var tbody = faddelem('tbody',table);
+   for (i=0;i<data.length;i++) {
+      var c = data[i].count;
+      var int = data[i].interval;
+      ms=c<m?ms:(ms===''?int:ms+', '+int); // max day(s)
+      var brow = faddelem('tr',tbody);
+      faddelem('td',brow,null,null,i);
+      faddelem('td',brow,null,null,int);
+      faddelem('td',brow,'tar',null,fcomnum(c));
+      faddelem('td',brow,'tar',null,fpct(c/t,2));
+      faddelem('td',brow,'tar',null,fpct(c/m));
+   };
+   //table footers
+   var tfoot = faddelem('tfoot',table);
+   var frow = faddelem('tr',tfoot);
+   faddelem('td',frow,null,null,'Total');
+   faddelem('td',frow,null,null,'');
+   faddelem('td',frow,'tar',null,fcomnum(t));
+   faddelem('td',frow,'tar',null,fpct(t/t,2));
+   faddelem('td',frow,'tar',null,'');
+   document.getElementById('maxint').innerHTML=ms;
+};
+
+function fvisualize(data) { //adapted from https://observablehq.com/@d3/zoomable-bar-chart
+   var rotatex = (!p_interval || p_interval==='month_of_year' || data.length<=8)?false:true;
+   var maxcount = d3.max(data, d => d.count);
+   var margin = ({top:5, right:0, bottom:(rotatex?70:30), left:(maxcount>=900000?56:maxcount>=900?48:32)});
+   var width = window.innerWidth*0.8;
+   var height = 200;
+   //var height = width/3;
+   //height = (height<200)?200:(height>300)?300:height;
+   var maxzoom = Math.ceil(data.length/15);
+   var x = d3.scaleBand()
+      .domain(data.map(d => d.interval))
+      .range([margin.left, width - margin.right])
+      .padding(0.1);
+   var y = d3.scaleLinear()
+      .domain([0, maxcount]).nice()
+      .range([height - margin.bottom, margin.top]);
+   var xAxis = g=> {
+      g.attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(x).tickSizeOuter(0));
+      if (rotatex) {
+         g.selectAll("text") 
+         .style("text-anchor","end")
+         .attr("dx","-.8em")
+         .attr("dy",".15em")
+         .attr("transform", "rotate(-65)");
       };
-      faddelem('p',document.body,null,null,'total records: '+fcomnum(xobj.total_results)+'<br />'
-         +'total observation count: '+fcomnum(t)+'<br />'
-         +intdesc.toLowerCase()+' max count: '+fcomnum(m)+'<br />'
-         +'max '+ intdesc.toLowerCase()+': <span id="maxint"></span>'
-         );
-      var table = faddelem('table',document.body,null,'main');
-      var thead = faddelem('thead',table);
-      var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'#');
-      faddelem('td',hrow,null,null,l_date_field+' '+l_interval);
-      faddelem('td',hrow,'tar',null,'Count');
-      faddelem('td',hrow,'tar',null,'% of Total');
-      faddelem('td',hrow,'tar',null,'% of Max');
-      var tbody = faddelem('tbody',table);
-      var i=0;
-      for (const property in robj) {
-         i++;
-         var c = robj[property];
-         ms=c<m?ms:(ms===''?property:ms+', '+property); // max day(s)
-         var brow = faddelem('tr',tbody);
-         faddelem('td',brow,null,null,i);
-         faddelem('td',brow,null,null,property);
-         faddelem('td',brow,'tar',null,fcomnum(c));
-         faddelem('td',brow,'tar',null,fpct(c/t,2));
-         faddelem('td',brow,'tar',null,fpct(c/m));
+   };
+   var yAxis = g => g
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(y));
+      //.call(g => g.select(".domain").remove());
+
+   const svg = d3.select("body")
+      .append("svg")
+      .attr("viewBox", [0, 0, width, height])
+      .call(zoom);
+   svg.append("g")
+      .attr("class","bars")
+      .attr("fill","gray")
+      .selectAll("rect")
+      .data(data)
+      .join("rect")
+      .attr("x", d => x(d.interval))
+      .attr("y", d => y(d.count))
+      .attr("height", d => y(0) - y(d.count))
+      .attr("width", x.bandwidth());
+   svg.append("g")
+      .attr("class", "x-axis")
+      .call(xAxis);
+   svg.append("g")
+      .attr("class", "y-axis")
+      .call(yAxis);
+   return svg.node();
+
+   function zoom(svg) {
+      const extent = [[margin.left, margin.top], [width - margin.right, height - margin.top]];
+      svg.call(d3.zoom()
+         .scaleExtent([1,maxzoom])
+         .translateExtent(extent)
+         .extent(extent)
+         .on("zoom", zoomed));
+      function zoomed() {
+         x.range([margin.left, width - margin.right].map(d => d3.event.transform.applyX(d)));
+         svg.selectAll(".bars rect").attr("x", d => x(d.interval)).attr("width", x.bandwidth());
+         svg.selectAll(".x-axis").call(xAxis);
       };
-      var tfoot = faddelem('tfoot',table);
-      var frow = faddelem('tr',tfoot);
-      faddelem('td',frow,null,null,'Total');
-      faddelem('td',frow,null,null,'');
-      faddelem('td',frow,'tar',null,fcomnum(t));
-      faddelem('td',frow,'tar',null,fpct(t/t,2));
-      faddelem('td',frow,'tar',null,'');
-      document.getElementById('maxint').innerHTML=ms;
-   }
-   else { faddelem('p',document.body,null,null,'No results returned.'); };
+   };
 };
 
 var apibase = 'https://api.inaturalist.org/v1/observations/histogram';
@@ -113,7 +187,7 @@ var apirefurl = furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_ob
 faddelem('h1',document.body,null,null,'iNaturalist Observation Count by '+l_date_field+' '+l_interval);
 
 if (winurlsearchstr==='') {
-   faddelem('p',document.body,null,null,'This page will present results from the iNaturalist '+apirefurl+' API endpoint in a friendly format. This page requires that you append some parameters to your URL.');
+   faddelem('p',document.body,null,null,'This page will present results from the iNaturalist '+apirefurl+' API endpoint in a friendly format. It also visualizes the data in a bar chart (using D3.js) that is zoomable along the X axis (in cases where there are more than 15 ticks). This page requires that you append some parameters to your URL.');
    faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?interval=day&d1=2010-01-01&user_id=bob'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?interval=day&d1=2010-01-01&user_id=bob'))+' in your browser.');
    faddelem('p',document.body,null,null,"Note that if you use interval=day and date_field=observed, you can set a beginning date (ex. d1=2010-01-01) to pull back more than just the last year's observed days.<br />Similarly, if you use interval=day and date_field=created, you can set a beginning date (created_d1) to pull back more than just the last year's created days.");
 }
