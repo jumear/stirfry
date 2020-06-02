@@ -116,16 +116,17 @@ for (i=0;i<ary_it.length;i++) {
 };
 faddelem('p',document.body,null,null,'Notes:<br />'
    +'1. Unknown includes things like Bacteria.<br />'
-   +'2. Because these numbers may be retrieved at slightly different times, they may not all tie exactly.<br />'
-   +'3. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search')+' endpoint.)'
+   +'2. Because these numbers may be retrieved at slightly different times, this may not represent a true snapshot at a single point in time.<br />'
+   +'3. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search')+' endpoint.)<br />'
+   +'4. Due to API request limits, you will not want to run this page multiple times in quick succession. If it looks like only some data is pulling back, wait a minute or two before trying to pull data again.'
 );
 
 var data = [];
 // pull data into table
 // (this is separate from the creation of the table structure just in case there are failures while pulling data)
-for (j=0;j<ary_it.length;j++) {
+for (j=0;j<(ary_it.length-1);j++) { // note that this is using length-1 because it will purposely exclude 'All' from the iteration set.
    var str_it = ary_it[j].icon_taxa
-   var p_it = str_it==='All'?'':'&iconic_taxa='+str_it;
+   var p_it = '&iconic_taxa='+str_it;
    var prom0 = Promise.resolve(str_it);
    var prom1 = fgetcount(apiurl+p_it+'&verifiable=true');
    var prom2 = fgetcount(apiurl+p_it+'&quality_grade=research');
@@ -144,22 +145,42 @@ for (j=0;j<ary_it.length;j++) {
       fsettdvalue(it,'all',fcomnum(a));
       fsettdvalue(it,'diff',fcomnum(a-v));
       fsettdvalue(it,'va',fpct(v/a));
+      data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Research Grade',count:rg});
+      data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Needs ID',count:n});
+      data.push({taxon:fitdispname(it),category:'Casual',subcategory:'Casual',count:(a-v)});
 
-      //this section is needed to create the Sankey diagram; last iteration to complete should kick off the creation of the diagram
-      if(it!=='All') {
-         data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Research Grade',count:rg});
-         data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Needs ID',count:n});
-         data.push({taxon:fitdispname(it),category:'Casual',subcategory:'Casual',count:(a-v)});
-         if (data.length===(ary_it.length-1)*3) {
-           faddelem('hr',document.body);
-            faddelem('h2',document.body,null,null,'Sankey Diagram');
-            data.sort(function(a, b) {
-               if(fitidx(a.taxon) < fitidx(b.taxon)) { return -1; }
-               if(fitidx(a.taxon) > fitidx(b.taxon)) { return 1; }
-               return 0;
-            });
-            fvisualize(data);
+      //if this is the last iteration in the set to finish, then it will also calculate totals and generate a Sankey diagram
+      if (data.length===(ary_it.length-1)*3) {
+         it = 'All';
+         v = 0;
+         rg = 0;
+         a = 0;
+         for (k=0;k<data.length;k++) {
+            var obj = data[k];
+            if (obj.subcategory==='Research Grade') {
+               rg = rg+obj.count;
+               v = v+obj.count;
+            };
+            if (obj.subcategory==='Needs ID') { v = v+obj.count; };
+            a = a+obj.count;
          };
+         n = v-rg;
+         fsettdvalue(it,'v',fcomnum(v));
+         fsettdvalue(it,'rg',fcomnum(rg));
+         fsettdvalue(it,'rgv',fpct(rg/v));
+         fsettdvalue(it,'nid',fcomnum(n));
+         fsettdvalue(it,'nidv',fpct(n/v));
+         fsettdvalue(it,'all',fcomnum(a));
+         fsettdvalue(it,'diff',fcomnum(a-v));
+         fsettdvalue(it,'va',fpct(v/a));
+         faddelem('hr',document.body);
+         faddelem('h2',document.body,null,null,'Sankey Diagram');
+         data.sort(function(a, b) {
+            if(fitidx(a.taxon) < fitidx(b.taxon)) { return -1; }
+            if(fitidx(a.taxon) > fitidx(b.taxon)) { return 1; }
+            return 0;
+         });
+         fvisualize(data);
       };
    });  
 };
