@@ -18,6 +18,8 @@
    img { margin:0px; padding:0px; border:0px; }
    a { text-decoration:none; }
 </style>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://unpkg.com/d3-sankey@0"></script>
 </head>
 
 <body>
@@ -63,25 +65,23 @@ function fgetcount(url) {
 
 var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=1&only_id=true'+((winurlparams!='')?('&'+winurlparams):'');
 var ary_it = [
-   {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒"},
-   {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅"},
-   {icon_taxa:"Reptilia",disp_name:"Reptiles",icon:"🐍"},
-   {icon_taxa:"Amphibia",disp_name:"Amphibians",icon:"🐸"},
-   {icon_taxa:"Actinopterygii",disp_name:"Ray-Finned Fish",icon:"🐠"},
-   {icon_taxa:"Mollusca",disp_name:"Mollusks",icon:"🐌"},
-   {icon_taxa:"Insecta",disp_name:"Insects",icon:"🐞"},
-   {icon_taxa:"Arachnida",disp_name:"Arachnids",icon:"🕷"},
-   {icon_taxa:"Animalia",disp_name:"Other Animals",icon:"🦀"},
-   {icon_taxa:"Plantae",disp_name:"Plants",icon:"🌱"},
-   {icon_taxa:"Fungi",disp_name:"Fungi",icon:"🍄"},
-   {icon_taxa:"Chromista",disp_name:"Chromista"},
-   {icon_taxa:"Protozoa",disp_name:"Protozoa"},
-   {icon_taxa:"unknown",disp_name:"Unknown<sup>1</sup>"},
-   {icon_taxa:"All",disp_name:"All",icon:"🌐"},
+   {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒",color:"mediumblue"},
+   {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅",color:"blue"},
+   {icon_taxa:"Reptilia",disp_name:"Reptiles",icon:"🐍",color:"darkblue"},
+   {icon_taxa:"Amphibia",disp_name:"Amphibians",icon:"🐸",color:"navy"},
+   {icon_taxa:"Actinopterygii",disp_name:"Ray-Finned Fish",icon:"🐠",color:"midnightblue"},
+   {icon_taxa:"Mollusca",disp_name:"Mollusks",icon:"🐌",color:"orangered"},
+   {icon_taxa:"Insecta",disp_name:"Insects",icon:"🐞",color:"red"},
+   {icon_taxa:"Arachnida",disp_name:"Arachnids",icon:"🕷",color:"crimson"},
+   {icon_taxa:"Animalia",disp_name:"Other Animals",icon:"🦀",color:"royalblue"},
+   {icon_taxa:"Plantae",disp_name:"Plants",icon:"🌱",color:"green"},
+   {icon_taxa:"Fungi",disp_name:"Fungi",icon:"🍄",color:"magenta"},
+   {icon_taxa:"Chromista",disp_name:"Chromista",color:"saddlebrown"},
+   {icon_taxa:"Protozoa",disp_name:"Protozoa",color:"purple"},
+   {icon_taxa:"unknown",disp_name:"Unknown",color:"gray"},
+   {icon_taxa:"All",disp_name:"All",icon:"🌐",color:"none"},
 ];
-
 faddelem('h1',document.body,null,null,'iNaturalist Observation Counts by Iconic Taxa');
-
 // create the basic structure of the table
 var table = faddelem('table',document.body,null,'main');
 var thead = faddelem('thead',table);
@@ -120,6 +120,7 @@ faddelem('p',document.body,null,null,'Notes:<br />'
    +'3. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search')+' endpoint.)'
 );
 
+var data = [];
 // pull data into table
 // (this is separate from the creation of the table structure just in case there are failures while pulling data)
 for (j=0;j<ary_it.length;j++) {
@@ -143,9 +144,140 @@ for (j=0;j<ary_it.length;j++) {
       fsettdvalue(it,'all',fcomnum(a));
       fsettdvalue(it,'diff',fcomnum(a-v));
       fsettdvalue(it,'va',fpct(v/a));
+
+      //this section is needed to create the Sankey diagram; last iteration to complete should kick off the creation of the diagram
+      if(it!=='All') {
+         data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Research Grade',count:rg});
+         data.push({taxon:fitdispname(it),category:'Verifiable',subcategory:'Needs ID',count:n});
+         data.push({taxon:fitdispname(it),category:'Casual',subcategory:'Casual',count:(a-v)});
+         if (data.length===(ary_it.length-1)*3) {
+           faddelem('hr',document.body);
+            faddelem('h2',document.body,null,null,'Sankey Diagram');
+            data.sort(function(a, b) {
+               if(fitidx(a.taxon) < fitidx(b.taxon)) { return -1; }
+               if(fitidx(a.taxon) > fitidx(b.taxon)) { return 1; }
+               return 0;
+            });
+            fvisualize(data);
+         };
+      };
    });  
 };
+//return a color based on iconic taxon
+function fitcolor(it) {
+   if (it==='All') { return 'none'; };
+   // if (p_color) { return p_color; };
+   var obj = ary_it.find(o=>o.disp_name===it);
+   return obj.color||'gray';
+};
+//return display name based on iconic taxon
+function fitdispname(it) {
+   var obj = ary_it.find(o=>o.icon_taxa===it);
+   return obj.disp_name;
+};
+//return array index position based on iconic taxon
+function fitidx(it) {
+   var idx = ary_it.findIndex(o=>o.disp_name===it);
+   return idx;
+};
+//this creates a Sankey diagram
+//adapted from https://observablehq.com/@d3/parallel-sets
+function fvisualize(data) {
+   data.columns = Object.keys(data[0]);
+   var width = window.innerWidth;
+   var height = 500;
+   var sankey = d3.sankey()
+      .nodeSort(null)
+      .linkSort(null)
+      .nodeWidth(5)
+      .nodePadding(12)
+      .extent([[0, 5], [width, height - 5]]);
+   var keys = data.columns.slice(0, -1);
+   var color = function(d) { return fitcolor(d); };
 
+   function fgraph() {
+      let index = -1;
+      const nodes = [];
+      const nodeByKey = new Map;
+      const indexByKey = new Map;
+      const links = [];
+      for (const k of keys) {
+         for (const d of data) {
+            const key = JSON.stringify([k, d[k]]);
+            if (nodeByKey.has(key)) continue;
+            const node = {name: d[k]};
+            nodes.push(node);
+            nodeByKey.set(key, node);
+            indexByKey.set(key, ++index);
+         };
+      };
+      for (let i = 1; i < keys.length; ++i) {
+         const a = keys[i - 1];
+         const b = keys[i];
+         const prefix = keys.slice(0, i + 1);
+         const linkByKey = new Map;
+         for (const d of data) {
+            const names = prefix.map(k => d[k]);
+            const key = JSON.stringify(names);
+            const value = d.count || 1;
+            let link = linkByKey.get(key);
+            if (link) { link.value += value; continue; }
+            link = {
+               source: indexByKey.get(JSON.stringify([a, d[a]])),
+               target: indexByKey.get(JSON.stringify([b, d[b]])),
+               names,
+               value
+            };
+            links.push(link);
+            linkByKey.set(key, link);
+         };
+      };
+      return {nodes, links};
+   };
+   var graph = fgraph();
+
+   const svg = d3.select("body")
+      .append("svg")
+      .attr("viewBox", [0, 0, width, height]);
+   const {nodes, links} = sankey({
+      nodes: graph.nodes.map(d => Object.assign({}, d)),
+      links: graph.links.map(d => Object.assign({}, d))
+   });
+   svg.append("g")
+   .selectAll("rect")
+   .data(nodes)
+   .join("rect")
+   .attr("x", d => d.x0)
+   .attr("y", d => d.y0)
+   .attr("height", d => d.y1 - d.y0)
+   .attr("width", d => d.x1 - d.x0)
+   .append("title")
+   .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+   svg.append("g")
+   .attr("fill", "none")
+   .selectAll("g")
+   .data(links)
+   .join("path")
+   .attr("d", d3.sankeyLinkHorizontal())
+   .attr("stroke", d => color(d.names[0]))
+   .attr("stroke-width", d => d.width)
+   .attr("opacity", 0.7)
+   .style("mix-blend-mode", "multiply")
+   .append("title")
+   .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+   svg.append("g")
+   .style("font", "10px sans-serif")
+   .selectAll("text")
+   .data(nodes)
+   .join("text")
+   .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+   .attr("y", d => (d.y1 + d.y0) / 2)
+   .attr("dy", "0.35em")
+   .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+   .text(d => d.name)
+   .append("tspan")
+   .text(d => ` ${d.value.toLocaleString()}`);
+};
 </script>
 </body>
 
