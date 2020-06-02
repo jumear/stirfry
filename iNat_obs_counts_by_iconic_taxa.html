@@ -219,7 +219,7 @@ function fvisualize(data) {
          for (const d of data) {
             const names = prefix.map(k => d[k]);
             const key = JSON.stringify(names);
-            const value = d.count || 1;
+            const value = d.count || 0;
             let link = linkByKey.get(key);
             if (link) { link.value += value; continue; }
             link = {
