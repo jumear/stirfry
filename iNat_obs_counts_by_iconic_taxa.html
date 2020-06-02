@@ -63,7 +63,7 @@ function fgetcount(url) {
       .catch((err) => { console.error(err); });
 };
 
-var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=1&only_id=true'+((winurlparams!='')?('&'+winurlparams):'');
+var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=0&only_id=true'+((winurlparams!='')?('&'+winurlparams):'');
 var ary_it = [
    {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒",color:"mediumblue"},
    {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅",color:"blue"},
