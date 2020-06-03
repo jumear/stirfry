@@ -95,7 +95,7 @@ function fresults(xobj) {
       var int = data[i].interval;
       ms=c<m?ms:(ms===''?int:ms+', '+int); // max day(s)
       var brow = faddelem('tr',tbody);
-      faddelem('td',brow,null,null,i);
+      faddelem('td',brow,null,null,i+1);
       faddelem('td',brow,null,null,int);
       faddelem('td',brow,'tar',null,fcomnum(c));
       faddelem('td',brow,'tar',null,fpct(c/t,2));
