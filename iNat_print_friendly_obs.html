@@ -365,7 +365,7 @@ function faddphotos(eparent,obj) {
          var photocaption = faddelem('figcaption',photofig,'photocaption');
          faddelem('p',photocaption,'photoattr',null,obj[m].attribution);
          faddelem('p',photocaption,'photourl',null,furl(fphotourl(url)));
-         faddelem('p',photocaption,'photodim',null,'Original Dimensions (px): '+obj[m].original_dimensions.height+'x'+obj[m].original_dimensions.width);
+         if (obj[m].original_dimensions) { faddelem('p',photocaption,'photodim',null,'Original Dimensions (px): '+obj[m].original_dimensions.height+'x'+obj[m].original_dimensions.width); };
       };
    };
 };
@@ -571,7 +571,7 @@ function fjson(url) {
    .catch((err) => { console.error(err); });
 };
 function fqueryset(obsset,order) {
-   var prom0 = fjson('https://api.inaturalist.org/v1/observations/'+obsset);
+   var prom0 = fjson('https://api.inaturalist.org/v1/observations/'+obsset+(g_get_proj?'?include_new_projects=true':''));
    var prom1 = Promise.resolve(order);
    Promise.all([prom0,prom1])
    .then(values=>{
@@ -590,27 +590,41 @@ function fqueryset(obsset,order) {
          farymerge(obs.place_ids,g_place);
          farymerge(obs.project_ids,g_project);
       };
+      var promiseary = [];
       var newplace = [];
       for (k=0;k<g_place.length;k++) {
          if (!g_place[k].name) { newplace.push(g_place[k].id); };
       };
-      var newproject = [];
-      for (l=0;l<g_project.length;l++) {
-         if (!g_project[l].title) { newproject.push(g_project[l].id); };
+      var placemaxlength = 500; // API will return no more than this number of places per request
+      for (m=0;m<newplace.length;m=m+placemaxlength) {
+         promiseary.push(Promise.resolve('place'));
+         promiseary.push(fjson('https://api.inaturalist.org/v1/places/'+newplace.slice(m,m+placemaxlength)));
       };
-      var promprop = (newplace.length===0)?Promise.resolve(null):fjson('https://api.inaturalist.org/v1/places/'+newplace);
-      var promproj = (newproject.length===0)?Promise.resolve(null):fjson('https://api.inaturalist.org/v1/projects/'+newproject);
-      await Promise.all([promprop,promproj]).then(data=>{
-         if (data[0]&&data[0].results&&data[0].results.length>0) {
-            for (p=0;p<data[0].results.length;p++) {
-               var prop = data[0].results[p];
-               faryset(g_place,prop.id,{id:prop.id,admin_level:prop.admin_level,name:prop.name});
-            };
+      if (g_get_proj) {
+         var newproject = [];
+         for (l=0;l<g_project.length;l++) {
+            if (!g_project[l].title) { newproject.push(g_project[l].id); };
          };
-         if (data[1]&&data[1].results&&data[1].results.length>0) {
-            for (q=0;q<data[1].results.length;q++) {
-               var proj = data[1].results[q];
-               faryset(g_project,proj.id,{id:proj.id,title:proj.title});
+         var projmaxlength = 10; // API will return no more than this number of projects per request
+         for (n=0;n<newproject.length;n=n+projmaxlength) {
+            promiseary.push(Promise.resolve('project'));
+            promiseary.push(fjson('https://api.inaturalist.org/v1/projects/'+newproject.slice(n,n+projmaxlength)));
+         };
+      };
+      if (promiseary.length===0) { return obsdata; }
+      await Promise.all(promiseary).then(data=>{
+         for (p=0;p<data.length;p=p+2) {
+            if (data[p+1]&&data[p+1].results&&data[p+1].results.length>0) {
+               for (q=0;q<data[p+1].results.length;q++) {
+                  if (data[p]==='place') {
+                     var place = data[p+1].results[q];
+                     faryset(g_place,place.id,{id:place.id,admin_level:place.admin_level,name:place.name});
+                  }
+                  else {
+                     var proj = data[p+1].results[q];
+                     faryset(g_project,proj.id,{id:proj.id,title:proj.title});
+                  };
+               };
             };
          };
       });
