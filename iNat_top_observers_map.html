@@ -234,7 +234,7 @@ async function fcreatemap(topobs) {
       var lyrctrl = L.control.layers(basemaps, overlaymaps).addTo(mymap);
       L.control.scale().addTo(mymap);
 
-      mymap.fitBounds([[bbox.nelat,bbox.nelng],[bbox.swlat,(bbox.swlng<bbox.nelng?bbox.swlng:bbox.swlng-360)]]);
+      mymap.fitBounds([[bbox.nelat,(bbox.swlng<bbox.nelng?bbox.nelng:bbox.nelng+360)],[bbox.swlat,bbox.swlng]]);
       console.log('bounding box nelat= '+bbox.nelat+' nelng= '+bbox.nelng+' swlat= '+bbox.swlat+' swlng= '+bbox.swlng);
       return {obj:mymap,bbox:bbox,lyrctrl:lyrctrl};
    });
