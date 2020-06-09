@@ -136,7 +136,8 @@ else {
 
 async function fcreatemap(topobs) {
    winurlparams.delete('user_id');
-   var fbbox = fjson(inat_urlbase+'observations?return_bounds=true&per_page=0&'+winurlparams+'&user_id='+topobs.map(o=>o.user_id));
+   var users = topobs.map(o=>o.user_id);
+   var fbbox = fjson(inat_urlbase+'observations?return_bounds=true&per_page=0&'+winurlparams+'&user_id='+users);
    var map = fbbox.then(data=>{
       var bbox = data.total_bounds;
 
@@ -147,10 +148,10 @@ async function fcreatemap(topobs) {
       let inat_grid = {url:inat_urlbase+'grid/{z}/{x}/{y}.png',description:'iNaturalist Observations (Grid)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist observation data</a>'};
       //let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
 
-      var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{maxZoom:20, attribution:inat_points.attribution});
-      var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams,{maxZoom:20, attribution:inat_circles.attribution});
-      var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams,{maxZoom:20, attribution:inat_heat.attribution});
-      var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{maxZoom:20, attribution:inat_grid.attribution});
+      var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_points.attribution});
+      var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_circles.attribution});
+      var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_heat.attribution});
+      var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_grid.attribution});
       //var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
 
       // Other iNaturalist Layers
@@ -235,7 +236,7 @@ async function fcreatemap(topobs) {
       L.control.scale().addTo(mymap);
 
       mymap.fitBounds([[bbox.nelat,(bbox.swlng<bbox.nelng?bbox.nelng:bbox.nelng+360)],[bbox.swlat,bbox.swlng]]);
-      console.log('bounding box nelat= '+bbox.nelat+' nelng= '+bbox.nelng+' swlat= '+bbox.swlat+' swlng= '+bbox.swlng);
+      console.log('bounding box nelat='+bbox.nelat+' nelng='+bbox.nelng+' swlat='+bbox.swlat+' swlng='+bbox.swlng);
       return {obj:mymap,bbox:bbox,lyrctrl:lyrctrl};
    });
    return map;
@@ -257,6 +258,7 @@ function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(l
 
 //function to identify the right tiles to pull, given a bounding box defined by a SW point and NE point in GPS coordinates
 //this is only somewhat tested, but it seems to help pull in the right tiles (most of the time?).
+//the goal of this is to find the best-fit 4 map tiles which will encompass the bounds of the observations.
 function ffindtiles(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
    var w = bbox.swlng;
    var e = bbox.nelng;
@@ -268,10 +270,8 @@ function ffindtiles(bbox={swlat:-90,swlng:0,nelat:89.999999,nelng:-0.00001}) {
    var dh = latidx(s)-latidx(n);
 
    //start to set some basic variables to create layers, tiles, and cells
-   //one or more layer divs will be placed on the 1024px x 1024px map div. each layer div will be the same size as the map div. multiple layer divs will be stacked.
-   //each layer div will contain 16 256px x 256px tiles (in 4 columns and 4 rows).
    //each tile may contain up to 4096 4px x 4px cells (in 64 columns and 64 rows).
-   //we want at least 4 tiles. because maps at zoom 0 will contain only 1 tile, we will set the default (lowest) zoom level 1 for simplicity.
+   //we want 4 tiles. because maps at zoom 0 will contain only 1 tile, we will set the default (lowest) zoom level 1 for simplicity.
    var zoom = 1;
    var txmax = Math.pow(2,zoom)-1;
    var tymax = Math.pow(2,zoom)-1;
@@ -330,6 +330,7 @@ function fgettile(ary,key) {
    return obj.tid;
 };
 async function fcenterpoint(tiles,user_id) {
+   //get UTFgrids
    var promiseary = [];
    for (t=0;t<tiles.length;t++) {
       var url = freplacexyz((inat_urlbase+'heatmap/{z}/{x}/{y}.grid.json?'+winurlparams+'&user_id='+user_id),tiles[t].tid[0],tiles[t].tid[1],tiles[t].zoom);
@@ -338,6 +339,7 @@ async function fcenterpoint(tiles,user_id) {
    };
    var coords = await Promise.all(promiseary)
    .then(data=>{
+      //parse through the UTFgrids
       var cellnum = 32;
       var cellary = [];
       var tileary = [];
@@ -346,7 +348,8 @@ async function fcenterpoint(tiles,user_id) {
          var id = data[p].id;
          var utfgrid = data[p+1];
          // note that although the UTFgrids are 64x64, these particular UTFGrids are effectively only 32x32 (where 2x2 sets of cells are combined into a single cell)
-         // we will use the bottom-right cell in each 2x2 set
+         // we will use the bottom-right cell in each 2x2 set of cells
+         // since the UTFgrids are *effectively* 32x32, and we have a 2x2 set of UTFgrids, we'll consolidate everything into a single 64x64 set of cells.
          for (cy=0;cy<cellnum;cy++) {
             for (cx=0;cx<cellnum;cx++) {
                //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
@@ -359,6 +362,8 @@ async function fcenterpoint(tiles,user_id) {
             };
          };
       };
+      //here, we'll do a very simple average to get the density midpoint along each of the X and Y axes. we'll round to the nearest cell (whole number).
+      //note that this doesn't account for things like the shaped of the Earth, but it should be fine for quick high-level visualization.
       var cax = 0;
       var cay = 0;
       var cat = 0;
@@ -370,10 +375,11 @@ async function fcenterpoint(tiles,user_id) {
       var zoom = data[0].zoom;
       var avgx = Math.round(cax/cat);
       var avgy = Math.round(cay/cat);
+      //now we'll relate the average cell in the set to one of the 32x32 effective cells in the original set of XYZ tiles / UTFgrids
       var avgid = [Math.floor((avgx-1)/cellnum),Math.floor((avgy-1)/cellnum)];
       var avgt = fgettile(tileary,avgid);
       var avgc = [(avgx-1)%cellnum,(avgy-1)%cellnum];
-
+      //finally, we'll translate the centerpoint of the cell to a latitude and longitude
       var avglat = Math.atan(Math.sinh( Math.PI*(1-( 2*(avgt[1]+((avgc[1]+0.5)/cellnum))/Math.pow(2,zoom) )) )) * 180 / Math.PI;
       var avglng = ( (avgt[0]+((avgc[0]+0.5)/cellnum)) / Math.pow(2,zoom) * 360 ) - 180;
       return [avglat,avglng];
