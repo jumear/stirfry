@@ -54,6 +54,7 @@ var top_n = winurlparams.get('top_n') || 10;
 winurlparams.delete('per_page'); //this will be used later
 winurlparams.delete('top_n');
 
+let inat_url = 'https://www.inaturalist.org/';
 let inat_urlbase = 'https://api.inaturalist.org/v1/';
 var apirefurl = furl(inat_urlbase+'docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json','Grid Tiles UTFGrid');
 
@@ -123,7 +124,7 @@ else {
             popupAnchor: [0,-iconpx/2],
          });
          var marker = L.marker([coords[0],coords[1]],{icon:icon}).addTo(mymap);
-         marker.bindPopup(obs.user_login+': '+fcomnum(obs.obs_count)+' observations');
+         marker.bindPopup('<a href="'+inat_url+'people/'+obs.user_login+'">'+obs.user_login+'</a>: <a href="'+inat_url+'observations?'+winurlparams+'&user_id='+obs.user_login+'">'+fcomnum(obs.obs_count)+' observations</a>');
          //var pin = L.marker([coords[0],coords[1]]).addTo(mymap);
          lyrctrl.addOverlay(marker,"Observer: "+obs.user_login+" ("+fcomnum(obs.obs_count)+")");
          console.log(obs.user_login+': '+coords[0]+','+coords[1]);
