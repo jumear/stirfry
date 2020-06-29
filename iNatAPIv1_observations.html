@@ -98,9 +98,9 @@ function fresults(xobj) {
       for (var i=0; i<results.length; i++) {
          var brow = faddelem('tr',tbody);
          faddelem('td',brow,null,null,i+1);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].id));
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations/'+results[i].id,results[i].id));
          faddelem('td',brow,null,null,'<img class="photo" src="'+((results[i].photos&&results[i].photos.length>0)?results[i].photos[0].url:'')+'" />');
-         faddelem('td',brow,null,null,results[i].taxon?results[i].taxon.name:'');
+         faddelem('td',brow,null,null,results[i].taxon?furl('https://www.inaturalist.org/taxa/'+results[i].taxon.id,results[i].taxon.name):'');
          faddelem('td',brow,null,null,results[i].taxon?results[i].taxon.preferred_common_name:'');
          faddelem('td',brow,null,null,results[i].taxon?results[i].taxon.rank:'');
          faddelem('td',brow,null,null,results[i].quality_grade);
