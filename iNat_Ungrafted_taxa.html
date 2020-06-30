@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist API Ungrafted Taxa" />
+<title>iNaturalist API Ungrafted Taxa</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+   .button { font-size:18pt; }
+   .button_inactive { font-size:18pt; opacity:0.5; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   eparent.appendChild(eobj);
+   return eobj;
+};
+function fpageurl(urlbase,urlparams,per_page,page) {
+   var params = new URLSearchParams(urlparams);
+   var url_per_page = params.get('per_page');
+   var url_page = params.get('page');
+   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
+   (url_page===null) ? params.append('page',page) : params.set('page',page);
+   return urlbase+'?'+params;
+};
+function fresults(xobj) {
+   var results = xobj.results;
+   if (results) {
+      var total_results = xobj.total_results;
+      var per_page = xobj.per_page;
+      var page_curr = xobj.page;
+      var page_max = Math.ceil(total_results/per_page);
+      var page_prev = ((page_curr>1)?page_curr-1:null);
+      var page_next = ((page_curr<page_max)?page_curr+1:null);
+
+      faddelem('p',document.body,null,null,'total taxa: '+fcomnum(total_results)+'<br />'
+         +'per page: '+fcomnum(per_page)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
+         );
+
+      var table = faddelem('table',document.body,null,'main');
+      var thead = faddelem('thead',table);
+      var hrow = faddelem('tr',thead);
+      faddelem('td',hrow,null,null,'Taxon');
+      faddelem('td',hrow,null,null,'rank');
+      faddelem('td',hrow,null,null,'id');
+      faddelem('td',hrow,null,null,'observations_count');
+	  faddelem('td',hrow,null,null,'extinct?');
+      faddelem('td',hrow,null,null,'Google search');
+      faddelem('td',hrow,null,null,'edit');
+      faddelem('td',hrow,null,null,'add new taxon change');
+      var tbody = faddelem('tbody',table);
+      for (var i=0; i<results.length; i++) {
+         var brow = faddelem('tr',tbody);
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].name));
+         faddelem('td',brow,null,null,results[i].rank);
+         faddelem('td',brow,null,null,results[i].id);
+         faddelem('td',brow,'tar',null,results[i].observations_count);	
+		 faddelem('td',brow,'tar',null,results[i].extinct);
+         faddelem('td',brow,null,null,furl('https://www.google.com/search?q='+results[i].name, 'Google search'));	 
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
+		 faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Taxon Change'));
+      };
+
+      // buttons to go to prev or next page
+      var buttons = faddelem('p',document.body);
+      (page_curr<=1)?faddelem('span',buttons,'button_inactive',null,'⏮'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,1),'⏮'));
+      (page_prev===null)?faddelem('span',buttons,'button_inactive',null,'◀'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev),'◀'));
+      (page_next===null)?faddelem('span',buttons,'button_inactive',null,'▶'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_next),'▶'));
+      (page_curr>=page_max)?faddelem('span',buttons,'button_inactive',null,'⏭'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_max),'⏭'));
+   }
+   else { faddelem('p',document.body,null,null,'No results returned.'); };
+};
+
+
+var apibase = 'http://api.inaturalist.org/v1/taxa';
+var apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+var apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
+var apirefname = 'iNaturalist Taxa';
+var apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,null,null,'iNaturalist Ungrafted Taxa');
+
+if (window.location.search==='') {
+    faddelem('p',document.body,null,null, 'This is the query for active ungrafted taxa:' +furl(famp(winurlexsearchstr+'?is_active=true&parent_id=0&rank=phylum%2Csubphylum%2Csuperclass%2Cclass%2Csubclass%2Cinfraclass%2Csubterclass%2Csuperorder%2Corder%2Csuborder%2Cinfraorder%2Cparvorder%2Czoosection%2Czoosubsection%2Csuperfamily%2Cepifamily%2Cfamily%2Csubfamily%2Csupertribe%2Ctribe%2Csubtribe%2Cgenus%2Cgenushybrid%2Csubgenus%2Csection%2Csubsection%2Ccomplex%2Cspecies%2Chybrid%2Csubspecies%2Cvariety%2Cform%2Cinfrahybrid&per_page=200'))+'. This page will also accept most parameters from the '+apiref+' API endpoint.');
+}
+else {
+	faddelem('p',document.body,null,null, 'This is the query for active ungrafted taxa:' +furl(famp(winurlexsearchstr+'?is_active=true&parent_id=0&rank=phylum%2Csubphylum%2Csuperclass%2Cclass%2Csubclass%2Cinfraclass%2Csubterclass%2Csuperorder%2Corder%2Csuborder%2Cinfraorder%2Cparvorder%2Czoosection%2Czoosubsection%2Csuperfamily%2Cepifamily%2Cfamily%2Csubfamily%2Csupertribe%2Ctribe%2Csubtribe%2Cgenus%2Cgenushybrid%2Csubgenus%2Csection%2Csubsection%2Ccomplex%2Cspecies%2Chybrid%2Csubspecies%2Cvariety%2Cform%2Cinfrahybrid&per_page=200'))+'. This page will also accept most parameters from the '+apiref+' API endpoint.');
+	fetch(apiurl)
+	  .then((response) => {
+		 if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+		 return response.json();
+	  })
+	  .then((data) => { fresults(data); })
+	  .catch((err) => {
+		 console.error(err.message);
+		 faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+	  });
+}
+</script>
+</body>
+
+</html>
+
+
