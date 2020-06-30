@@ -70,7 +70,8 @@ function fresults(xobj) {
       faddelem('td',hrow,null,null,'rank');
       faddelem('td',hrow,null,null,'id');
       faddelem('td',hrow,null,null,'observations_count');
-	  faddelem('td',hrow,null,null,'extinct?');
+      faddelem('td',hrow,null,null,'extinct?');
+      faddelem('td',hrow,null,null,'unresolved flags');
       faddelem('td',hrow,null,null,'Google search');
       faddelem('td',hrow,null,null,'edit');
       faddelem('td',hrow,null,null,'add new taxon change');
@@ -81,10 +82,11 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,results[i].rank);
          faddelem('td',brow,null,null,results[i].id);
          faddelem('td',brow,'tar',null,results[i].observations_count);	
-		 faddelem('td',brow,'tar',null,results[i].extinct);
+         faddelem('td',brow,'tar',null,results[i].extinct);
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
          faddelem('td',brow,null,null,furl('https://www.google.com/search?q='+results[i].name, 'Google search'));	 
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
-		 faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Taxon Change'));
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Taxon Change'));
       };
 
       // buttons to go to prev or next page
@@ -110,6 +112,7 @@ if (window.location.search==='') {
 }
 else {
 	faddelem('p',document.body,null,null, 'This is the query for active ungrafted taxa:' +furl(famp(winurlexsearchstr+'?is_active=true&parent_id=0&rank=phylum%2Csubphylum%2Csuperclass%2Cclass%2Csubclass%2Cinfraclass%2Csubterclass%2Csuperorder%2Corder%2Csuborder%2Cinfraorder%2Cparvorder%2Czoosection%2Czoosubsection%2Csuperfamily%2Cepifamily%2Cfamily%2Csubfamily%2Csupertribe%2Ctribe%2Csubtribe%2Cgenus%2Cgenushybrid%2Csubgenus%2Csection%2Csubsection%2Ccomplex%2Cspecies%2Chybrid%2Csubspecies%2Cvariety%2Cform%2Cinfrahybrid&per_page=200'))+'. This page will also accept most parameters from the '+apiref+' API endpoint.');
+	faddelem('p',document.body,null,null, 'External taxonomic authorities and taxon curators can be found ' + furl('https://www.inaturalist.org/pages/curator+guide#authorities', 'here')+'.');
 	fetch(apiurl)
 	  .then((response) => {
 		 if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
