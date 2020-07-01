@@ -28,7 +28,7 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-//var p_per_page = winurlparams.get('per_page') || 500;
+//var p_per_page = winurlparams.get('per_page') || 200;
 //var p_page = winurlparams.get('page') || 1;
 
 function fdate(str) {
@@ -69,8 +69,7 @@ function fresults(xobj) {
       var page_prev = ((page_curr>1)?page_curr-1:null);
       var page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      //faddelem('p',document.body,null,null,'total leaf taxa: '+xobj.total_results);
-      faddelem('p',document.body,null,null,'total leaf taxa: '+fcomnum(total_results)+'<br />'
+      faddelem('p',document.body,null,null,'total observations: '+fcomnum(total_results)+'<br />'
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
          );
