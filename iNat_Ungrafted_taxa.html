@@ -81,7 +81,7 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].name));
          faddelem('td',brow,null,null,results[i].rank);
          faddelem('td',brow,null,null,results[i].id);
-         faddelem('td',brow,'tar',null,results[i].observations_count);	
+         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?verifiable=any&taxon_id='+results[i].id,results[i].observations_count));	
          faddelem('td',brow,'tar',null,results[i].extinct);
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
          faddelem('td',brow,null,null,furl('https://www.google.com/search?q='+results[i].name, 'Google search'));	 
