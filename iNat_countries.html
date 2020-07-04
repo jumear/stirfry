@@ -81,7 +81,7 @@ Promise.all(promiseary).then(data=>{
       var c = countries[i].parent_id;
       if(!continents.includes(c)) { continents.push(c) };
    };
-   var d = await ffetch('http://api.inaturalist.org/v1/places/'+continents);
+   var d = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
    return [countries,d];
 })
 .then(data=>{
