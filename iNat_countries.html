@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Countries" />
+<title>iNaturalist Countries</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   a { text-decoration:none; }
+   .button { font-size:18pt; }
+   .button_inactive { font-size:18pt; opacity:0.5; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+//var p_per_page = winurlparams.get('per_page') || 200;
+//var p_page = winurlparams.get('page') || 1;
+
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace('+00:00','±00:00');
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+   };
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   if (etext!==null) { eobj.innerText = etext };
+   if (eparent!==null) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function fgetname(ary,key) {
+   var obj = ary.find(o=>o.id===key);
+   return obj?obj.name:key;
+};
+function fround(num,places) {
+   var n = num*1;
+   return n.toFixed(places); 
+};
+function fpageurl(urlbase,urlparams,per_page,page) {
+   var params = new URLSearchParams(urlparams);
+   var url_per_page = params.get('per_page');
+   var url_page = params.get('page');
+   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
+   (url_page===null) ? params.append('page',page) : params.set('page',page);
+   return urlbase+'?'+params;
+};
+function ffetch(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      .then((data) => { return data; })
+      .catch((err) => { console.error(err); });
+};
+
+faddelem('h1',document.body,null,null,'iNaturalist Countries');
+var apiurl = 'https://www.inaturalist.org/places.json?place_type=country&per_page=200';
+var promiseary = [];
+for (i=1;i<=2;i++) { // there shouldn't be more than 2 sets needed
+   promiseary.push(ffetch(apiurl+'&page='+i));
+};
+Promise.all(promiseary).then(data=>{
+   var placeary = [];
+   for (d=0;d<data.length;d++) {
+      for (p=0;p<data[d].length;p++) {
+         if (data[d][p].admin_level===0) { placeary.push(data[d][p]); }
+      };
+   };
+   return placeary;
+})
+.then(async countries=>{
+   var continents = [];
+   for (i=0;i<countries.length;i++) {
+      var c = countries[i].parent_id;
+      if(!continents.includes(c)) { continents.push(c) };
+   };
+   var d = await ffetch('http://api.inaturalist.org/v1/places/'+continents);
+   return [countries,d];
+})
+.then(data=>{
+   var countries = data[0];
+   var continents = data[1].results;
+   if (!countries) {
+      faddelem('p',document.body,null,null,'No results returned.');
+      return;
+   }
+   countries.sort(function(a, b) { // sort by name
+       if(a.name < b.name) { return -1; }
+       if(a.name > b.name) { return 1; }
+       return 0;
+   });
+   var table = faddelem('table',document.body,null,'main');
+   var thead = faddelem('thead',table);
+   var hrow = faddelem('tr',thead);
+   faddelem('td',hrow,null,null,'#');
+   faddelem('td',hrow,null,null,'ID');
+   faddelem('td',hrow,null,null,'Alpha-2 Code');
+   faddelem('td',hrow,null,null,'Name');
+//   faddelem('td',hrow,null,null,'display_name');
+//   faddelem('td',hrow,null,null,'slug');
+   faddelem('td',hrow,null,null,'Check List ID');
+   faddelem('td',hrow,null,null,'Create Date');
+   faddelem('td',hrow,null,null,'Update Date');
+   faddelem('td',hrow,null,null,'Parent Place');
+   faddelem('td',hrow,'tar',null,'Lat');
+   faddelem('td',hrow,'tar',null,'Long');
+   faddelem('td',hrow,'tar',null,'NE Lat');
+   faddelem('td',hrow,'tar',null,'NE Long');
+   faddelem('td',hrow,'tar',null,'SW Lat');
+   faddelem('td',hrow,'tar',null,'SW Long');
+//   faddelem('td',hrow,null,null,'source_id');
+//   faddelem('td',hrow,null,null,'source_identifier');
+//   faddelem('td',hrow,null,null,'source_name');
+//   faddelem('td',hrow,null,null,'user_id');
+//   faddelem('td',hrow,null,null,'woeid');
+//   faddelem('td',hrow,null,null,'uuid');
+
+   var tbody = faddelem('tbody',table);
+   for (var i=0; i<countries.length; i++) {
+      var brow = faddelem('tr',tbody);
+      faddelem('td',brow,null,null,i+1);
+      faddelem('td',brow,null,null,furl('https://www.inaturalist.org/places/'+countries[i].id,countries[i].id));
+      faddelem('td',brow,null,null,furl('https://www.iso.org/obp/ui/#iso:code:3166:'+countries[i].code,countries[i].code));
+      faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+countries[i].id,countries[i].name));
+//      faddelem('td',brow,null,null,countries[i].display_name);
+//      faddelem('td',brow,null,null,countries[i].slug);
+      faddelem('td',brow,null,null,countries[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+countries[i].check_list_id,countries[i].check_list_id):'');
+      faddelem('td',brow,null,null,fdate(countries[i].created_at,true));
+      faddelem('td',brow,null,null,fdate(countries[i].updated_at,true));
+      faddelem('td',brow,null,null,countries[i].parent_id?furl('https://www.inaturalist.org/places/'+countries[i].parent_id,fgetname(continents,countries[i].parent_id)):'');
+      faddelem('td',brow,'tar',null,fround(countries[i].latitude,4));
+      faddelem('td',brow,'tar',null,fround(countries[i].longitude,4));
+      faddelem('td',brow,'tar',null,fround(countries[i].nelat,4));
+      faddelem('td',brow,'tar',null,fround(countries[i].nelng,4));
+      faddelem('td',brow,'tar',null,fround(countries[i].swlat,4));
+      faddelem('td',brow,'tar',null,fround(countries[i].swlng,4));
+//      faddelem('td',brow,null,null,countries[i].source_id);
+//      faddelem('td',brow,null,null,countries[i].source_identifier);
+//      faddelem('td',brow,null,null,countries[i].source_name);
+//      faddelem('td',brow,null,null,countries[i].user_id);
+//      faddelem('td',brow,null,null,countries[i].woeid);
+//      faddelem('td',brow,null,null,countries[i].uuid);
+   };
+});
+
+</script>
+</body>
+
+</html>
