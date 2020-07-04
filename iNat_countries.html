@@ -22,6 +22,24 @@
 <body>
 <script>
 
+//get parameters from the url
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var stats = winurlparams.get('stats')||[];
+var show = {};
+show.observations = stats.includes('observations');
+show.species = stats.includes('species');
+show.observers = stats.includes('observers');
+show.identifiers = stats.includes('identifiers');
+winurlparams.delete('stats');
+winurlparams.delete('place_id'); // will be set to individual countries
+winurlparams.delete('page');
+winurlparams.append('page',1);
+winurlparams.delete('per_page');
+winurlparams.append('per_page',0); // we don't actually need to return any detail records. we just need the total_records value returned in the response.
+
 function fdate(str,dateonly=false) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
    if (dateonly) { str = str.split(' ')[0]; }
@@ -33,6 +51,7 @@ function fdate(str,dateonly=false) {
    return str;
 };
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
 function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
@@ -59,8 +78,24 @@ function ffetch(url) {
       .then((data) => { return data; })
       .catch((err) => { console.error(err); });
 };
+function delay(time,value) {
+   return new Promise(function(resolve) { 
+       setTimeout(resolve.bind(null, value), time)
+       console.log('Pausing '+time+'ms...')
+   });
+}
 
+
+var apiref = {};
+apiref.observations = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations';
+apiref.species = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_species_counts';
+apiref.identifiers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_identifiers';
+apiref.observers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_observers';
 faddelem('h1',document.body,null,null,'iNaturalist Countries');
+faddelem('p',document.body,null,null,'By default, this page pulls back a list of countries set up in iNaturalist. Optionally, it can pull back counts of observations, species, identifiers, and observers for each country. To get the extra statistics, add a "stats" parameter to the URL, and set it to a comma-separated list of values including "observations", "species", "identifiers", and/or "observers". These extra stats can also be filtered in the URL using the parameters available in the '+furl(apiref.observations,'observations')+', '+furl(apiref.species,'species')+', '+furl(apiref.identifiers,'identifiers')+', and '+furl(apiref.observers,'observers')+' API endpoints.');
+faddelem('p',document.body,null,null,'For example, to add number of research-grade bird observations and associated observers to the list of countries, open '+furl(winurlexsearchstr+'?taxon_id=3&quality_grade=research&stats=observations,observers')+' in your browser.');
+faddelem('p',document.body,null,null,'To adhere to recommended API request limits when getting the additional stats, this page will request one data point per second. Additionally, you should be careful of how often you use this page to get those additional stats so that you do not exceed the recommended maximum 10,000 daily API request limit. See the '+furl('https://www.inaturalist.org/pages/api+recommended+practices','API recommended practices page')+' for more information.');
+
 var apiurl = 'https://www.inaturalist.org/places.json?place_type=country&per_page=200';
 var promiseary = [];
 for (i=1;i<=2;i++) { // there shouldn't be more than 2 sets needed
@@ -121,6 +156,10 @@ Promise.all(promiseary).then(data=>{
 //   faddelem('td',hrow,null,null,'user_id');
 //   faddelem('td',hrow,null,null,'woeid');
 //   faddelem('td',hrow,null,null,'uuid');
+   if (show.observations) { faddelem('td',hrow,'tar',null,'Observations'); }
+   if (show.species) { faddelem('td',hrow,'tar',null,'Species'); }
+   if (show.identifiers) { faddelem('td',hrow,'tar',null,'Identifiers'); }
+   if (show.observers) { faddelem('td',hrow,'tar',null,'Observers'); }
 
    var tbody = faddelem('tbody',table);
    for (var i=0; i<countries.length; i++) {
@@ -147,6 +186,48 @@ Promise.all(promiseary).then(data=>{
 //      faddelem('td',brow,null,null,countries[i].user_id);
 //      faddelem('td',brow,null,null,countries[i].woeid);
 //      faddelem('td',brow,null,null,countries[i].uuid);
+      if (show.observations) { faddelem('td',brow,'tar','observations_'+countries[i].id); }
+      if (show.species) { faddelem('td',brow,'tar','species_'+countries[i].id); }
+      if (show.identifiers) { faddelem('td',brow,'tar','identifiers_'+countries[i].id); }
+      if (show.observers) { faddelem('td',brow,'tar','observers_'+countries[i].id); }
+   };
+   return countries;
+})
+.then(async countries=>{
+   for (var i=0; i<countries.length; i++) {
+      if (show.observations) {
+         await delay(1000);
+         Promise.all([
+            Promise.resolve(countries[i].id),
+            ffetch('https://api.inaturalist.org/v1/observations?'+winurlparams+'&place_id='+countries[i].id)
+         ])
+         .then(results=>{ document.getElementById('observations_'+results[0]).innerText = (results[1]?fcomnum(results[1].total_results):'N/A'); });
+
+      };
+      if (show.species) {
+         await delay(1000);
+         Promise.all([
+            Promise.resolve(countries[i].id),
+            ffetch('https://api.inaturalist.org/v1/observations/species_counts?'+winurlparams+'&place_id='+countries[i].id)
+         ])
+         .then(results=>{ document.getElementById('species_'+results[0]).innerText = (results[1]?fcomnum(results[1].total_results):'N/A'); });
+      };
+      if (show.identifiers) {
+         await delay(1000);
+         Promise.all([
+            Promise.resolve(countries[i].id),
+            ffetch('https://api.inaturalist.org/v1/observations/identifiers?'+winurlparams+'&place_id='+countries[i].id)
+         ])
+         .then(results=>{ document.getElementById('identifiers_'+results[0]).innerText = (results[1]?fcomnum(results[1].total_results):'N/A'); });
+      };
+      if (show.observers) {
+         await delay(1000);
+         Promise.all([
+            Promise.resolve(countries[i].id),
+            ffetch('https://api.inaturalist.org/v1/observations/observers?'+winurlparams+'&place_id='+countries[i].id)
+         ])
+         .then(results=>{ document.getElementById('observers_'+results[0]).innerText = (results[1]?fcomnum(results[1].total_results):'N/A'); });
+      };
    };
 });
 
