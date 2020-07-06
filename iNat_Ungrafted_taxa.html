@@ -8,7 +8,7 @@
 </head>
 
 <body>
-<script src="http://www.tablefilter.com/tablefilter/tablefilter.js"></script>
+<script src="https://www.tablefilter.com/tablefilter/tablefilter.js"></script>
 <script>
 
 const RANK_LEVELS = {
@@ -49,7 +49,7 @@ const RANK_LEVELS = {
 };
 
 var tfConfig = {
-    base_path: 'http://www.tablefilter.com/tablefilter/',
+    base_path: 'https://www.tablefilter.com/tablefilter/',
     alternate_rows: true,  // highlight alternate rows
     rows_counter: {
         text: 'Taxa: '
@@ -152,7 +152,7 @@ function fresults(results) {
           +' | '+furl('https://www.inaturalist.org/search?q='+results[i].name, 'iNat')
           +' | '+furl('https://www.inaturalist.org/taxa/search?is_active=any&q='+results[i].name, 'old iNat taxa')          
           +' | '+furl('https://eol.org/search?utf8=%E2%9C%93&q='+results[i].name, 'EOL')            
-          +' | '+furl('http://www.catalogueoflife.org/annual-checklist/2012/search/all/key/'+results[i].name, 'COL')        
+          +' | '+furl('https://www.catalogueoflife.org/annual-checklist/2012/search/all/key/'+results[i].name, 'COL')        
        );    
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Change'));
