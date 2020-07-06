@@ -5,34 +5,93 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="description" content="iNaturalist API Ungrafted Taxa" />
 <title>iNaturalist API Ungrafted Taxa</title>
-<style>
-   body { font:10pt Sans-Serif; }
-   .tar { text-align:right; }
-   #main { width:100%; }
-   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
-   thead tr { font-weight:600; background:green; color:white; }
-   tr { background:whitesmoke; }
-   tr:nth-child(even) {background-color:white }
-   .icon { height:48px; width:48px; border-radius:50%; }
-   img { margin:0px; padding:0px; border:0px; }
-   a { text-decoration:none; }
-   .button { font-size:18pt; }
-   .button_inactive { font-size:18pt; opacity:0.5; }
-   .pbreak { word-wrap:break-word; word-break:break-word; }
-</style>
 </head>
 
 <body>
+<script src="http://www.tablefilter.com/tablefilter/tablefilter.js"></script>
 <script>
-let winurlstr = window.location.href;
-let winurlsearchstr = window.location.search;
-let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
-var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+
+const RANK_LEVELS = {
+  root: 100,
+  kingdom: 70,
+  subkingdom: 67,
+  phylum: 60,
+  subphylum: 57,
+  superclass: 53,
+  class: 50,
+  subclass: 47,
+  infraclass: 45,
+  superorder: 43,
+  order: 40,
+  suborder: 37,
+  infraorder: 35,
+  parvorder: 34.5,
+  zoosection: 34,
+  zoosubsection: 33.5,
+  superfamily: 33,
+  epifamily: 32,
+  family: 30,
+  subfamily: 27,
+  supertribe: 26,
+  tribe: 25,
+  subtribe: 24,
+  genus: 20,
+  genushybrid: 20,
+  subgenus: 15,
+  section: 13,
+  subsection: 12,
+  species: 10,
+  hybrid: 10,
+  subspecies: 5,
+  variety: 5,
+  form: 5,
+  infrahybrid: 5
+};
+
+var tfConfig = {
+    base_path: 'http://www.tablefilter.com/tablefilter/',
+    alternate_rows: true,  // highlight alternate rows
+    rows_counter: {
+        text: 'Taxa: '
+    },
+    btn_reset: true,  // clear button
+    no_results_message: true,
+    col_widths: ['310px', '130px', '110px', '100px', '90px', '100px', '360px', '70px', '120px'],
+
+    // columns data types
+    col_types: [
+        'string',
+        'string',
+        'number',
+        'number',
+        'boolean',
+        'number',
+        'none',
+        'none',
+        'none'
+    ],
+    col_1: 'checklist',
+    col_4: 'select',
+    col_6: 'none',
+    col_7: 'none',
+    col_8: 'none',
+    auto_filter: true,
+    // We use a custom comparer for the "Rank" column.
+    filter_options_sorter: {
+      col: [1],
+      comparer: [
+        function(a, b) { 
+          return (RANK_LEVELS[b] - RANK_LEVELS[a]); 
+        }
+      ]
+    },
+    sticky_headers: true,
+
+    extensions: [{ name: 'sort' }]
+};
 
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
-function famp(str) { return str.replace(/&/g,'&amp;'); };
-function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
 function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    var eobj = document.createElement(etype);
    if (eclass!==null) { eobj.classList = eclass };
@@ -41,97 +100,78 @@ function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
    eparent.appendChild(eobj);
    return eobj;
 };
-function fpageurl(urlbase,urlparams,per_page,page) {
-   var params = new URLSearchParams(urlparams);
-   var url_per_page = params.get('per_page');
-   var url_page = params.get('page');
-   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
-   (url_page===null) ? params.append('page',page) : params.set('page',page);
-   return urlbase+'?'+params;
-};
-function fresults(xobj) {
-   var results = xobj.results;
-   if (results) {
-      var total_results = xobj.total_results;
-      var per_page = xobj.per_page;
-      var page_curr = xobj.page;
-      var page_max = Math.ceil(total_results/per_page);
-      var page_prev = ((page_curr>1)?page_curr-1:null);
-      var page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      faddelem('p',document.body,null,null,'total taxa: '+fcomnum(total_results)+'<br />'
-         +'per page: '+fcomnum(per_page)+'<br />'
-         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
-         );
+function fgather(url,perpage=500,results=[],sofar=0,page=1) {
+    fetch(url+'&page='+page+'&per_page='+perpage)
+    .then((response) => {
+        if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+        return response.json();
+    })
+    .then((data) => {
+        var newResults = results.concat(data.results);
+        if (sofar + perpage > data.total_results) {
+            var table = fresults(newResults);
+            var tf = new TableFilter(table, tfConfig);
+            tf.init();
+        } else {
+            return fgather(url,perpage,newResults,sofar+perpage,page+1);
+        };
+    })
+    .catch((err) => {
+        console.error(err.message);
+        faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+    });
+}
 
-      var table = faddelem('table',document.body,null,'main');
-      var thead = faddelem('thead',table);
-      var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'Taxon');
-      faddelem('td',hrow,null,null,'Rank');
-      faddelem('td',hrow,null,null,'ID');
-      faddelem('td',hrow,null,null,'Obs Count');
-      faddelem('td',hrow,null,null,'Extinct?');
-      faddelem('td',hrow,null,null,'Unresolved Flags');
-      faddelem('td',hrow,null,null,'Internet Search');
-      faddelem('td',hrow,null,null,'Edit Taxon');
-      faddelem('td',hrow,null,null,'New Taxon Change');
-      var tbody = faddelem('tbody',table);
-      for (var i=0; i<results.length; i++) {
-         var brow = faddelem('tr',tbody);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].name));
-         faddelem('td',brow,null,null,results[i].rank);
-         faddelem('td',brow,null,null,results[i].id);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?verifiable=any&taxon_id='+results[i].id,results[i].observations_count));	
-         faddelem('td',brow,null,null,results[i].extinct);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
-         faddelem('td',brow,null,null,
-            furl('https://www.google.com/search?q='+results[i].name, 'Google')
-            +' | '+furl('https://www.bing.com/search?q='+results[i].name, 'Bing')
-            +' | '+furl('https://duckduckgo.com/?q='+results[i].name, 'DDGo')
-            +' | '+furl('https://yandex.com/search/?text='+results[i].name, 'Yandex')
-         );	 
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Change'));
-      };
 
-      // buttons to go to prev or next page
-      var buttons = faddelem('p',document.body);
-      (page_curr<=1)?faddelem('span',buttons,'button_inactive',null,'⏮'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,1),'⏮'));
-      (page_prev===null)?faddelem('span',buttons,'button_inactive',null,'◀'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev),'◀'));
-      (page_next===null)?faddelem('span',buttons,'button_inactive',null,'▶'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_next),'▶'));
-      (page_curr>=page_max)?faddelem('span',buttons,'button_inactive',null,'⏭'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_max),'⏭'));
-   }
-   else { faddelem('p',document.body,null,null,'No results returned.'); };
+function fresults(results) {
+    var table = faddelem('table',document.body,null,'main');
+    var thead = faddelem('thead',table);
+    var hrow = faddelem('tr',thead);
+    faddelem('th',hrow,null,null,'Taxon');
+    faddelem('th',hrow,null,null,'Rank');
+    faddelem('th',hrow,null,null,'ID');
+    faddelem('th',hrow,null,null,'Obs Count');
+    faddelem('th',hrow,null,null,'Extinct?');
+    faddelem('th',hrow,null,null,'Unresolved Flags');
+    faddelem('th',hrow,null,null,'Search');
+    faddelem('th',hrow,null,null,'Edit Taxon');
+    faddelem('th',hrow,null,null,'New Taxon Change');
+    var tbody = faddelem('tbody',table);
+    for (var i=0; i<results.length; i++) {
+       var brow = faddelem('tr',tbody);
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].name));
+       faddelem('td',brow,null,null,results[i].rank);
+       faddelem('td',brow,null,null,results[i].id);
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?verifiable=any&taxon_id='+results[i].id,results[i].observations_count)); 
+       faddelem('td',brow,null,null,results[i].extinct);
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
+       faddelem('td',brow,null,null,
+          furl('https://www.google.com/search?q='+results[i].name, 'Google')
+          +' | '+furl('https://duckduckgo.com/?q='+results[i].name, 'DDGo')
+          +' | '+furl('https://www.inaturalist.org/search?q='+results[i].name, 'iNat')
+          +' | '+furl('https://www.inaturalist.org/taxa/search?is_active=any&q='+results[i].name, 'old iNat taxa')          
+          +' | '+furl('https://eol.org/search?utf8=%E2%9C%93&q='+results[i].name, 'EOL')            
+          +' | '+furl('http://www.catalogueoflife.org/annual-checklist/2012/search/all/key/'+results[i].name, 'COL')        
+       );    
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Change'));
+    };
+ return table
 };
 
 
-var apibase = 'https://api.inaturalist.org/v1/taxa';
-var apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
-var apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
-var apirefname = 'iNaturalist Taxa';
-var apiref = furl(apirefurl,apirefname);
+var apiurl = 'https://api.inaturalist.org/v1/taxa?is_active=true&parent_id=0&rank=phylum,subphylum,superclass,class,subclass,infraclass,subterclass,superorder,order,suborder,infraorder,parvorder,zoosection,zoosubsection,superfamily,epifamily,family,subfamily,supertribe,tribe,subtribe,genus,genushybrid,subgenus,section,subsection,complex,species,hybrid,subspecies,variety,form,infrahybrid';
 faddelem('h1',document.body,null,null,'iNaturalist Ungrafted Taxa');
-faddelem('p',document.body,'pbreak',null, 'This is the query for active ungrafted taxa: '+furl(famp(winurlexsearchstr+'?is_active=true&parent_id=0&rank=phylum,subphylum,superclass,class,subclass,infraclass,subterclass,superorder,order,suborder,infraorder,parvorder,zoosection,zoosubsection,superfamily,epifamily,family,subfamily,supertribe,tribe,subtribe,genus,genushybrid,subgenus,section,subsection,complex,species,hybrid,subspecies,variety,form,infrahybrid&per_page=200'))+'. This page will also accept most parameters from the '+apiref+' API endpoint.');
-faddelem('p',document.body,null,null, 'External taxonomic authorities and taxon curators can be found ' + furl('https://www.inaturalist.org/pages/curator+guide#authorities', 'here')+'.');
+faddelem('h3',document.body,null,null,'Note: this page does NOT take query parameters in the URL.');
+faddelem('h3',document.body,null,null, 'External taxonomic authorities and taxon curators can be found ' + furl('https://www.inaturalist.org/pages/curator+guide#authorities', 'here')+'.');
+faddelem('h2',document.body,null,null, furl('https://www.inaturalist.org/taxa/new', 'Add new taxon'));
+faddelem('h2',document.body,null,null, furl('https://www.inaturalist.org/taxon_changes/new', 'Add new taxon change'));
+faddelem('h3',document.body,null,null, 'Click column headers to sort.');
 
-if (window.location.search==='') {
-    //faddelem('p',document.body,null,null, 'This is the query for active ungrafted taxa: '+furl(famp(winurlexsearchstr+'?is_active=true&parent_id=0&rank=phylum,subphylum,superclass,class,subclass,infraclass,subterclass,superorder,order,suborder,infraorder,parvorder,zoosection,zoosubsection,superfamily,epifamily,family,subfamily,supertribe,tribe,subtribe,genus,genushybrid,subgenus,section,subsection,complex,species,hybrid,subspecies,variety,form,infrahybrid&per_page=200'))+'. This page will also accept most parameters from the '+apiref+' API endpoint.');
-}
-else {
-	fetch(apiurl)
-	  .then((response) => {
-		 if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
-		 return response.json();
-	  })
-	  .then((data) => { fresults(data); })
-	  .catch((err) => {
-		 console.error(err.message);
-		 faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
-	  });
-}
+fgather(apiurl)
+
 </script>
 </body>
 
 </html>
-
