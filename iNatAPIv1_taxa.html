@@ -130,6 +130,8 @@ if (window.location.search==='') {
    faddelem('p',document.body,null,null,'This page displays the response from the '+apiref+' API endpoint in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.');
    faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?q=dracopis&is_active=any&per_page=500'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?q=dracopis&is_active=any&per_page=500'))+' in your browser.');
    faddelem('p',document.body,null,null,'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.');
+   faddelem('p',document.body,null,null,'Also note that is_active=any is undocumented, but that is the thing to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.');
+
 }
 else {
    faddelem('p',document.body,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)');
