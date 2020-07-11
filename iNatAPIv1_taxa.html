@@ -103,11 +103,11 @@ function fexport(count=0) {
          };
       };
       // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
-      var csv = "data:text/csv;charset=utf-8,"+ ary.map(e => e.join(",")).join("\n");
+      var csv = 'data:text/csv;charset=utf-8,'+ ary.map(e => e.join(',')).join('\n');
       var euri = encodeURI(csv);
-      var link = document.createElement("a");
+      var link = document.createElement('a');
       link.href = euri;
-      link.download = "inat_taxa.csv";
+      link.download = 'inat_taxa.csv';
       document.body.appendChild(link); // for FF
       link.click();
       ebutton.innerHTML = 'exported';
@@ -164,7 +164,7 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,results[i].is_active);
          faddelem('td',brow,null,null,results[i].extinct);
          faddelem('td',brow,null,null,results[i].parent_id?furl('https://www.inaturalist.org/taxa/'+results[i].parent_id,results[i].parent_id):'');
-         faddelem('td',brow,null,null,results[i].current_synonymous_taxon_ids);
+         faddelem('td',brow,null,null,results[i].current_synonymous_taxon_ids?results[i].current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)):'');
          faddelem('td',brow,null,null,results[i].atlas_id?furl('https://www.inaturalist.org/atlases/'+results[i].atlas_id,results[i].atlas_id):'');
          faddelem('td',brow,'tar',null,fcomnum(results[i].flag_counts.unresolved));
          faddelem('td',brow,'tar',null,fcomnum(results[i].flag_counts.resolved));
