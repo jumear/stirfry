@@ -82,9 +82,9 @@ function fexport(count=0) {
          'name',
          'rank',
          'rank_level',
-         'parent_id',
          'active',
          'extinct',
+         'parent_id',
          'observations_count',
       ]];
       for (r=0;r<results.length;r++) {
@@ -95,9 +95,9 @@ function fexport(count=0) {
                data[j].name||'',
                data[j].rank||'',
                data[j].rank_level||'',
-               (data[j].parent_id!=null)?data[j].parent_id:'',
                data[j].is_active,
                data[j].extinct,
+               (data[j].parent_id!=null)?data[j].parent_id:'',
                data[j].observations_count,
             ]);
          };
@@ -145,8 +145,8 @@ function fresults(xobj) {
       faddelem('td',hrow,null,null,'parent id');
       faddelem('td',hrow,null,null,'synonymous ids');
       faddelem('td',hrow,null,null,'atlas id');
-      faddelem('td',hrow,'tar',null,'flags (unresolved)');
-      faddelem('td',hrow,'tar',null,'flags (resolved)');
+      faddelem('td',hrow,'tar',null,'unresolved flags');
+      faddelem('td',hrow,'tar',null,'resolved flags');
       faddelem('td',hrow,'tar',null,'taxon schemes');
       faddelem('td',hrow,'tar',null,'taxon changes');
       faddelem('td',hrow,'tar',null,'observations');
