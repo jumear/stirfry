@@ -51,6 +51,68 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    (url_page===null) ? params.append('page',page) : params.set('page',page);
    return urlbase+'?'+params;
 };
+function ffetch(url) {
+   return fetch(url)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .catch((err) => { console.error(err); });
+};
+function fexport(count=0) {
+   var ebutton = document.getElementById('export');
+   ebutton.innerHTML = 'exporting...';
+   // generally the API will return no more than the first 10000 records for a given set of parameters
+   var maxcount = 10000;
+   if (count>maxcount) {
+      count=maxcount;
+      alert('Can export only a maximum of '+maxcount+' records due to API limits.')
+   };
+   // note that API recommended request limit is about 1 request/second or no more than 100 requests per minute.
+   // because this particular endpoint allows 500 records, that means we can do 20 requests before we hit a maximum of 10000 records.
+   // in other words, 20 requests can bring back all the records available, and we are below 100 requests per minute.
+   // so here, we'll just make all the requests in parallel rather than doing them in serial, since it's unlikely we'll encounter API request limits here.
+   var pary = [];
+   var maxper = 500;
+   for (i=0;i<Math.ceil(count/maxper);i++) { pary.push(ffetch(fpageurl(apibase,winurlparams,maxper,i+1))); };
+   Promise.all(pary)
+   .then(results=>{
+      var ary = [[
+         'id',
+         'name',
+         'rank',
+         'rank_level',
+         'parent_id',
+         'active',
+         'extinct',
+         'observations_count',
+      ]];
+      for (r=0;r<results.length;r++) {
+         var data = results[r].results;
+         for (j=0;j<data.length;j++) {
+            ary.push([
+               data[j].id||'',
+               data[j].name||'',
+               data[j].rank||'',
+               data[j].rank_level||'',
+               (data[j].parent_id!=null)?data[j].parent_id:'',
+               data[j].is_active,
+               data[j].extinct,
+               data[j].observations_count,
+            ]);
+         };
+      };
+      // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
+      var csv = "data:text/csv;charset=utf-8,"+ ary.map(e => e.join(",")).join("\n");
+      var euri = encodeURI(csv);
+      var link = document.createElement("a");
+      link.href = euri;
+      link.download = "inat_taxa.csv";
+      document.body.appendChild(link); // for FF
+      link.click();
+      ebutton.innerHTML = 'exported';
+   });
+};
 function fresults(xobj) {
    //faddelem('p',document.body,null,null,furl(famp(apiurl)));
    var results = xobj.results;
@@ -62,7 +124,8 @@ function fresults(xobj) {
       var page_prev = ((page_curr>1)?page_curr-1:null);
       var page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      faddelem('p',document.body,null,null,'total observations: '+fcomnum(total_results)+'<br />'
+      faddelem('p',document.body,null,null,'total observations: '+fcomnum(total_results)+' '
+         +'[<span id="export"><a href="javascript:fexport('+total_results+');">export</a></span>]<br />' 
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
          );
@@ -85,7 +148,7 @@ function fresults(xobj) {
       faddelem('td',hrow,'tar',null,'flags (unresolved)');
       faddelem('td',hrow,'tar',null,'flags (resolved)');
       faddelem('td',hrow,'tar',null,'taxon schemes');
-      faddelem('td',hrow,'tar',null,'taaxon changes');
+      faddelem('td',hrow,'tar',null,'taxon changes');
       faddelem('td',hrow,'tar',null,'observations');
  
       var tbody = faddelem('tbody',table);
