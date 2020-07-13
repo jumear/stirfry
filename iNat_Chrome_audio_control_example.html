@@ -1,5 +1,10 @@
 <html>
 <head>
+    <meta content="https://www.inaturalist.org" property="og:url" />
+    <meta content="Observations" property="og:title" />
+    <meta content="Audio Control example" property="og:description" />
+    <meta content="summary" name="twitter:card" />
+    <meta property="og:image" content="https://static.inaturalist.org/sites/1-shareable_image.png"/>
 </head>
 <style>
    body { margin:10px; }
@@ -29,6 +34,16 @@
 </p>
 <audio controls controlsList="nodownload" preload="none">
 <source src="https://static.inaturalist.org/sounds/93996.wav" type="audio/x-wav">
+</audio>
+
+<h2>Unusual 32-bit Wav file</h2>
+<p>
+   &lt;audio controls preload="none"&gt;<br />
+   &lt;source src="https://static.inaturalist.org/sounds/38536.wav" type="audio/x-wav"&gt;<br />
+   &lt;/audio&gt;<br />
+</p>
+<audio controls preload="none">
+<source src="https://static.inaturalist.org/sounds/38536.wav" type="audio/x-wav">
 </audio>
 
 </body>
