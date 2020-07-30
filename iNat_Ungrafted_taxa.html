@@ -56,7 +56,7 @@ var tfConfig = {
     },
     btn_reset: true,  // clear button
     no_results_message: true,
-    col_widths: ['310px', '130px', '110px', '100px', '90px', '100px', '360px', '70px', '120px'],
+    col_widths: ['310px', '130px', '90px', '70px', '80px', '70px', '370px', '70px', '120px', '90px'],
 
     // columns data types
     col_types: [
@@ -68,6 +68,7 @@ var tfConfig = {
         'number',
         'none',
         'none',
+        'none',
         'none'
     ],
     col_1: 'checklist',
@@ -75,6 +76,7 @@ var tfConfig = {
     col_6: 'none',
     col_7: 'none',
     col_8: 'none',
+    col_9: 'none',
     auto_filter: true,
     // We use a custom comparer for the "Rank" column.
     filter_options_sorter: {
@@ -87,7 +89,7 @@ var tfConfig = {
     },
     sticky_headers: true,
 
-    extensions: [{ name: 'sort' }]
+    extensions: [{ name: 'sort', sort_col_at_start: [2, true] }]
 };
 
 
@@ -131,12 +133,13 @@ function fresults(results) {
     faddelem('th',hrow,null,null,'Taxon');
     faddelem('th',hrow,null,null,'Rank');
     faddelem('th',hrow,null,null,'ID');
-    faddelem('th',hrow,null,null,'Obs Count');
+    faddelem('th',hrow,null,null,'# Obs');
     faddelem('th',hrow,null,null,'Extinct?');
-    faddelem('th',hrow,null,null,'Unresolved Flags');
+    faddelem('th',hrow,null,null,'Open Flags');
     faddelem('th',hrow,null,null,'Search');
     faddelem('th',hrow,null,null,'Edit Taxon');
     faddelem('th',hrow,null,null,'New Taxon Change');
+    faddelem('th',hrow,null,null,'Check IDs');    
     var tbody = faddelem('tbody',table);
     for (var i=0; i<results.length; i++) {
        var brow = faddelem('tr',tbody);
@@ -148,14 +151,16 @@ function fresults(results) {
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
        faddelem('td',brow,null,null,
           furl('https://www.google.com/search?q='+results[i].name, 'Google')
-          +' | '+furl('https://duckduckgo.com/?q='+results[i].name, 'DDGo')
+          +' | '+furl('https://duckduckgo.com/?q='+results[i].name, 'DDG')
           +' | '+furl('https://www.inaturalist.org/search?q='+results[i].name, 'iNat')
-          +' | '+furl('https://www.inaturalist.org/taxa/search?is_active=any&q='+results[i].name, 'old iNat taxa')          
+          +' | '+furl('https://www.inaturalist.org/taxa/search?is_active=any&q='+results[i].name, 'old iNat')          
           +' | '+furl('https://eol.org/search?utf8=%E2%9C%93&q='+results[i].name, 'EOL')            
-          +' | '+furl('https://www.catalogueoflife.org/annual-checklist/2012/search/all/key/'+results[i].name, 'COL')        
+          +' | '+furl('https://www.catalogueoflife.org/annual-checklist/2012/search/all/key/'+results[i].name, 'COL') 
+          +' | '+furl('http://powo.science.kew.org/?q='+results[i].name, 'POWO')          
        );    
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/edit', 'Edit'));
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxon_changes/new?input_taxon_ids%5B%5D='+results[i].id+'&type=TaxonSwap','Add Change'));
+       faddelem('td',brow,null,null,furl('https://www.inaturalist.org/identifications?current=any&taxon_id='+results[i].id, 'Check'));       
     };
  return table
 };
