@@ -58,6 +58,29 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    (url_page===null) ? params.append('page',page) : params.set('page',page);
    return urlbase+'?'+params;
 };
+function fpushifnew(ary,value) {
+   if(!ary.includes(value)) { ary.push(value) };
+   return ary.length;
+};
+function fidextra(obs) {
+   var taxon = obs.taxon;
+   var ids = obs.identifications;
+   if (!ids || !taxon) { return null; }
+   var taxa = {obs:[],ancestor:[],descendant:[],other:[]};
+   var countall = 0;
+   for (i=0;i<ids.length;i++) {
+      if (ids[i].current && !ids[i].hidden) {
+         countall++;
+         var id = ids[i].taxon.id;
+         if ( id===taxon.id ) { fpushifnew(taxa.obs,id); }
+         else if ( taxon.ancestry.split('/').map(s=>Number(s)).includes(id) ) { fpushifnew(taxa.ancestor,id); }
+         else if ( ids[i].taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { fpushifnew(taxa.descendant,id); }
+         else { fpushifnew(taxa.other,id); };
+      };
+   };
+   return {count:{all:countall,by_others:obs.identifications_count},taxa};
+};
+
 function fresults(xobj) {
    //faddelem('p',document.body,null,null,furl(famp(apiurl)));
    var results = xobj.results;
@@ -84,6 +107,11 @@ function fresults(xobj) {
       faddelem('td',hrow,null,null,'common name');
       faddelem('td',hrow,null,null,'rank');
       faddelem('td',hrow,null,null,'grade');
+      faddelem('td',hrow,'tar',null,'id count');
+      faddelem('td',hrow,'tar',null,'id taxa @ obs');
+      faddelem('td',hrow,'tar',null,'id taxa @ ansc');
+      faddelem('td',hrow,'tar',null,'id taxa @ desc');
+      faddelem('td',hrow,'tar',null,'id taxa @ other');
       faddelem('td',hrow,null,null,'user photo');
       faddelem('td',hrow,null,null,'user login');
       faddelem('td',hrow,null,null,'observed date');
@@ -95,6 +123,7 @@ function fresults(xobj) {
  
       var tbody = faddelem('tbody',table);
       for (var i=0; i<results.length; i++) {
+         var idextra = fidextra(results[i]);
          var brow = faddelem('tr',tbody);
          faddelem('td',brow,null,null,i+1);
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations/'+results[i].id,results[i].id));
@@ -103,6 +132,11 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,results[i].taxon?results[i].taxon.preferred_common_name:'');
          faddelem('td',brow,null,null,results[i].taxon?results[i].taxon.rank:'');
          faddelem('td',brow,null,null,results[i].quality_grade);
+         faddelem('td',brow,'tar',null,(idextra===null)?0:idextra.count.all);
+         faddelem('td',brow,'tar',null,(idextra===null)?'N/A':idextra.taxa.obs.length);
+         faddelem('td',brow,'tar',null,(idextra===null)?'N/A':idextra.taxa.ancestor.length);
+         faddelem('td',brow,'tar',null,(idextra===null)?'N/A':idextra.taxa.descendant.length);
+         faddelem('td',brow,'tar',null,(idextra===null)?'N/A':idextra.taxa.other.length);
          faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].user.icon+'" />');
          faddelem('td',brow,null,null,furl('https://www.inaturalist.org/people/'+results[i].user.login,results[i].user.login));
          faddelem('td',brow,null,null,(results[i].time_observed_at?fdate(results[i].time_observed_at):(results[i].observed_on||'')));
