@@ -68,6 +68,9 @@ async function fresults(taxon) {
 //   faddelem('td',hrow,null,null,'Create Date');
 //   faddelem('td',hrow,null,null,'Update Date');
    faddelem('td',hrow,null,null,'Parent Place ID');
+   faddelem('td',hrow,null,null,'Type');
+   faddelem('td',hrow,null,null,'Type Name');
+   faddelem('td',hrow,null,null,'Admin Level');
    faddelem('td',hrow,'tar',null,'Lat');
    faddelem('td',hrow,'tar',null,'Long');
    faddelem('td',hrow,'tar',null,'NE Lat');
@@ -120,6 +123,9 @@ async function fresults(taxon) {
 //                  faddelem('td',brow,null,null,fdate(data[i].created_at,true));
 //                  faddelem('td',brow,null,null,fdate(data[i].updated_at,true));
                   faddelem('td',brow,null,null,data[i].parent_id?furl('https://www.inaturalist.org/places/'+data[i].parent_id,data[i].parent_id):'');
+                  faddelem('td',brow,null,null,data[i].place_type);
+                  faddelem('td',brow,null,null,data[i].place_type_name);
+                  faddelem('td',brow,null,null,data[i].admin_level);
                   faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
                   faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
                   faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
