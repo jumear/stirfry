@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Taxon Establishment Means" />
+<title>iNaturalist Taxon Establishment Means</title>
+<style>
+   body { font:10pt Sans-Serif; }
+   .tar { text-align:right; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   thead tr { font-weight:600; background:green; color:white; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) {background-color:white }
+   img { margin:0px; padding:0px; border:0px; }
+   a { text-decoration:none; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var p_taxon_id = winurlparams.get('taxon_id');
+
+function fdate(str) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+   str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace('+00:00','±00:00');
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   if (etext!==null) { eobj.innerText = etext };
+   if (eparent!==null) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function fround(num,places) {
+   var n = num*1;
+   return n.toFixed(places); 
+};
+
+async function fresults(taxon) {
+   if (taxon.listed_taxa_count=0) {return false;};
+
+   // table and headers
+   var table = faddelem('table',document.body,null,'main');
+   var thead = faddelem('thead',table);
+   var hrow = faddelem('tr',thead);
+   faddelem('td',hrow,null,null,'#');
+   faddelem('td',hrow,null,null,'Est Means');
+   faddelem('td',hrow,null,null,'Check List ID');
+   faddelem('td',hrow,null,null,'Place Name');
+   faddelem('td',hrow,null,null,'Place ID');
+//   faddelem('td',hrow,null,null,'Alpha-2 Code');
+//   faddelem('td',hrow,null,null,'display_name');
+//   faddelem('td',hrow,null,null,'slug');
+//   faddelem('td',hrow,null,null,'Create Date');
+//   faddelem('td',hrow,null,null,'Update Date');
+   faddelem('td',hrow,null,null,'Parent Place ID');
+   faddelem('td',hrow,'tar',null,'Lat');
+   faddelem('td',hrow,'tar',null,'Long');
+   faddelem('td',hrow,'tar',null,'NE Lat');
+   faddelem('td',hrow,'tar',null,'NE Long');
+   faddelem('td',hrow,'tar',null,'SW Lat');
+   faddelem('td',hrow,'tar',null,'SW Long');
+//   faddelem('td',hrow,null,null,'source_id');
+//   faddelem('td',hrow,null,null,'source_identifier');
+//   faddelem('td',hrow,null,null,'source_name');
+//   faddelem('td',hrow,null,null,'user_id');
+//   faddelem('td',hrow,null,null,'woeid');
+//   faddelem('td',hrow,null,null,'uuid');
+
+   // table body
+   var tbody = faddelem('tbody',table);
+
+   // a few variables
+   var means = ['endemic','native','introduced'];
+   var recnum = 0;
+   var page = 0;
+
+   // there shouldn't be that many establishment records. so i'll keep track of fetch attempts and set an arbitrary max limit for attempts just in case something goes wrong.
+   var fetchattempt = 0;
+   var maxfetchattempt = 10; 
+
+   for (m=0;m<means.length;m++) {
+      page++;
+      while (page>0 && fetchattempt<maxfetchattempt) {
+         fetchattempt++;
+         await fetch('https://www.inaturalist.org/places.json?per_page=200&page='+page+'&taxon='+taxon.id+'&establishment_means='+means[m])
+         .then((response) => {
+            if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+            return response.json();
+         })
+         .then((data) => {
+            if (data.length>0) {
+               page++;
+               // add table rows
+               for (var i=0; i<data.length; i++) {
+                  recnum++;
+                  var brow = faddelem('tr',tbody);
+                  faddelem('td',brow,null,null,recnum);
+                  faddelem('td',brow,null,null,means[m]);
+                  faddelem('td',brow,null,null,data[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+data[i].check_list_id+'?taxon='+taxon.id,data[i].check_list_id):'');
+                  faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+data[i].id+'&taxon_id='+taxon.id,data[i].name));
+                  faddelem('td',brow,null,null,furl('https://www.inaturalist.org/places/'+data[i].id,data[i].id));
+//                  faddelem('td',brow,null,null,furl('https://www.iso.org/obp/ui/#iso:code:3166:'+data[i].code,data[i].code));
+//                  faddelem('td',brow,null,null,data[i].display_name);
+//                  faddelem('td',brow,null,null,data[i].slug);
+//                  faddelem('td',brow,null,null,fdate(data[i].created_at,true));
+//                  faddelem('td',brow,null,null,fdate(data[i].updated_at,true));
+                  faddelem('td',brow,null,null,data[i].parent_id?furl('https://www.inaturalist.org/places/'+data[i].parent_id,data[i].parent_id):'');
+                  faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
+                  faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
+                  faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
+                  faddelem('td',brow,'tar',null,fround(data[i].nelng,4));
+                  faddelem('td',brow,'tar',null,fround(data[i].swlat,4));
+                  faddelem('td',brow,'tar',null,fround(data[i].swlng,4));
+//                  faddelem('td',brow,null,null,data[i].source_id);
+//                  faddelem('td',brow,null,null,data[i].source_identifier);
+//                  faddelem('td',brow,null,null,data[i].source_name);
+//                  faddelem('td',brow,null,null,data[i].user_id);
+//                  faddelem('td',brow,null,null,data[i].woeid);
+//                  faddelem('td',brow,null,null,data[i].uuid);
+               };
+            }
+            else { page = 0; }; 
+         })
+         .catch((err) => {
+            console.error(err.message);
+            faddelem('p',document.body,null,null,'There was a problem retrieving establishment means. Error '+err.message+'.')
+         });
+      };
+   };
+   
+   // the count returned from the taxon endpoint is incorrect. so this is just a workaround to get a proper count for now.
+   var reccount = document.getElementById('reccount');
+   reccount.innerText = fcomnum(recnum);
+};
+
+faddelem('h1',document.body,null,null,'iNaturalist Taxon Establishment Means');
+if (window.location.search==='' || p_taxon_id===null) {
+   faddelem('p',document.body,null,null,'This page provides establishment means records for a given taxon. It is only useful if the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).')
+   faddelem('p',document.body,null,null,'To use this page, add a taxon_id parameter and value to the URL. For example, if you want to get establishment means for Liquidambar stryaciflua (American Sweetgum), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=49658'))+' in your browser.');
+}
+else {
+   var apibase = 'https://api.inaturalist.org/v1/taxa/';
+   var apiurl = apibase+p_taxon_id;
+   fetch(apiurl)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => {
+      var firstrec = data.results[0]; // always just get the first result
+      var taxon = {
+         id: firstrec.id,
+         name: firstrec.name, 
+         listed_taxa_count: firstrec.listed_taxa_count,
+      };
+      faddelem('p',document.body,null,null,'taxon: '+taxon.name+' ('+furl('https://www.inaturalist.org/taxa/'+taxon.id,taxon.id)+')<br />'
+         +'total establishment means records: <span id="reccount">'+fcomnum(taxon.listed_taxa_count)+'</span>');
+      fresults(taxon); 
+   })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,null,null,'There was a problem retrieving taxon. Check to make sure you have input a valid taxon. Error '+err.message+'.')
+   });
+};
+</script>
+</body>
+
+
+</html>
