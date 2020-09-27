@@ -68,10 +68,15 @@ var ary_tr = [
    {taxon_rank:"superclass",disp_name:"Superclass"},
    {taxon_rank:"class",disp_name:"Class"},
    {taxon_rank:"subclass",disp_name:"Subclass"},
+   {taxon_rank:"infraclass",disp_name:"Infraclass"},
+   {taxon_rank:"subterclass",disp_name:"Subterclass"},
    {taxon_rank:"superorder",disp_name:"Superorder"},
    {taxon_rank:"order",disp_name:"Order"},
    {taxon_rank:"suborder",disp_name:"Suborder"},
    {taxon_rank:"infraorder",disp_name:"Infraorder"},
+   {taxon_rank:"parvorder",disp_name:"Parvorder"},
+   {taxon_rank:"zoosection",disp_name:"Zoosection"},
+   {taxon_rank:"zoosubsection",disp_name:"Zoosubsection"},
    {taxon_rank:"superfamily",disp_name:"Superfamily"},
    {taxon_rank:"epifamily",disp_name:"Epifamily"},
    {taxon_rank:"family",disp_name:"Family"},
@@ -81,11 +86,16 @@ var ary_tr = [
    {taxon_rank:"subtribe",disp_name:"Subtribe"},
    {taxon_rank:"genus",disp_name:"Genus"},
    {taxon_rank:"genushybrid",disp_name:"Genus Hybrid"},
-   {taxon_rank:"species",disp_name:"Species"},
+   {taxon_rank:"subgenus",disp_name:"Subgenus"},
+   {taxon_rank:"section",disp_name:"Section"},
+   {taxon_rank:"subsection",disp_name:"Subsection"},
+   {taxon_rank:"complex",disp_name:"Complex"},
+   {taxon_rank:"species",disp_name:"Species",icon:"🗝"},
    {taxon_rank:"hybrid",disp_name:"Hybrid"},
    {taxon_rank:"subspecies",disp_name:"Subspecies"},
    {taxon_rank:"variety",disp_name:"Variety"},
    {taxon_rank:"form",disp_name:"Form"},
+   {taxon_rank:"infrahybrid",disp_name:"Infrahybrid"},
    {taxon_rank:"All",disp_name:"All",icon:"🌐"},
 ];
 
@@ -115,9 +125,8 @@ for (i=0;i<ary_tr.length;i++) {
 };
 faddelem('p',document.body,null,null,'Notes:<br />'
    +'1. Because these numbers may be retrieved at slightly different times, they may not all tie exactly.<br />'
-   +'2. Also, the API does not seem to return counts of taxa greater than 10000. So unless that can be altered, this will not work correctly.<br />'
-   +'3. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa','Taxon Search')+' endpoint.)'
-);
+   +'2. This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the iNaturalist API '+furl('https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa','Taxon Search')+' endpoint.)'
+)
 
 // pull data into table
 // (this is separate from the creation of the table structure just in case there are failures while pulling data)
