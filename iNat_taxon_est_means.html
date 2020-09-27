@@ -49,6 +49,66 @@ function fround(num,places) {
    var n = num*1;
    return n.toFixed(places); 
 };
+// functions to sort data in a table
+function fsort(columnNo,asc=true,blanksatend=true) {
+   var tb = document.getElementById('tbody');
+   var ary = Array.from(tb.children);
+   ary.sort(function(a, b) {
+      var val_a = a.children[columnNo].innerText;
+      var val_b = b.children[columnNo].innerText;
+      if (!isNaN(val_a)&&val_b==='') { return blanksatend?-1:1; }
+      else if (!isNaN(val_b)&&val_a==='') { return blanksatend?1:-1; }
+      else if (!isNaN(val_a)&&val_b==='NaN') { return asc?1:-1; }
+      else if (!isNaN(val_b)&&val_a==='NaN') { return asc?-1:1; }
+      else if (isNaN(val_a-val_b)) { return (asc?1:-1) * (val_a>val_b?1:val_a<val_b?-1:0); }
+      else { return asc?(val_a-val_b):(val_b-val_a); };      
+   });
+   ary.forEach(function(ele) {
+      tb.appendChild(ele);
+   });
+};
+function frenum(columnNo=0) {
+   var tb = document.getElementById('tbody');
+   for (var r = 0, row; row = tb.rows[r]; r++) { row.children[columnNo].innerText = r+1; };
+}
+
+//need to do some geometry to figure out the vertical position of a point at given lattitude on a Mercator projection
+//this is not necessary for longitudes
+function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2; };
+
+//this adds a small map with a point marker
+function faddmapthumb (eparent,lat,lng) {
+   var mappx = 40;
+   var mapx = (lng+180)/360*mappx;
+   var mapy = latidx(lat)*mappx;
+
+   var map = faddelem('div',eparent);
+   map.style.height = mappx+'px';
+   map.style.width = mappx+'px';
+   map.style.position = 'relative';
+   map.style.border = '0.75px solid black';
+   map.style.borderRadius = (mappx*0.25)+'px';
+   map.style.overflow = 'hidden';
+   map.style.marginTop = '0px';
+
+   var basemap = faddelem('div',map);
+   basemap.style.height = mappx+'px';
+   basemap.style.width = mappx+'px';
+   //basemap.style.filter = 'invert(65%) brightness(85%)';
+   basemap.style.background = 'url(https://stamen-tiles.a.ssl.fastly.net/toner-lite/0/0/0.png)';
+   basemap.style.backgroundSize = mappx+'px '+mappx+'px';
+   basemap.style.backgroundPosition = (-mapx)+'px 0px';
+
+   var marker = faddelem('div',map);
+   marker.style.height = '3px';
+   marker.style.width = '3px';
+   marker.style.filter = 'none';
+   marker.style.borderRadius ='1.5px';
+   marker.style.position = 'absolute';
+   marker.style.left = (mappx/2-1)+'px';
+   marker.style.top = (mapy-1)+'px';
+   marker.style.background = '#000000';
+};
 
 async function fresults(taxon) {
    if (taxon.listed_taxa_count=0) {return false;};
@@ -58,6 +118,7 @@ async function fresults(taxon) {
    var thead = faddelem('thead',table);
    var hrow = faddelem('tr',thead);
    faddelem('td',hrow,null,null,'#');
+   faddelem('td',hrow,null,null,'Tiny Map');
    faddelem('td',hrow,null,null,'Est Means');
    faddelem('td',hrow,null,null,'Check List ID');
    faddelem('td',hrow,null,null,'Place Name');
@@ -85,7 +146,7 @@ async function fresults(taxon) {
 //   faddelem('td',hrow,null,null,'uuid');
 
    // table body
-   var tbody = faddelem('tbody',table);
+   var tbody = faddelem('tbody',table,null,'tbody');
 
    // a few variables
    var means = ['endemic','native','introduced'];
@@ -113,6 +174,7 @@ async function fresults(taxon) {
                   recnum++;
                   var brow = faddelem('tr',tbody);
                   faddelem('td',brow,null,null,recnum);
+                  var tdmap = faddelem('td',brow);
                   faddelem('td',brow,null,null,means[m]);
                   faddelem('td',brow,null,null,data[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+data[i].check_list_id+'?taxon='+taxon.id,data[i].check_list_id):'');
                   faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+data[i].id+'&taxon_id='+taxon.id,data[i].name));
@@ -126,6 +188,7 @@ async function fresults(taxon) {
                   faddelem('td',brow,null,null,data[i].place_type);
                   faddelem('td',brow,null,null,data[i].place_type_name);
                   faddelem('td',brow,null,null,data[i].admin_level);
+                  faddmapthumb (tdmap,data[i].latitude,data[i].longitude);
                   faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
                   faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
                   faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
@@ -152,6 +215,13 @@ async function fresults(taxon) {
    // the count returned from the taxon endpoint is incorrect. so this is just a workaround to get a proper count for now.
    var reccount = document.getElementById('reccount');
    reccount.innerText = fcomnum(recnum);
+   
+   //sort by admin level, parent place id, place name, place id
+   fsort(5);
+   fsort(7);
+   fsort(6);
+   fsort(9);
+   frenum();
 };
 
 faddelem('h1',document.body,null,null,'iNaturalist Taxon Establishment Means');
