@@ -25,6 +25,7 @@ let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 var p_taxon_id = winurlparams.get('taxon_id');
+var p_disp_coords = winurlparams.get('disp_coords') || false;
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
@@ -132,12 +133,14 @@ async function fresults(taxon) {
    faddelem('td',hrow,null,null,'Type');
    faddelem('td',hrow,null,null,'Type Name');
    faddelem('td',hrow,null,null,'Admin Level');
-   faddelem('td',hrow,'tar',null,'Lat');
-   faddelem('td',hrow,'tar',null,'Long');
-   faddelem('td',hrow,'tar',null,'NE Lat');
-   faddelem('td',hrow,'tar',null,'NE Long');
-   faddelem('td',hrow,'tar',null,'SW Lat');
-   faddelem('td',hrow,'tar',null,'SW Long');
+   if (p_disp_coords) {
+      faddelem('td',hrow,'tar',null,'Lat');
+      faddelem('td',hrow,'tar',null,'Long');
+      faddelem('td',hrow,'tar',null,'NE Lat');
+      faddelem('td',hrow,'tar',null,'NE Long');
+      faddelem('td',hrow,'tar',null,'SW Lat');
+      faddelem('td',hrow,'tar',null,'SW Long');
+   };
 //   faddelem('td',hrow,null,null,'source_id');
 //   faddelem('td',hrow,null,null,'source_identifier');
 //   faddelem('td',hrow,null,null,'source_name');
@@ -175,6 +178,7 @@ async function fresults(taxon) {
                   var brow = faddelem('tr',tbody);
                   faddelem('td',brow,null,null,recnum);
                   var tdmap = faddelem('td',brow);
+                  faddmapthumb (tdmap,data[i].latitude,data[i].longitude);
                   faddelem('td',brow,null,null,means[m]);
                   faddelem('td',brow,null,null,data[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+data[i].check_list_id+'?taxon='+taxon.id,data[i].check_list_id):'');
                   faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+data[i].id+'&taxon_id='+taxon.id,data[i].name));
@@ -188,13 +192,14 @@ async function fresults(taxon) {
                   faddelem('td',brow,null,null,data[i].place_type);
                   faddelem('td',brow,null,null,data[i].place_type_name);
                   faddelem('td',brow,null,null,data[i].admin_level);
-                  faddmapthumb (tdmap,data[i].latitude,data[i].longitude);
-                  faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
-                  faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
-                  faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
-                  faddelem('td',brow,'tar',null,fround(data[i].nelng,4));
-                  faddelem('td',brow,'tar',null,fround(data[i].swlat,4));
-                  faddelem('td',brow,'tar',null,fround(data[i].swlng,4));
+                  if (p_disp_coords) {
+                     faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
+                     faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
+                     faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
+                     faddelem('td',brow,'tar',null,fround(data[i].nelng,4));
+                     faddelem('td',brow,'tar',null,fround(data[i].swlat,4));
+                     faddelem('td',brow,'tar',null,fround(data[i].swlng,4));
+                  };
 //                  faddelem('td',brow,null,null,data[i].source_id);
 //                  faddelem('td',brow,null,null,data[i].source_identifier);
 //                  faddelem('td',brow,null,null,data[i].source_name);
@@ -218,7 +223,7 @@ async function fresults(taxon) {
    
    //sort by admin level, parent place id, place name, place id
    fsort(5);
-   fsort(7);
+   fsort(4);
    fsort(6);
    fsort(9);
    frenum();
@@ -226,8 +231,9 @@ async function fresults(taxon) {
 
 faddelem('h1',document.body,null,null,'iNaturalist Taxon Establishment Means');
 if (window.location.search==='' || p_taxon_id===null) {
-   faddelem('p',document.body,null,null,'This page provides establishment means records for a given taxon. It is only useful if the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).')
+   faddelem('p',document.body,null,null,'This page provides establishment means records for a given taxon. It is useful when the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).')
    faddelem('p',document.body,null,null,'To use this page, add a taxon_id parameter and value to the URL. For example, if you want to get establishment means for Liquidambar stryaciflua (American Sweetgum), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=49658'))+' in your browser.');
+   faddelem('p',document.body,null,null,'It is also possible to display coordinates for places by adding disp_coords=true to the URL. For example, if you want to get establishment means with coordinates for Berberis aquifolium (Oregon Grape), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=126887&disp_coords=true'))+' in your browser.');
 }
 else {
    var apibase = 'https://api.inaturalist.org/v1/taxa/';
