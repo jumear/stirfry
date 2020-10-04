@@ -7,7 +7,7 @@
 <title>iNaturalist Observation Grid Widget</title>
 <style>
    body { margin:0px; padding:0px; font:10pt Sans-Serif; }
-   img { margin:0px; padding:0px; border:0px; display:block; }
+   img { margin:0px; padding:0px; border:0px; display:block; object-fit:cover; object-position:center; }
    a { text-decoration:none; color:#006600; }
    p { margin:15px; }
    #grid { margin:0px; padding:0px; border:0px; }
@@ -75,7 +75,13 @@ function fresults(data) {
             break;
          }
          else {
-            var photo = (results[obsseq].photos.length>0) ? '<img width="'+cellpx+'px" height="'+cellpx+'px" src="'+results[obsseq].photos[0].url+'" />' : '<span>❎</span>';
+            var photourl = results[obsseq].photos[0].url;
+            var photo = (results[obsseq].photos.length===0) ? '<span>❎</span>'
+               : ('<img width="'+cellpx+'px" height="'+cellpx+'px" src="'
+                  + ((cellpx<=75) ? photourl
+                     : (cellpx<=150) ? photourl.replace('square','small')
+                     : photourl.replace('square','medium'))
+                  + '" />');
             gcell.innerHTML = furl(famp(obsurlbase+'/'+results[obsseq].id),photo);
             if (r===1&&c>1) { grid.style.width = (c*cellpx+(c-1)*spacerpx)+'px'; };
             obsseq++;
