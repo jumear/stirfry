@@ -75,8 +75,8 @@ function fresults(data) {
             break;
          }
          else {
-            var photourl = results[obsseq].photos[0].url;
-            var photo = (results[obsseq].photos.length===0) ? '<span>❎</span>'
+            var photourl = (results[obsseq].photos.length>0) ? results[obsseq].photos[0].url : null;
+            var photo = (photourl===null) ? '<span>❎</span>'
                : ('<img width="'+cellpx+'px" height="'+cellpx+'px" src="'
                   + ((cellpx<=75) ? photourl
                      : (cellpx<=150) ? photourl.replace('square','small')
