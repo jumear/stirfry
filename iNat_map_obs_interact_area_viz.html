@@ -101,6 +101,551 @@ L.gridLayer.utfGridDensityMap = function (options) {
    return new L.GridLayer.UTFGridDensityMap(options);
 };
 
+/*
+https://github.com/mapbox/corslite
+BSD 2-Clause License
+
+Copyright (c) 2017, Mapbox
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+function corslite(url, callback, cors) {
+    var sent = false;
+
+    if (typeof window.XMLHttpRequest === 'undefined') {
+        return callback(Error('Browser not supported'));
+    }
+
+    if (typeof cors === 'undefined') {
+        var m = url.match(/^\s*https?:\/\/[^\/]*/);
+        cors = m && (m[0] !== location.protocol + '//' + location.hostname +
+                (location.port ? ':' + location.port : ''));
+    }
+
+    var x = new window.XMLHttpRequest();
+
+    function isSuccessful(status) {
+        return status >= 200 && status < 300 || status === 304;
+    }
+
+    if (cors && !('withCredentials' in x)) {
+        // IE8-9
+        x = new window.XDomainRequest();
+
+        // Ensure callback is never called synchronously, i.e., before
+        // x.send() returns (this has been observed in the wild).
+        // See https://github.com/mapbox/mapbox.js/issues/472
+        var original = callback;
+        callback = function() {
+            if (sent) {
+                original.apply(this, arguments);
+            } else {
+                var that = this, args = arguments;
+                setTimeout(function() {
+                    original.apply(that, args);
+                }, 0);
+            }
+        }
+    }
+
+    function loaded() {
+        if (
+            // XDomainRequest
+            x.status === undefined ||
+            // modern browsers
+            isSuccessful(x.status)) callback.call(x, null, x);
+        else callback.call(x, x, null);
+    }
+
+    // Both `onreadystatechange` and `onload` can fire. `onreadystatechange`
+    // has [been supported for longer](http://stackoverflow.com/a/9181508/229001).
+    if ('onload' in x) {
+        x.onload = loaded;
+    } else {
+        x.onreadystatechange = function readystate() {
+            if (x.readyState === 4) {
+                loaded();
+            }
+        };
+    }
+
+    // Call the callback with the XMLHttpRequest object as an error and prevent
+    // it from ever being called again by reassigning it to `noop`
+    x.onerror = function error(evt) {
+        // XDomainRequest provides no evt parameter
+        callback.call(this, evt || true, null);
+        callback = function() { };
+    };
+
+    // IE9 must have onprogress be set to a unique function.
+    x.onprogress = function() { };
+
+    x.ontimeout = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
+
+    x.onabort = function(evt) {
+        callback.call(this, evt, null);
+        callback = function() { };
+    };
+
+    // GET is the only supported HTTP Verb by XDomainRequest and is the
+    // only one supported here.
+    x.open('GET', url, true);
+
+    // Send the request. Sending data is not supported.
+    x.send(null);
+    sent = true;
+
+    return x;
+}
+
+if (typeof module !== 'undefined') module.exports = corslite;
+
+/*
+https://github.com/consbio/Leaflet.UTFGrid/blob/master/L.UTFGrid.js
+Copyright (c) 2015 - 2017, Conservation Biology Institute
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*/
+
+//heavily modified from: https://raw.githubusercontent.com/danzel/Leaflet.utfgrid/leaflet-master/src/leaflet.utfgrid.js
+//depends on corslite
+
+L.UTFGrid = L.TileLayer.extend({
+	options: {
+		resolution: 4,
+		pointerCursor: true,
+        mouseInterval: 66  // Delay for mousemove events
+	},
+
+	_mouseOn: null,
+    _mouseOnTile: null,
+    _tileCharCode: null, // '<tileKey>:<charCode>' or null
+    _cache: null, // {<tileKey>: <utfgrid>}
+    _idIndex: null, // {<featureID>: {<tileKey1>: true, ...<tileKeyN>: true} }
+    _throttleMove: null, // holds throttled mousemove handler
+    //_throttleConnectEventHandlers: null, // holds throttled connection setup function
+
+    _updateCursor: function(){ }, //no-op, overridden below
+
+	onAdd: function (map) {
+        this._cache = {};
+        this._idIndex = {};
+
+        L.TileLayer.prototype.onAdd.call(this, map);
+
+        this._throttleMove = L.Util.throttle(this._move, this.options.mouseInterval, this);
+
+        if (this.options.pointerCursor) {
+            this._updateCursor = function(cursor) { this._container.style.cursor = cursor; }
+        }
+
+        map.on('boxzoomstart', this._disconnectMapEventHandlers, this);
+        // have to throttle or we get an immediate click event on boxzoomend
+        map.on('boxzoomend', this._throttleConnectEventHandlers, this);
+        this._connectMapEventHandlers();
+	},
+
+	onRemove: function () {
+		var map = this._map;
+        map.off('boxzoomstart', this._disconnectMapEventHandlers, this);
+        map.off('boxzoomend', this._throttleConnectEventHandlers, this);
+        this._disconnectMapEventHandlers();
+		this._updateCursor('');
+        L.TileLayer.prototype.onRemove.call(this, map);
+	},
+
+    createTile: function(coords) {
+        this._loadTile(coords);
+        return document.createElement('div');  // empty DOM node, required because this overrides L.TileLayer
+	},
+
+    setUrl: function(url, noRedraw) {
+        this._cache = {};
+        return L.TileLayer.prototype.setUrl.call(this, url, noRedraw);
+    },
+
+    _connectMapEventHandlers: function(){
+        this._map.on('click', this._onClick, this);
+        this._map.on('mousemove', this._throttleMove, this);
+    },
+
+    _disconnectMapEventHandlers: function(){
+        this._map.off('click', this._onClick, this);
+		this._map.off('mousemove', this._throttleMove, this);
+    },
+
+    _throttleConnectEventHandlers: function() {
+        setTimeout(this._connectMapEventHandlers.bind(this), 100);
+    },
+
+    _update: function (center, zoom) {
+        L.TileLayer.prototype._update.call(this, center, zoom);
+    },
+
+    _loadTile: function (coords) {
+        var url = this.getTileUrl(coords);
+		var key = this._tileCoordsToKey(coords);
+		var self = this;
+        if (this._cache[key]) { return }
+        corslite(url, function(err, response){
+            if (err) {
+                self.fire('error', {error: err});
+                return;
+            }
+            var data = JSON.parse(response.responseText);
+            self._cache[key] = data;
+            L.Util.bind(self._handleTileLoad, self)(key, data);
+        }, true);
+	},
+
+    _handleTileLoad: function(key, data) {
+        // extension point
+    },
+
+	_onClick: function (e) {
+		this.fire('click', this._objectForEvent(e));
+	},
+
+	_move: function (e) {
+        if (e.latlng == null){ return }
+
+		var on = this._objectForEvent(e);
+
+        if (on._tileCharCode !== this._tileCharCode) {
+			if (this._mouseOn) {
+				this.fire('mouseout', {
+                    latlng: e.latlng,
+                    data: this._mouseOn,
+                    _tile: this._mouseOnTile,
+                    _tileCharCode: this._tileCharCode
+                });
+				this._updateCursor('');
+			}
+			if (on.data) {
+				this.fire('mouseover', on);
+				this._updateCursor('pointer');
+			}
+
+			this._mouseOn = on.data;
+            this._mouseOnTile = on._tile;
+            this._tileCharCode = on._tileCharCode;
+		} else if (on.data) {
+			this.fire('mousemove', on);
+		}
+	},
+
+	_objectForEvent: function (e) {
+	    if (!e.latlng) return;  // keyboard <ENTER> events also pass through as click events but don't have latlng
+
+        var map = this._map,
+		    point = map.project(e.latlng),
+		    tileSize = this.options.tileSize,
+		    resolution = this.options.resolution,
+		    x = Math.floor(point.x / tileSize),
+		    y = Math.floor(point.y / tileSize),
+		    gridX = Math.floor((point.x - (x * tileSize)) / resolution),
+		    gridY = Math.floor((point.y - (y * tileSize)) / resolution),
+			max = map.options.crs.scale(map.getZoom()) / tileSize;
+
+        x = (x + max) % max;
+        y = (y + max) % max;
+
+        var tileKey = this._tileCoordsToKey({z: map.getZoom(), x: x, y: y});
+
+		var data = this._cache[tileKey];
+		if (!data) {
+			return {
+                latlng: e.latlng,
+                data: null,
+                _tile: null,
+                _tileCharCode: null
+            };
+		}
+
+        var charCode = data.grid[gridY].charCodeAt(gridX);
+		var idx = this._utfDecode(charCode),
+		    key = data.keys[idx],
+		    result = data.data[key];
+
+		if (!data.data.hasOwnProperty(key)) {
+			result = null;
+		}
+
+		return {
+            latlng: e.latlng,
+            data: result,
+            id: (result)? result.id: null,
+            _tile: tileKey,
+            _tileCharCode: tileKey + ':' + charCode
+        };
+	},
+
+    _dataForCharCode: function (tileKey, charCode) {
+        var data = this._cache[tileKey];
+        var idx = this._utfDecode(charCode),
+		    key = data.keys[idx],
+		    result = data.data[key];
+
+		if (!data.data.hasOwnProperty(key)) {
+			result = null;
+		}
+        return result;
+    },
+
+	_utfDecode: function (c) {
+		if (c >= 93) {
+			c--;
+		}
+		if (c >= 35) {
+			c--;
+		}
+		return c - 32;
+	},
+
+    _utfEncode: function (c) {
+        //reverse of above, returns charCode for c
+        //derived from: https://github.com/mapbox/glower/blob/mb-pages/src/glower.js#L37
+        var charCode = c + 32;
+        if (charCode >= 34) {
+            charCode ++;
+        }
+        if (charCode >= 92) {
+            charCode ++;
+        }
+        return charCode;
+    }
+});
+
+L.utfGrid = function (url, options) {
+	return new L.UTFGrid(url, options);
+};
+
+L.UTFGridCanvas = L.UTFGrid.extend({
+	options: {
+        idField: 'ID',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
+        buildIndex: true,  // requires above field to be set properly
+        fillColor: 'black',
+	    shadowBlur: 0,  // Number of pixels for blur effect
+        shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
+        debug: false  // if true, show tile borders and tile keys
+    },
+
+    _adjacentTiles: null,
+
+    onAdd: function (map) {
+        this._adjacentTiles = [];
+
+        L.UTFGrid.prototype.onAdd.call(this, map);
+	},
+
+    createTile: function(coords) {
+        this._loadTile(coords);
+
+        var tile = document.createElement('canvas');
+        tile.width = tile.height = this.options.tileSize;
+
+        if (this.options.debug) {
+            this._drawDefaultTile(tile.getContext('2d'), this._tileCoordsToKey(coords));
+        }
+
+        return tile;
+	},
+
+    _connectMapEventHandlers: function(){
+        L.UTFGrid.prototype._connectMapEventHandlers.call(this);
+        this.on('mouseover', this._handleMouseOver, this);
+        this.on('mouseout', this._handleMouseOut, this);
+    },
+
+    _disconnectMapEventHandlers: function(){
+        L.UTFGrid.prototype._disconnectMapEventHandlers.call(this);
+        this.off('mouseover', this._handleMouseOver, this);
+        this.off('mouseout', this._handleMouseOut, this);
+    },
+
+    _handleMouseOver: function (e) {
+        if (e._tile == null || e._tileCharCode == null){ return }
+
+        this._clearAdjacentTiles();
+
+        // currently over this tile:
+        var curTile = e._tile;
+        this._drawTile(curTile, parseInt(e._tileCharCode.split(':')[3]));
+
+        if (e.data && this._idIndex) {
+            // draw adjacent tiles
+            var id = e.data[this.options.idField];
+            var zoomLevel = curTile.split(':')[2];
+            if (!(id && this._idIndex[id] && this._idIndex[id][zoomLevel])) { return }
+
+            var idx = this._idIndex[id][zoomLevel];
+            for (var tileKey in idx) {
+                //TODO: screen out any tiles that are not currently visible?
+                if (tileKey !== curTile) {
+                    this._drawTile(tileKey, idx[tileKey]);
+                    this._adjacentTiles.push(tileKey);
+                }
+            }
+        }
+    },
+
+    _handleMouseOut: function (e) {
+        this._resetTile(e._tile);
+        this._clearAdjacentTiles();
+    },
+
+    _clearAdjacentTiles: function() {
+        // clear out any adjacent tiles that were drawn
+        if (this._adjacentTiles) {
+            for (var i = 0; i < this._adjacentTiles.length; i++) {
+                this._resetTile(this._adjacentTiles[i]);
+            }
+            this._adjacentTiles = [];
+        }
+    },
+
+    _handleTileLoad: function(tileKey, data) {
+        // build index: {<id: {zoomLevel: {tileKey: tileCharCode} } }
+        if (this.options.buildIndex) {
+            var id, props, idx;
+            var idField = this.options.idField;
+            var zoomLevel = tileKey.split(':')[2];
+            for (var i = 0; i < data.keys.length; i++) {
+                props = data.data[data.keys[i]];
+                if (props) {
+                    id = props[idField];
+                    if (id) {
+                        if (this._idIndex[id] == null) {
+                            this._idIndex[id] = {};
+                        }
+                        idx = this._idIndex[id];
+                        if (idx[zoomLevel] == null) {
+                            idx[zoomLevel] = {};
+                        }
+                        idx[zoomLevel][tileKey] = this._utfEncode(i);
+                    }
+                }
+            }
+        }
+    },
+
+    _drawTile: function(tileKey, charCode) {
+        // for a given tile, find all pixels that match character and repaint
+        // TODO: request animation frame?
+
+        if (this._tiles[tileKey] == null){ return }
+
+        var canvas = this._tiles[tileKey].el;
+        var ctx = canvas.getContext('2d');
+
+        this._resetTile(tileKey);
+        var grid = this._cache[tileKey].grid;
+
+        ctx.fillStyle = this.options.fillColor;
+        var dim = this.options.tileSize / this.options.resolution;
+
+        // TODO: order of traversal here may be backwards?  Do y then x?  (are data column major or row major?)
+        //modified slightly from: https://github.com/mapbox/glower/blob/mb-pages/src/glower.js
+        for (var x = 0; x < dim; x++) {
+            for (var y = 0; y < dim; y++) {
+                if (grid[y].charCodeAt(x) === charCode) {
+                    var sweep = 1;
+                    while (y < 63 && grid[y + 1].charCodeAt(x) === charCode) {
+                        y++;
+                        sweep++;
+                    }
+                    ctx.fillRect(x * 4, (y * 4) - ((sweep - 1) * 4), 4, 4 * sweep);
+                }
+            }
+        }
+
+        if (this.options.shadowBlur) {
+            this._addShadow(canvas, ctx);
+        }
+	
+    },
+
+    _resetTile: function(tileKey) {
+        // clear the canvas
+        if (this._tiles[tileKey] == null){ return }
+
+        var tile = this._tiles[tileKey].el;
+        tile.width = this.options.tileSize;  // hard reset of canvas
+
+        if (this.options.debug) {
+            this._drawDefaultTile(tile.getContext('2d'), tileKey);
+        }
+    },
+
+    _drawDefaultTile: function(ctx, tileKey) {
+        // if this.options.debug, add tileKey text and borders
+        ctx.fillStyle = 'black';
+        ctx.fillText(tileKey, 20, 20);
+        ctx.strokeStyle = 'red';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(255, 0);
+        ctx.lineTo(255, 255);
+        ctx.lineTo(0, 255);
+        ctx.closePath();
+        ctx.stroke();
+    },
+
+    _addShadow: function(canvas, ctx) {
+        ctx.shadowBlur = this.options.shadowBlur;
+        ctx.shadowColor = this.options.shadowColor || this.options.fillColor;
+
+        //Blur effect copied from glower - https://github.com/cutting-room-floor/glower/blob/mb-pages/src/glower.js#L108
+        ctx.globalAlpha = 0.7;
+        ctx.globalCompositeOperation = 'lighter';
+        var a = 1;
+        ctx.drawImage(canvas, -a, -a);
+        ctx.drawImage(canvas, a, a);
+        ctx.drawImage(canvas, 0, -a);
+        ctx.drawImage(canvas, -a, 0);
+        ctx.globalAlpha = 1;
+    }
+});
+
+L.utfGridCanvas = function (url, options) {
+	return new L.UTFGridCanvas(url, options);
+};
+
+
 </script>
 </head>
 <body>
@@ -110,7 +655,7 @@ L.gridLayer.utfGridDensityMap = function (options) {
 <p>The UTFgrid cells do not always approximate the shape of their corresponding markers correctly. This page provides a way to visualize the areas where an interaction can take place, alongside the corresponding markers that would be shown on an iNaturalist map.</p>
 <p>A few notes:</p>
 <p>First, this page uses a different set of basemaps than those available in iNaturalist (since the ones that iNaturalist uses are not free).</p>
-<p>Second, the pin-style markers (that look like upside down teardrops) seem to be shifted down ever so slightly in the actual iNaturalist maps vs what can be achieved in this page. (The effect would be that the corresponding interaction area in iNaturalist would be the fat end of the pin vs the narrow tip of the pin in this page.) So you will just have to mentally shift those pins down a bit when you see them in this page.</p>
+<p>Second, I *think* the iNaturalist maps do some sort of fancy offset for the pin-style markers (the ones that look like upside down teardrops) so that their corresponding interaction areas are effectively shifted up a bit. (The effect would be that the corresponding interaction area in iNaturalist would be the fat end of a pin vs the narrow tip of a pin in this page.) Since this page does not do any fancy offsetting, you will just have to mentally do the shift to imagine where you would need to hover and click on an iNaturalist map.</p>
 <p>Finally, the set of observations displayed by this page can be modified by adding parameters to the page URL. For example, if you would to see just bird observations by loarie, you could add "?user_id=loarie&taxon_id=3" to the end of the base URL. See the API reference for the <a href="https://api.inaturalist.org/v1/docs/#!/Observations/get_observations">Get Observations endpoint</a> for a full list of parameters available to use.</p>
 </div>
 <div id="mapid"></div>
@@ -179,6 +724,92 @@ var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{minZoom:10,max
 var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{minZoom:0,maxZoom:9,attribution:inat_grid.attribution});
 var g_inat_obs = L.layerGroup([l_inat_grid,l_inat_points]);
 
+// iNat UTFGrid Selection
+// (hover to see selected area, and click to view selected observation)
+function fpopup(obs) {
+   var s = (obs.photos.length==0) ? '[No Photo]' : '<img src="'+obs.photos[0].url+'" />';
+   s += (obs.photos.length>1) ? ' ['+obs.photos.length+']' : '';
+   s += '<br />observation #: <a target="_blank" href="'+obs.uri+'">'+obs.id+'</a> (grade: '+obs.quality_grade+')';
+   s += '<br />taxon: ' + ((obs.taxon==null) ? '[Unknown]' : (obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'));
+   s += '<br />observer: '+obs.user.login;
+//   s += '<br />location: '+obs.place_guess;
+   s += '<br />coordinates: '+Math.round(obs.geojson.coordinates[1]*1000000)/1000000+', '+Math.round(obs.geojson.coordinates[0]*1000000)/1000000;
+   s += (obs.positional_accuracy==null) ? '' : ' ('+Math.round(obs.positional_accuracy*10)/10+'m)';
+   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : obs.time_observed_at.replace('T',' '));
+   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : obs.created_at.replace('T',' '));
+   s += '<br />last updated: '+obs.updated_at.replace('T',' ');
+//   if (obs.description==null) {}
+//   else if (obs.description.length < 200) {s += '<br />'+obs.description }
+//   else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
+   L.popup().setLatLng([obs.geojson.coordinates[1],obs.geojson.coordinates[0]])
+      .setContent(s).openOn(mymap);
+};
+
+var u_inat_points = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+    resolution: 4,
+    pointerCursor: true,
+    mouseInterval: 66,  // Delay for mousemove events
+    minZoom:10,
+    maxZoom:20, 
+});
+u_inat_points.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(inat_urlbase+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
+});
+
+var u_inat_grid = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+    resolution: 4,
+    pointerCursor: true,
+    mouseInterval: 66,  // Delay for mousemove events
+    minZoom:0,
+    maxZoom:9,
+});
+u_inat_grid.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(inat_urlbase+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
+});
+
+var v_inat_points = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+    idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
+    buildIndex: true,  // requires above field to be set properly
+    fillColor: 'black',
+    shadowBlur: 0,  // Number of pixels for blur effect
+    shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
+    debug: false,  // if true, show tile borders and tile keys
+    minZoom:10,
+    maxZoom:20, 
+});
+
+var v_inat_grid = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+    idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
+    buildIndex: true,  // requires above field to be set properly
+    fillColor: 'black',
+    shadowBlur: 0,  // Number of pixels for blur effect
+    shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
+    debug: false,  // if true, show tile borders and tile keys
+    minZoom:0,
+    maxZoom:9,
+});
+
+var g_utfgdm_sel = L.layerGroup([u_inat_grid,u_inat_points,v_inat_grid,v_inat_points]);
+
+
 // Other iNaturalist Layers
 var l_inat_place = L.tileLayer(inat_urlbase+'places/'+place_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
 /*
@@ -210,7 +841,7 @@ var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxN
 //debug layer
 var l_debug = L.gridLayer.debugCoords();
 
-var defaultlayers = [l_stamen_toner];
+var defaultlayers = [l_stamen_tonerlite];
 /*
 if (taxon_id!==null) {
    if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
@@ -222,6 +853,7 @@ if (place_id!==null) {
 };
 defaultlayers.push(g_inat_obs);
 defaultlayers.push(g_utfgdm);
+defaultlayers.push(g_utfgdm_sel);
 
 // create map, and set default center coordinates, zoom level, and layers
 var mymap = L.map('mapid', {
@@ -261,6 +893,7 @@ var overlaymaps = {
 //   "iNaturalist Observations Points": l_inat_points,
    "iNaturalist Observations":g_inat_obs,
    "iNaturalist Obs Interaction Area":g_utfgdm,
+   "iNaturalist Obs Active Interaction":g_utfgdm_sel,
    "Debug Grid":l_debug,
 };
 /*
