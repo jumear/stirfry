@@ -65,6 +65,17 @@ function fgetname(ary,key) {
    var obj = ary.find(o=>o.id===key);
    return obj?obj.name:key;
 };
+function fgetwdinfo(ary,key) {
+   var obj = ary.find(o=>o.isoCode.value===key);
+   return obj ? {
+      isoCode : obj.isoCode.value, 
+      population : obj.population?obj.population.value:null,
+      area : obj.area?obj.area.value:null,
+      entity: obj.country?obj.country.value.substring(obj.country.value.lastIndexOf('/')+1):null,
+      url: obj.country?obj.country.value:null
+   } 
+   : { isoCode:key };
+};
 function fround(num,places) {
    var n = num*1;
    return n.toFixed(places); 
@@ -91,7 +102,7 @@ apiref.species = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observ
 apiref.identifiers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_identifiers';
 apiref.observers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_observers';
 faddelem('h1',document.body,null,null,'iNaturalist Countries');
-faddelem('p',document.body,null,null,'By default, this page pulls back a list of countries set up in iNaturalist. Optionally, it can pull back counts of observations, species, identifiers, and observers for each country. To get the extra statistics, add a "stats" parameter to the URL, and set it to a comma-separated list of values including "observations", "species", "identifiers", and/or "observers". These extra stats can also be filtered in the URL using the parameters available in the '+furl(apiref.observations,'observations')+', '+furl(apiref.species,'species')+', '+furl(apiref.identifiers,'identifiers')+', and '+furl(apiref.observers,'observers')+' API endpoints.');
+faddelem('p',document.body,null,null,'By default, this page pulls back a list of countries set up in iNaturalist. It also will get population and area from Wikidata, if available, keying on ISO 3166-1 Alpha-2 Code. Optionally, it can pull back counts of observations, species, identifiers, and observers for each country. To get the extra statistics, add a "stats" parameter to the URL, and set it to a comma-separated list of values including "observations", "species", "identifiers", and/or "observers". These extra stats can also be filtered in the URL using the parameters available in the '+furl(apiref.observations,'observations')+', '+furl(apiref.species,'species')+', '+furl(apiref.identifiers,'identifiers')+', and '+furl(apiref.observers,'observers')+' API endpoints.');
 faddelem('p',document.body,null,null,'For example, to add number of research-grade bird observations and associated observers to the list of countries, open '+furl(winurlexsearchstr+'?taxon_id=3&quality_grade=research&stats=observations,observers')+' in your browser.');
 faddelem('p',document.body,null,null,'To adhere to recommended API request limits when getting the additional stats, this page will request one data point per second. Additionally, you should be careful of how often you use this page to get those additional stats so that you do not exceed the recommended maximum 10,000 daily API request limit. See the '+furl('https://www.inaturalist.org/pages/api+recommended+practices','API recommended practices page')+' for more information.');
 
@@ -112,6 +123,7 @@ Promise.all(promiseary).then(data=>{
    return placeary;
 })
 // get the continents (parent places) associated with the countries
+// also get population and area information from Wikidata. (after writing an appropriate sparql query using the Wikidata query service at https://query.wikidata.org/, the javascript code for below was taken more or less as suggested by the service.)
 .then(async countries=>{
    var continents = [];
    for (i=0;i<countries.length;i++) {
@@ -119,13 +131,38 @@ Promise.all(promiseary).then(data=>{
       if(!continents.includes(c)) { continents.push(c) };
    };
    var d = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
-   return [countries,d];
+
+   class SPARQLQueryDispatcher {
+      constructor( endpoint ) {
+         this.endpoint = endpoint;
+      }
+      query( sparqlQuery ) {
+         const fullUrl = this.endpoint + '?query=' + encodeURIComponent( sparqlQuery );
+         const headers = { 'Accept': 'application/sparql-results+json' };
+         return fetch( fullUrl, { headers } ).then( body => body.json() );
+      }
+   }
+   const endpointUrl = 'https://query.wikidata.org/sparql';
+   const sparqlQuery = `SELECT ?isoCode ?countryLabel ?country ?population ?area WHERE {
+       ?country wdt:P297 ?isoCode .
+       OPTIONAL { ?country wdt:P1082 ?population } .
+       OPTIONAL { ?country wdt:P2046 ?area } .
+      #  OPTIONAL { ?country p:P2046/psn:P2046/wikibase:quantityAmount ?area } .
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+      }
+      ORDER BY ?isoCode DESC(?population) ?area`;
+   const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
+   var wd = await queryDispatcher.query( sparqlQuery );
+  // .then( console.log );
+
+   return [countries,d,wd];
 })
 // create the the country list
 // if any stats are specified in the parameters, then create the cells to hold the data, but don't populate the cells at this point.
 .then(data=>{
    var countries = data[0];
    var continents = data[1].results;
+   var wd = data[2].results.bindings;
    if (!countries) {
       faddelem('p',document.body,null,null,'No results returned.');
       return;
@@ -162,6 +199,9 @@ Promise.all(promiseary).then(data=>{
 //   faddelem('td',hrow,null,null,'user_id');
 //   faddelem('td',hrow,null,null,'woeid');
 //   faddelem('td',hrow,null,null,'uuid');
+   faddelem('td',hrow,'tar',null,'Wikidata ID');
+   faddelem('td',hrow,'tar',null,'Population');
+   faddelem('td',hrow,'tar',null,'Area (sq km)');
    if (show.observations) { faddelem('td',hrow,'tar',null,'Observations'); }
    if (show.species) { faddelem('td',hrow,'tar',null,'Species'); }
    if (show.identifiers) { faddelem('td',hrow,'tar',null,'Identifiers'); }
@@ -193,6 +233,10 @@ Promise.all(promiseary).then(data=>{
 //      faddelem('td',brow,null,null,countries[i].user_id);
 //      faddelem('td',brow,null,null,countries[i].woeid);
 //      faddelem('td',brow,null,null,countries[i].uuid);
+      var wdinfo = fgetwdinfo(wd,countries[i].code);
+      faddelem('td',brow,'tar',null,wdinfo.entity?furl(wdinfo.url,wdinfo.entity):null);
+      faddelem('td',brow,'tar',null,wdinfo.population?fcomnum(wdinfo.population):null);
+      faddelem('td',brow,'tar',null,wdinfo.area?fcomnum(fround(wdinfo.area,1)):null);
       if (show.observations) { faddelem('td',brow,'tar','observations_'+countries[i].id); }
       if (show.species) { faddelem('td',brow,'tar','species_'+countries[i].id); }
       if (show.identifiers) { faddelem('td',brow,'tar','identifiers_'+countries[i].id); }
