@@ -3,12 +3,11 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="iNaturalist Map Observation Interaction Area Visualization" />
-<title>iNaturalist Map Observation Interaction Area Visualization</title>
+<meta name="description" content="iNaturalist Observation Map with Elevations (US Only)" />
+<title>iNaturalist Observation Map with Elevations (US Only)</title>
 <style>
    body { height:100vh; width:100vw; margin:0px; }
-   #nav { font:9pt Sans-serif; height:100vh; width:25vw; position:absolute; top:0vh; left:0vw; background:darkgray; }
-   #mapid { height:100vh; width:75vw; position:absolute; top:0vh; left:25vw; background:darkgray; }
+   #mapid { height:100vh; width:100vw; position:absolute; top:0vh; left:0vw; background:darkgray; }
    p { margin:10px 10px 0px 10px; }
 </style>
 
@@ -28,78 +27,6 @@ L.GridLayer.DebugCoords = L.GridLayer.extend({
 });
 L.gridLayer.debugCoords = function(opts) {
    return new L.GridLayer.DebugCoords(opts);
-};
-
-// iNaturalist UTFGrid Density Map
-function freplacexyz(url,x,y,z) {
-   url = url.replace('{x}',x);
-   url = url.replace('{y}',y);
-   url = url.replace('{z}',z);
-   return url;
-};
-L.GridLayer.UTFGridDensityMap = L.GridLayer.extend({
-   createTile: function (coords, done) {
-
-      var tile = document.createElement('canvas');
-      var tileSize = this.getTileSize();
-      tile.width = tileSize.x;
-      tile.height = tileSize.y;
-      var cellsPerTile = {x:64,y:64};
-      var cellSize = {x:tileSize.x/cellsPerTile.x,y:tileSize.y/cellsPerTile.y};
-      var ctx = tile.getContext('2d');
-
-      // default marker setups
-      var dmarker = {size:0.75,offset:{x:0,y:0},colorRGB:[0,255,0]};
-      var marker = null;
-      if (this.options.marker) {
-         marker = this.options.marker;
-         marker.size = marker.size || dmarker.size;
-         marker.offset = marker.offset || dmarker.offset;
-         marker.offset.x = marker.offset.x || dmarker.offset.x;
-         marker.offset.y = marker.offset.y || dmarker.offset.y;
-         marker.colorRGB = marker.colorRGB || dmarker.colorRGB;
-      }
-      else { marker = dmarker };
-      var offset = marker.offset;
-
-      // get UTFgrid
-      var url = freplacexyz(this.options.url,coords.x,coords.y,coords.z);
-      fetch(url)
-      .then((response) => {
-         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
-         return response.json();
-      })
-      // draw markers on a canvas object
-      .then((utfgrid) => {
-         //draw markers on the tile canvas
-         for (cx=0;cx<cellsPerTile.x;cx++) {
-            for (cy=0;cy<cellsPerTile.y;cy++) {
-               var cell = {x:cx,y:cy};
-               //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
-               var i = utfgrid.grid[cell.y].charCodeAt(cell.x);
-               i = i-((i>=93)?34:(i>=35)?33:32);
-               var d = utfgrid.data[utfgrid.keys[i]];
-               var markerColor = 0; //default to black
-               if (d!=null) {
-                  var opacity = 0.5;
-                  var markerColor = 'rgba('+marker.colorRGB+','+opacity+')'; //rgba format
-                  ctx.fillStyle = markerColor;
-                  ctx.fillRect(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,cellSize.x*marker.size,cellSize.y*marker.size);
-               };
-            };
-         };
-      })
-      .catch((err) => { console.error(err); });
-
-      // asynchronous call
-      setTimeout(function() {
-         done(null, tile);
-      }, 1000);
-      return tile;
-   }
-});
-L.gridLayer.utfGridDensityMap = function (options) {
-   return new L.GridLayer.UTFGridDensityMap(options);
 };
 
 /*
@@ -650,15 +577,6 @@ L.utfGridCanvas = function (url, options) {
 </script>
 </head>
 <body>
-<div id="nav">
-<p>Markers in maps in iNaturalist are generally delivered as tiled image files, not actually as individual markers. This means that a user cannot directly interact with the markers displayed on the maps.</p>
-<p>Instead, a user interacts with an invisible UTFgrid layer -- a grid of square cells -- that sits on top of the marker layer. The idea is that if a user interacts with a UTFgrid cell that is positioned on top of a particular marker, then the action triggered should correspond to an action meaningful for that marker.</p>
-<p>The UTFgrid cells do not always approximate the shape of their corresponding markers correctly. This page provides a way to visualize the areas where an interaction can take place, alongside the corresponding markers that would be shown on an iNaturalist map.</p>
-<p>A few notes:</p>
-<p>First, this page uses a different set of basemaps than those available in iNaturalist (since the ones that iNaturalist uses are not free).</p>
-<p>Second, I *think* the iNaturalist maps do some sort of fancy offset for the pin-style markers (the ones that look like upside down teardrops) so that their corresponding interaction areas are effectively shifted up a bit. (The effect would be that the corresponding interaction area in iNaturalist would be the fat end of a pin vs the narrow tip of a pin in this page.) Since this page does not do any fancy offsetting, you will just have to mentally do the shift to imagine where you would need to hover and click on an iNaturalist map.</p>
-<p>Finally, the set of observations displayed by this page can be modified by adding parameters to the page URL. For example, if you would to see just bird observations by loarie, you could add "?user_id=loarie&taxon_id=3" to the end of the base URL. See the API reference for the <a href="https://api.inaturalist.org/v1/docs/#!/Observations/get_observations">Get Observations endpoint</a> for a full list of parameters available to use.</p>
-</div>
 <div id="mapid"></div>
 
 <script>
@@ -704,13 +622,6 @@ winurlparams.delete('showtaxonplace');
 winurlparams.delete('showtaxonrange');
 winurlparams.delete('showplace');
 
-// iNat UTFGrid Visualization, using grid-style UTFGrid at lower zooms and point-style UTFGrid at higher zooms
-let utfgridapi_grid = {url:'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json">iNaturalist</a>'};
-let utfgridapi_points = {url:'https://api.inaturalist.org/v1/points/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_points_zoom_x_y_grid_json">iNaturalist</a>'};
-var l_utfgdm1 = L.gridLayer.utfGridDensityMap({url:utfgridapi_grid.url+'?'+winurlparams,minZoom:0,maxZoom:9,attribution:utfgridapi_grid.attr,marker:{size:0.90,colorRGB:[0,255,0]}})
-var l_utfgdm2 = L.gridLayer.utfGridDensityMap({url:utfgridapi_points.url+'?'+winurlparams,minZoom:10,maxZoom:20,attribution:utfgridapi_grid.attr,marker:{size:0.90,colorRGB:[176,0,176]}})
-var g_utfgdm = L.layerGroup([l_utfgdm1,l_utfgdm2]);
-
 // iNat Observation Layer, using grid markers at lower zooms and points at higher zooms
 let inat_urlbase = 'https://api.inaturalist.org/v1/';
 //let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
@@ -727,7 +638,18 @@ var g_inat_obs = L.layerGroup([l_inat_grid,l_inat_points]);
 
 // iNat UTFGrid Selection
 // (hover to see selected area, and click to view selected observation)
-function fpopup(obs) {
+async function fpopup(obs) {
+
+   var elevationurl = 'https://nationalmap.gov/epqs/pqs.php?y='+obs.geojson.coordinates[1]+'&x='+obs.geojson.coordinates[0]+'&output=json&units=Feet';
+   var elevation = await fetch(elevationurl)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      .then((data) => {
+         return data.USGS_Elevation_Point_Query_Service.Elevation_Query;
+      });
+
    var s = (obs.photos.length==0) ? '[No Photo]' : '<img src="'+obs.photos[0].url+'" />';
    s += (obs.photos.length>1) ? ' ['+obs.photos.length+']' : '';
    s += '<br />observation #: <a target="_blank" href="'+obs.uri+'">'+obs.id+'</a> (grade: '+obs.quality_grade+')';
@@ -736,6 +658,7 @@ function fpopup(obs) {
 //   s += '<br />location: '+obs.place_guess;
    s += '<br />coordinates: '+Math.round(obs.geojson.coordinates[1]*1000000)/1000000+', '+Math.round(obs.geojson.coordinates[0]*1000000)/1000000;
    s += (obs.positional_accuracy==null) ? '' : ' ('+Math.round(obs.positional_accuracy*10)/10+'m)';
+   s += '<br />elevation: '+elevation.Elevation+'ft, '+ Math.round(elevation.Elevation*0.3048*10)/10 + 'm ('+elevation.Data_Source+')';
    s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : obs.time_observed_at.replace('T',' '));
    s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : obs.created_at.replace('T',' '));
    s += '<br />last updated: '+obs.updated_at.replace('T',' ');
@@ -839,10 +762,19 @@ var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.
 var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
 var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
 
+// USGS maps (US only)
+var s_usgs_urlbase = 'https://basemap.nationalmap.gov/arcgis/rest/services/'
+//var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data; Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model'});
+var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>'});
+var l_usgs_img = L.tileLayer(s_usgs_urlbase+'USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryOnly/MapServer">USGS The National Map</a>: Orthoimagery'});
+var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
+var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
+var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
+
 //debug layer
 var l_debug = L.gridLayer.debugCoords();
 
-var defaultlayers = [l_stamen_tonerlite];
+var defaultlayers = [l_usgs_topo];
 /*
 if (taxon_id!==null) {
    if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
@@ -853,7 +785,6 @@ if (place_id!==null) {
    if (showplace==='true') {defaultlayers.push(l_inat_place)};
 };
 defaultlayers.push(g_inat_obs);
-defaultlayers.push(g_utfgdm);
 defaultlayers.push(g_utfgdm_sel);
 
 // create map, and set default center coordinates, zoom level, and layers
@@ -875,10 +806,15 @@ var basemaps = {
    "OpenTopoMap": l_otm,
    "OpenStreetMap France": l_osm_fr,
    "OpenStreetMap Humanitarian": l_osm_hot,
+   "USGS Imagery": l_usgs_img,
+   "USGS Topo": l_usgs_topo,
+   "USGS Imagery + Topo": l_usgs_imgtopo,
+   "USGS Relief": l_usgs_relief,
 };
 
 // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
 var overlaymaps = {
+   "USGS Hydro": l_usgs_hydro,
    "Stamen Terrain Lines": l_stamen_terrainlines,
    "Stamen Toner Lines": l_stamen_tonerlines,
    "Stamen Toner Hybrid": l_stamen_tonerhybrid,
@@ -893,7 +829,6 @@ var overlaymaps = {
 //   "iNaturalist Observations Circles": l_inat_circles,
 //   "iNaturalist Observations Points": l_inat_points,
    "iNaturalist Observations":g_inat_obs,
-   "iNaturalist Obs Interaction Area":g_utfgdm,
    "iNaturalist Obs Active Interaction":g_utfgdm_sel,
    "Debug Grid":l_debug,
 };
@@ -910,6 +845,19 @@ if (place_id===null) {
 // add a layer selector control and scale bar
 L.control.layers(basemaps, overlaymaps).addTo(mymap);
 L.control.scale().addTo(mymap);
+
+if (!centerlat  && !centerlng) {
+   fetch(inat_urlbase+'observations?return_bounds=true&per_page=0&'+winurlparams)
+   .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+   })
+      .then((data) => {
+      var bbox = data.total_bounds;
+      mymap.fitBounds([[bbox.nelat,(bbox.swlng<bbox.nelng?bbox.nelng:bbox.nelng+360)],[bbox.swlat,bbox.swlng]]);
+   });
+};
+
 
 </script>
 </body>
