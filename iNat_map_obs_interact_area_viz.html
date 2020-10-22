@@ -662,6 +662,17 @@ L.utfGridCanvas = function (url, options) {
 <div id="mapid"></div>
 
 <script>
+function fdate(str) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+   str = str.replace('+00:00','±00:00');
+   return str;
+};
+function fround(num,places) {
+   var n = num*1;
+   return n.toFixed(places); 
+};
 
 //get parameters from the url
 let winurlstr = window.location.href;
@@ -731,14 +742,14 @@ function fpopup(obs) {
    var s = (obs.photos.length==0) ? '[No Photo]' : '<img src="'+obs.photos[0].url+'" />';
    s += (obs.photos.length>1) ? ' ['+obs.photos.length+']' : '';
    s += '<br />observation #: <a target="_blank" href="'+obs.uri+'">'+obs.id+'</a> (grade: '+obs.quality_grade+')';
-   s += '<br />taxon: ' + ((obs.taxon==null) ? '[Unknown]' : (obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'));
+   s += '<br />taxon: ' + ((obs.taxon==null) ? '[Unknown]' : obs.taxon.preferred_common_name ? (obs.taxon.preferred_common_name+' ('+obs.taxon.name+')') : obs.taxon.name );
    s += '<br />observer: '+obs.user.login;
 //   s += '<br />location: '+obs.place_guess;
-   s += '<br />coordinates: '+Math.round(obs.geojson.coordinates[1]*1000000)/1000000+', '+Math.round(obs.geojson.coordinates[0]*1000000)/1000000;
-   s += (obs.positional_accuracy==null) ? '' : ' ('+Math.round(obs.positional_accuracy*10)/10+'m)';
-   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : obs.time_observed_at.replace('T',' '));
-   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : obs.created_at.replace('T',' '));
-   s += '<br />last updated: '+obs.updated_at.replace('T',' ');
+   s += '<br />coordinates: '+fround(obs.geojson.coordinates[1],6)+', '+fround(obs.geojson.coordinates[0],6);
+   s += (obs.positional_accuracy==null) ? '' : ' ('+fround(obs.positional_accuracy,1)+'m)';
+   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
+   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
+   s += '<br />last updated: '+fdate(obs.updated_at);
 //   if (obs.description==null) {}
 //   else if (obs.description.length < 200) {s += '<br />'+obs.description }
 //   else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
@@ -867,7 +878,7 @@ var mymap = L.map('mapid', {
 // define available basemaps (can view only one at a time)
 var basemaps = {
    "Stamen Watercolor": l_stamen_watercolor,
-   "Stamen Terrain Terrain": l_stamen_terrain,
+   "Stamen Terrain": l_stamen_terrain,
    "Stamen Terrain Background": l_stamen_terrainbg,
    "Stamen Toner": l_stamen_toner,
    "Stamen Toner Background": l_stamen_tonerbg,
@@ -888,9 +899,9 @@ var overlaymaps = {
 //   "iNaturalist Taxon Places": l_inat_taxonplace,
    "iNaturalist Place": l_inat_place,
 //   "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
-//   "iNaturalist Observations Grid": l_inat_grid,
 //   "iNaturalist Observations Heatmap": l_inat_heat,
 //   "iNaturalist Observations Circles": l_inat_circles,
+//   "iNaturalist Observations Grid": l_inat_grid,
 //   "iNaturalist Observations Points": l_inat_points,
    "iNaturalist Observations":g_inat_obs,
    "iNaturalist Obs Interaction Area":g_utfgdm,

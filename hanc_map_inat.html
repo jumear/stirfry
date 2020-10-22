@@ -573,6 +573,17 @@ L.utfGridCanvas = function (url, options) {
 <body>
 <div id="mapid"></div>
 <script>
+function fdate(str) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+   str = str.replace('+00:00','±00:00');
+   return str;
+};
+function fround(num,places) {
+   var n = num*1;
+   return n.toFixed(places); 
+};
 
 // create map, and set default center coordinates, zoom level
 //   center: [29.762801,-95.452861],
@@ -673,6 +684,7 @@ else {
 // Create iNat observation image tileset layers
 var l_inat_pts = L.tileLayer(s_inat_url+'points/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'});
 var l_inat_cheat = L.tileLayer(s_inat_url+'colored_heatmap/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'});
+var l_inat_grid = L.tileLayer(s_inat_url+'grid/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist observation data</a>'});
 var l_inat_heat = L.tileLayer(s_inat_url+'heatmap/{z}/{x}/{y}.png'+inat_query_string,{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'});
 
 // Create iNaturalist UTFGrids and pair each with an observation tileset from above (skip heatmap, since there aren't distinct points in that)
@@ -683,14 +695,14 @@ function fpopup(obs) {
    s += '<br />taxon: ' + ((obs.taxon==null) ? '[Unknown]' : (obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'));
    s += '<br />observer: '+obs.user.login;
 //   s += '<br />location: '+obs.place_guess;
-   s += '<br />coordinates: '+Math.round(obs.geojson.coordinates[1]*1000000)/1000000+', '+Math.round(obs.geojson.coordinates[0]*1000000)/1000000;
-   s += (obs.positional_accuracy==null) ? '' : ' ('+Math.round(obs.positional_accuracy*10)/10+'m)';
-   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : obs.time_observed_at.replace('T',' '));
-   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : obs.created_at.replace('T',' '));
-   s += '<br />last updated: '+obs.updated_at.replace('T',' ');
-   if (obs.description==null) {}
-   else if (obs.description.length < 200) {s += '<br />'+obs.description }
-   else {s += '<br />'+(obs.description.substring(0,200)+'... (more)')};
+   s += '<br />coordinates: '+fround(obs.geojson.coordinates[1],6)+', '+fround(obs.geojson.coordinates[0],6);
+   s += (obs.positional_accuracy==null) ? '' : ' ('+fround(obs.positional_accuracy,1)+'m)';
+   s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
+   s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
+   s += '<br />last updated: '+fdate(obs.updated_at);
+//   if (obs.description==null) {}
+//   else if (obs.description.length < 200) {s += '<br />'+obs.description }
+//   else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
    L.popup().setLatLng([obs.geojson.coordinates[1],obs.geojson.coordinates[0]])
       .setContent(s).openOn(mymap);
 };
@@ -731,14 +743,35 @@ u_inat_cheat.on("click", function(e) { // "mouseover" and "mouseout" events not 
 });
 var g_inat_cheat = L.layerGroup([l_inat_cheat, u_inat_cheat]);
 
-var v_inat_pts = L.utfGridCanvas(s_inat_url+'points/{z}/{x}/{y}.grid.json'+inat_query_string, {
-    idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
-    buildIndex: true,  // requires above field to be set properly
-    fillColor: 'black',
-    shadowBlur: 0,  // Number of pixels for blur effect
-    shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
-    debug: true  // if true, show tile borders and tile keys
+var u_inat_cheat = L.utfGrid(s_inat_url+'colored_heatmap/{z}/{x}/{y}.grid.json'+inat_query_string,utfGridoptions);
+u_inat_cheat.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(s_inat_url+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
 });
+var g_inat_cheat = L.layerGroup([l_inat_cheat, u_inat_cheat]);
+
+var u_inat_grid = L.utfGrid(s_inat_url+'grid/{z}/{x}/{y}.grid.json'+inat_query_string,utfGridoptions);
+u_inat_grid.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+   if (e.data) {
+      corslite(s_inat_url+'observations/'+e.data.id, function(err, response) {
+         if (err) {
+            self.fire('error', {error: err});
+            return;
+         };
+         var obsdata = JSON.parse(response.responseText);
+         fpopup(obsdata.results[0]);
+       }, true);
+   };
+});
+var g_inat_grid = L.layerGroup([l_inat_grid, u_inat_grid]);
 
 // iNaturalist Place Layer
 var l_inat_place = L.tileLayer(s_inat_url+'places/'+inat_place_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+s_inat_url+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
@@ -770,7 +803,7 @@ var basemaps = {
    "Carto Voyager Background": l_carto_voyagerbg,
    "Carto Voyager Labels Under": l_carto_voyagerunder,
    "Stamen Watercolor": l_stamen_watercolor,
-   "Stamen Terrain Terrain": l_stamen_terrain,
+   "Stamen Terrain": l_stamen_terrain,
    "Stamen Terrain Background": l_stamen_terrainbg,
    "Stamen Toner": l_stamen_toner,
    "Stamen Toner Background": l_stamen_tonerbg,
@@ -806,8 +839,8 @@ var overlaymaps = {
    "iNaturalist Place": l_inat_place,
    "iNaturalist Heatmap": l_inat_heat,
    "iNaturalist Circles": g_inat_cheat,
+   "iNaturalist Grid": g_inat_grid,
    "iNaturalist Points": g_inat_pts,
-   "iNaturalist Points (Debug)": v_inat_pts,
 };
 
 // add a layer selector control and scale bar

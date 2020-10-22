@@ -29,8 +29,8 @@ var p_disp_coords = winurlparams.get('disp_coords') || false;
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
    str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
    str = str.replace('+00:00','±00:00');
    return str;
 };

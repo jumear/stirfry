@@ -607,8 +607,8 @@ winurlparams.delete('view');
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
    str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
    str = str.replace('+00:00','±00:00');
    return str;
 };
@@ -860,9 +860,9 @@ else {
       "iNaturalist Taxon Places": l_inat_taxonplace,
       "iNaturalist Place": l_inat_place,
 //      "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
-//      "iNaturalist Observations Grid": l_inat_grid,
       "iNaturalist Observations Heatmap": l_inat_heat,
 //      "iNaturalist Observations Circles": l_inat_circles,
+//      "iNaturalist Observations Grid": l_inat_grid,
 //      "iNaturalist Observations Points": l_inat_points,
       "iNaturalist Observations":g_inat_obs,
       "iNaturalist Obs Active Interaction":g_utfgdm_sel,
