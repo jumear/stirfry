@@ -30,6 +30,24 @@ L.gridLayer.debugCoords = function(opts) {
    return new L.GridLayer.DebugCoords(opts);
 };
 
+// this allows a style filter to be applied to a basemap tile layer
+L.TileLayer.StyleFilter = L.TileLayer.extend({
+   intialize: function (url, options) {
+      L.TileLayer.prototype.initialize.call(this, url, options);
+   },
+   styleFilter: function () {
+      var filters = this.options.filter || '';
+      return filters;
+   },
+   _initContainer: function () {
+      var tile = L.TileLayer.prototype._initContainer.call(this);
+      this._container.style.filter = this.styleFilter();
+   },
+});
+L.tileLayer.styleFilter = function (url, options) {
+   return new L.TileLayer.StyleFilter(url, options);
+};
+
 /*
 https://github.com/mapbox/corslite
 BSD 2-Clause License
@@ -777,6 +795,15 @@ else {
    var l_stamen_tonerlines = L.tileLayer(s_stamen_urlbase+'toner-lines/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerlabels = L.tileLayer(s_stamen_urlbase+'toner-labels/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright});
 
+   // Stamen layer mods
+   var l_stamen_toner_mod_dark25 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(25%)'});
+   var l_stamen_toner_mod_dark70 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(70%)'});
+   var l_stamen_toner_mod_green_on_black = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(40%) sepia(40%) hue-rotate(60deg) saturate(400%) contrast(200%)'});
+   var l_stamen_toner_mod_black_on_blue = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(60%) sepia(100%) hue-rotate(180deg) saturate(150%)'});
+   var l_stamen_tonerlite_mod_dark50 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) contrast(125%)'});
+   var l_stamen_tonerlite_mod_dark_with_purple = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(70%) sepia(100%) hue-rotate(205deg) saturate(160%)'});
+   var l_stamen_tonerlite_mod_olive = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) sepia(100%) hue-rotate(15deg) saturate(160%)'});
+
    // OpenStreetMaps & OpenTopoMap
    var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {minZoom:2, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
    var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {minZoom:2, maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
@@ -795,8 +822,8 @@ else {
    var l_debug = L.gridLayer.debugCoords();
 
    var defaultlayers = (view==='elevation') ? [l_usgs_topo] 
-      : (view==='heatmap') ? [l_stamen_tonerlite] 
-      : [l_stamen_terrain];
+      : (view==='heatmap') ? [l_stamen_tonerlite_mod_dark50] 
+      : [l_stamen_toner_mod_dark25];
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
       if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
@@ -839,6 +866,13 @@ else {
       "Stamen Toner": l_stamen_toner,
       "Stamen Toner Background": l_stamen_tonerbg,
       "Stamen Toner Lite": l_stamen_tonerlite,
+      "Stamen Toner Mod (Med Dark)": l_stamen_toner_mod_dark70,
+      "Stamen Toner Mod (Dark)": l_stamen_toner_mod_dark25,
+      "Stamen Toner Lite Mod (Med Dark)": l_stamen_tonerlite_mod_dark50,
+      "Stamen Toner Mod (Green on Black)": l_stamen_toner_mod_green_on_black,
+      "Stamen Toner Mod (Black on Blue)": l_stamen_toner_mod_black_on_blue,
+      "Stamen Toner Lite Mod (Dark with Purple)": l_stamen_tonerlite_mod_dark_with_purple,
+      "Stamen Toner Lite Mod (Olive)": l_stamen_tonerlite_mod_olive,
       "OpenTopoMap": l_otm,
       "OpenStreetMap France": l_osm_fr,
       "OpenStreetMap Humanitarian": l_osm_hot,
