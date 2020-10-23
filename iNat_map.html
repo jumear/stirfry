@@ -691,7 +691,7 @@ else {
          .setContent(s).openOn(mymap);
    };
 
-   var u_inat_points = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+   var u_inat_points = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, {
       resolution: 4,
       pointerCursor: true,
       mouseInterval: 66,  // Delay for mousemove events
@@ -711,7 +711,7 @@ else {
       };
    });
 
-   var u_inat_grid = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+   var u_inat_grid = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, {
       resolution: 4,
       pointerCursor: true,
       mouseInterval: 66,  // Delay for mousemove events
@@ -731,7 +731,7 @@ else {
       };
    });
 
-   var v_inat_points = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+   var v_inat_points = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, {
       idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
       buildIndex: true,  // requires above field to be set properly
       fillColor: 'black',
@@ -742,7 +742,7 @@ else {
       maxZoom:20, 
    });
 
-   var v_inat_grid = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json'+winurlsearchstr, {
+   var v_inat_grid = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, {
       idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
       buildIndex: true,  // requires above field to be set properly
       fillColor: 'black',
