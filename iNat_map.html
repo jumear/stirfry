@@ -10,6 +10,7 @@
    #mapid { height:100vh; width:100vw; position:absolute; top:0vh; left:0vw; background:darkgray; }
    #info { padding:15px; }
    h1 { margin-top:0px; }
+   a { text-decoration:none; }
 </style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
@@ -803,6 +804,7 @@ else {
    var l_stamen_tonerlite_mod_dark50 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) contrast(125%)'});
    var l_stamen_tonerlite_mod_dark_with_purple = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(70%) sepia(100%) hue-rotate(205deg) saturate(160%)'});
    var l_stamen_tonerlite_mod_olive = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) sepia(100%) hue-rotate(15deg) saturate(160%)'});
+   var l_stamen_watercolor_mod_gray = L.tileLayer.styleFilter(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{minZoom:2, maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.', filter:'grayscale(85%)'});
 
    // OpenStreetMaps & OpenTopoMap
    var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {minZoom:2, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
@@ -822,8 +824,8 @@ else {
    var l_debug = L.gridLayer.debugCoords();
 
    var defaultlayers = (view==='elevation') ? [l_usgs_topo] 
-      : (view==='heatmap') ? [l_stamen_tonerlite_mod_dark50] 
-      : [l_stamen_toner_mod_dark25];
+      : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
+      : [l_stamen_tonerlite_mod_dark50];
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
       if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
@@ -866,11 +868,12 @@ else {
       "Stamen Toner": l_stamen_toner,
       "Stamen Toner Background": l_stamen_tonerbg,
       "Stamen Toner Lite": l_stamen_tonerlite,
+      "Stamen Watercolor Mod (Grayish)": l_stamen_watercolor_mod_gray,
       "Stamen Toner Mod (Med Dark)": l_stamen_toner_mod_dark70,
       "Stamen Toner Mod (Dark)": l_stamen_toner_mod_dark25,
-      "Stamen Toner Lite Mod (Med Dark)": l_stamen_tonerlite_mod_dark50,
       "Stamen Toner Mod (Green on Black)": l_stamen_toner_mod_green_on_black,
       "Stamen Toner Mod (Black on Blue)": l_stamen_toner_mod_black_on_blue,
+      "Stamen Toner Lite Mod (Med Dark)": l_stamen_tonerlite_mod_dark50,
       "Stamen Toner Lite Mod (Dark with Purple)": l_stamen_tonerlite_mod_dark_with_purple,
       "Stamen Toner Lite Mod (Olive)": l_stamen_tonerlite_mod_olive,
       "OpenTopoMap": l_otm,
