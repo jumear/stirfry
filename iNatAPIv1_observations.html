@@ -120,6 +120,7 @@ function fresults(xobj) {
       faddelem('td',hrow,null,null,'coordinates');
       faddelem('td',hrow,null,null,'location description');
       faddelem('td',hrow,null,null,'description');
+      faddelem('td',hrow,null,null,'photo urls');
  
       var tbody = faddelem('tbody',table);
       for (var i=0; i<results.length; i++) {
@@ -145,6 +146,15 @@ function fresults(xobj) {
          faddelem('td',brow,null,null,results[i].location?results[i].location.replace(',',', '):'');
          faddelem('td',brow,null,null,null,results[i].place_guess);
          faddelem('td',brow,null,null,null,results[i].description);
+         var photos = [];
+         if (results[i].photos&&results[i].photos.length>0) {
+            for (var p=0; p<results[i].photos.length; p++) {
+               var url = (p>0)?' ':'';
+               url += results[i].photos[p].url.substring(0,results[i].photos[p].url.search('\\?'));
+               photos.push(furl(url.replace('square','medium'),url.replace('square','medium')));
+            };
+         };
+         faddelem('td',brow,null,null,photos); 
       };
 
       // buttons to go to prev or next page
