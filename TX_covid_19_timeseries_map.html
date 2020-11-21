@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="Map of Texas Covid-19 Time Series Data" />
+<title>Map of Texas Covid-19 Time Series Data</title>
+<style>
+#seldiv { width:320px; position:absolute; top:0px; left:0px; padding:10px; z-index:1002; background:whitesmoke; }
+#datadiv { width:320px; position:absolute; top:0px; left:0px; padding:10px; overflow:scroll; z-index:1001; background:whitesmoke; }
+#data { width:100%; text-align:left; }
+#mapdiv { height:100vh; width:1000px; position:absolute; top:0px; left:300px; }
+#title { width:150px; position:absolute; top:10px; left:300px; z-index:1000; background:rgba(200,200,200,0.7); text-align:center; }
+#titledate { font-size:20px; font-weight:600; }
+.tar { text-align:right; }
+.tac { text-align:center; }
+.tal { text-align:left; }
+body { margin:0px; border:0px; background:whitesmoke; font:10pt Sans-serif; }
+h2 { margin:0px; border:0px; font-size:12pt; }
+form { font-size:10pt; margin:10px 0px; }
+td { opacity:1; }
+a { text-decoration:none; }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js" integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og==" crossorigin=""></script>
+
+<script src="2018_TX_county_500k.js"></script>
+<script src="TX_covid_19_data.js"></script>
+<script>
+function fmapresize() {
+   var md = document.getElementById('mapdiv');
+   var mt = document.getElementById('title');
+   var sd = document.getElementById('seldiv');
+   var dd = document.getElementById('datadiv');
+   md.style.width=(window.innerWidth-sd.offsetWidth)+'px';
+   md.style.left=sd.offsetWidth+'px';
+   mt.style.left=sd.offsetWidth+((window.innerWidth-sd.offsetWidth)/2)-(mt.offsetWidth/2)+'px';
+   dd.style.height=(window.innerHeight-sd.offsetHeight-20)+'px';
+   dd.style.top=sd.offsetHeight+'px'
+};
+</script>
+</head>
+
+<body onresize="fmapresize();">
+<div id="seldiv">
+<h2>Texas Covid-19 Time Series Data Map <span id="lastupdate"></span></h2>
+<form>
+Dataset: 
+   <select name="dataset" id="dataset" onchange="fdataset();"></select>
+   <select name="dataviz" id="dataviz" onchange="fdatapt();">
+      <option value='per'>(per 1000)</option>
+      <!--//<option value='psm'>(per sq mi)</option>//-->
+      <option value='lin'>(absolute)</option>
+      <!--//<option value='psm'><option value='log'>(abs log)</option>//-->
+      <option value='pct'>(% of TX)</option>
+   </select><br />
+Data Point: 
+   <a title="first" href="javascript:fchangept(-2);">⏮</a><a title="previous" href="javascript:fchangept(-1);">◀</a><select name="datapt" id="datapt" onchange="fdatapt();"></select><a title="next" href="javascript:fchangept(1);">▶</a><a title="last" href="javascript:fchangept(2);">⏭</a><br />
+Animate: <input type="checkbox" name="animate" id="animate" checked onchange="fdatapt();" />
+Loop: <input type="checkbox" name="animloop" id="animloop"  onchange="fdatapt();" />
+Speed:
+   <select name="animspeed" id="animspeed" onchange="fdatapt();">
+      <option value='500'>Fast (0.5s)</option>
+      <option value='1000' selected>Normal (1s)</option>
+      <option value='3000'>Slow (3s)</option>
+   </select>
+</form>
+</div>
+<div id="datadiv"></div>
+<div id="mapdiv"></div>
+<div id="title"></div>
+
+<script>
+function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
+   var eobj = document.createElement(etype);
+   if (eclass!==null) { eobj.classList = eclass };
+   if (eid!==null) { eobj.id = eid };
+   if (ehtml!==null) { eobj.innerHTML = ehtml };
+   if (etext!==null) { eobj.innerText = etext };
+   if (eparent!==null) { eparent.appendChild(eobj); };
+   return eobj;
+};
+
+let sqm_per_sqmi = 2589988.1103;
+
+// create main map
+var mainmap = L.map('mapdiv');
+//map.setView([29.825,-95.435],12); //center default view on Harris County... note this will be done with fitBounds later
+
+// add layers 
+// here are some XYZ map tile layers for base maps
+var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
+var s_stamen_urlbase = 'https://stamen-tiles-{s}.a.ssl.fastly.net/';
+var l_stamen_toner = L.tileLayer(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_tonerlite = L.tileLayer(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
+var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
+var l_carto_voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}' + (L.Browser.retina ? '@2x.png' : '.png'), {maxZoom: 20,subdomains: 'abcd',attribution:'&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'});
+var l_carto_light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}' + (L.Browser.retina ? '@2x.png' : '.png'), {maxZoom: 20,subdomains: 'abcd',attribution:'&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'});
+var l_carto_dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}' + (L.Browser.retina ? '@2x.png' : '.png'), {maxZoom: 20,subdomains: 'abcd',attribution:'&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'});
+
+l_stamen_tonerlite.addTo(mainmap);
+
+var baseMaps = {
+    'Stamen Toner':l_stamen_toner,
+    'Stamen Toner Lite':l_stamen_tonerlite,
+    'Stamen Terrain':l_stamen_terrain,
+    'Stamen Watercolor':l_stamen_watercolor,
+    'Carto Voyager (non-commercial use only)':l_carto_voyager,
+    'Carto Light (non-commercial use only)':l_carto_light,
+    'Carto Dark (non-commercial use only)':l_carto_dark,
+};
+var overlayMaps = {
+//    'State':l_state,
+//    'County':l_county,
+//    'Congressional District':l_cd
+//    'Congressional District (by party of rep)':l_cd_rep,
+//    'Congressional District (by sex of rep)':l_cd_rep_sex,
+//    'Harris County Voting Precinct':l_voting_pct,
+//    'Harris County Commissioner Precinct':l_commissioner_pct,
+};
+
+var lcontrol = L.control.layers(baseMaps,overlayMaps).addTo(mainmap);
+L.control.scale().addTo(mainmap);
+
+// some functions for handling decimals and percents
+function fnopercent(str) { return str.replace(/%/g,''); };
+function fnocomma(str) { return str.replace(/,/g,''); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fround(num,places) { return num.toFixed(places); };
+
+// functions to sort data in a table
+function fsortbase(columnNo,asc=true,comma=false,percent=false) {
+   if (columnNo > 1) {fsortbase(1);}; // before sorting by any other column, sort by precinct first
+   var tb = document.getElementById('datatbody');
+   var ary = Array.from(tb.children);
+   ary.sort(function(a, b) {
+      var val_a = a.children[columnNo].innerHTML;
+      var val_b = b.children[columnNo].innerHTML;
+      if (comma) {
+         val_a = fnocomma(val_a);
+         val_b = fnocomma(val_b);
+      };
+      if (percent) {
+         val_a = fnopercent(val_a)==='N/A'?-1:fnopercent(val_a);
+         val_b = fnopercent(val_b)==='N/A'?-1:fnopercent(val_b);
+      };
+      if (!isNaN(val_a)&&val_b==='NaN') { return asc?1:-1; }
+      else if (!isNaN(val_b)&&val_a==='NaN') { return asc?-1:1; }
+      else if (isNaN(val_a-val_b)) { return (asc?1:-1) * (val_a>val_b?1:val_a<val_b?-1:0); }
+      else { return asc?(val_a-val_b):(val_b-val_a); };      
+   });
+   ary.forEach(function(ele) {
+      tb.appendChild(ele);
+   });
+};
+function fsortcolumn(headerObject,comma=false,percent=false,defaultasc=null) {
+   var header = headerObject;
+   var hrow = headerObject.parentElement;
+   var columnNo = 0;
+   for (i=1;i<hrow.childNodes.length;i++) { // start at index 1, since index 0 (the color box) is not sortable
+      // first clear any existing sort order indicators
+      var text = hrow.childNodes[i].innerText;
+      var prevSort = text.charAt(text.length-1)==='▴' ? 'asc'
+         : text.charAt(text.length-1)==='▾' ? 'desc'
+         : 'none';
+      if (prevSort!=='none') {
+         text = text.substring(0,text.length-1);
+         hrow.childNodes[i].innerText = text;
+      };
+      // if the column is the one to sort on, then sort it and add a sort order indicator .
+      if (headerObject===hrow.childNodes[i]) {
+         if ((prevSort==='asc'&&defaultasc===null)||(defaultasc===false)) {
+            fsortbase(i,false,comma,percent);
+            text+='▾';
+         }
+         else {
+            fsortbase(i,true,comma,percent);
+            text+='▴';
+         };
+         headerObject.innerText = text;
+      };
+   };
+};
+function flayerhighlight(row,highlight=true) {
+   var pct = row.childNodes[1].innerHTML;
+   for (i in ldatasetlayer._layers) {
+      layer = ldatasetlayer._layers[i];
+      if (layer._polygonId === pct) {
+         if (highlight) {
+            layer.setStyle(polygonstyle.highlight);
+            row.style.background='white';
+         }
+         else {
+            layer.setStyle(polygonstyle.unhighlight);
+            row.style.background='whitesmoke';
+         };
+         break;
+      };
+   };
+};
+function flayerpopup(row) {
+   var pct = row.childNodes[1].innerHTML;
+   for (i in ldatasetlayer._layers) {
+      layer = ldatasetlayer._layers[i];
+      if (layer._polygonId === pct) {
+         layer.openPopup();
+         break;
+      };
+   };
+};
+function fdatatablerow(tbody,cbstyle,county,values) {
+   var brow = faddelem('tr',tbody,null,'tr'+county);
+   var colorbox = faddelem('td',brow,null,null,'&nbsp;');
+   colorbox.style.background = cbstyle.fillColor;
+   colorbox.style.opacity = cbstyle.fillOpacity;
+   faddelem('td',brow,null,null,county);
+   for (i=0;i<values.length;i++) {
+      faddelem('td',brow,'tar',null,values[i]);
+   };
+   brow.addEventListener('mouseover', function() { flayerhighlight(this) } );
+   brow.addEventListener('mouseout', function() { flayerhighlight(this,false) });
+   brow.addEventListener('click', function() { flayerpopup(this) });
+};
+function fdatahdrwsort(hrow,eclass=null,eid=null,ehtml=null,comma=false,percent=false,defaultasc=null) {
+   faddelem('th',hrow,eclass,eid,ehtml)
+   .addEventListener('click', function() { fsortcolumn(this,comma,percent,defaultasc) } );
+};
+function fdatatable(odata) {
+   var data = document.getElementById('data');
+   if (data) { data.remove(); };
+   var datadiv = document.getElementById('datadiv');
+   data = faddelem('table',datadiv,null,'data');
+   var thead = faddelem('thead',data);
+   var tbody = faddelem('tbody',data,null,'datatbody');
+   var headerdone = false;
+   for (p=0;p<odata.length;p++) {
+      let county = odata[p].properties;
+      var pstyle = fpolygonstyle(odata[p]);
+      if (!headerdone) {
+         headerdone = true;
+         var hrow = faddelem('tr',thead);
+         faddelem('th',hrow,null,'datahdr_colorbox','');
+         fdatahdrwsort(hrow,null,'datahdr_county','County');
+         if (fisdataset('cfr')) {
+            fdatahdrwsort(hrow,'tar','datahdr_f','Fatalities',true);
+            fdatahdrwsort(hrow,'tar','datahdr_c','Cases',true);
+            fdatahdrwsort(hrow,'tar','datahdr_value',county.valueshortnm,true);
+         }
+         else if (fisdataset('acc')) {
+            fdatahdrwsort(hrow,'tar','datahdr_a','Active',true);
+            fdatahdrwsort(hrow,'tar','datahdr_c','Cumulative',true);
+            fdatahdrwsort(hrow,'tar','datahdr_value',county.valueshortnm,true);
+         }
+         else {
+            fdatahdrwsort(hrow,'tar','datahdr_value',county.valueshortnm,true);
+            fdatahdrwsort(hrow,'tar','datahdr_per','Per 1000',true);
+            fdatahdrwsort(hrow,'tar','datahdr_pct','% of TX',false,true);
+         };
+      };
+      if (fisdatasets(['cfr','acc'])) {
+         fdatatablerow(tbody,pstyle,county.NAME,[
+            fcomnum(county.value),
+            fcomnum(county.valuettl),
+            fround(county.value/county.valuettl,6),
+         ]);
+      } 
+      else {
+         fdatatablerow(tbody,pstyle,county.NAME,[
+            fcomnum(county.value),
+            fround(county.value/county.pop*1000,6),
+            fround(county.value/county.valuettl*100,3),
+         ]);
+      };
+   };
+   // do an initial sort based on map type
+   if (fisdatasets(['cfr','acc'])) { fsortcolumn(document.getElementById('datahdr_value'),false,true,false); }
+   else if (fisdataviz('per')) { fsortcolumn(document.getElementById('datahdr_per'),true,false,false); }
+   else if (fisdataviz('lin')) { fsortcolumn(document.getElementById('datahdr_value'),true,false,false); }
+//   else if (fisdataviz('log')) { fsortcolumn(document.getElementById('datahdr_value'),true,false,false); }
+   else if (fisdataviz('pct')) { fsortcolumn(document.getElementById('datahdr_pct'),false,true,false); }
+   else { fsortcolumn(document.getElementById('datahdr_county')); };
+};
+
+function frgb(r,g,b) { return 'rgb('+r+','+g+','+b+')'; };
+function fhsl(h,s,l) { return 'hsl('+h+','+s+'%,'+l+'%)'; };
+function flogbase(val,base) { return Math.log(val) / Math.log(base); };
+function fscale(num,scale,limit=true) {
+   var num = num*scale;
+   if (num>scale) { num=scale }; 
+   return num;
+};
+// define general polygon styling
+var polygonstyle = {
+   default: {
+      fillColor: 'darkgray',
+      weight: 1,
+      opacity: 0.55,
+      color: 'darkgray',
+      fillOpacity: 0.55,
+      smoothFactor: 0.0
+   },
+   highlight: {
+      color: 'cyan',
+      fillOpacity: 0.75
+   },
+   unhighlight: {
+      color: 'darkgray',
+      fillOpacity: 0.55
+   }
+};
+
+function fhslscale(h,s,l,factor,shift,bidirectional=false) {
+   if (bidirectional) {
+      return (factor>0)?fhsl(h-fscale(factor,shift),s,l)
+         :(factor<0)?fhsl(h+fscale(-factor,shift),s,l)
+         :'darkgray'
+   }
+   return fhsl(h-fscale(factor,shift),s,l);
+};
+
+function fpolygonstyle(feature) {
+   let pstyle = polygonstyle.default;
+//   let pareami = feature.properties.ALAND/sqm_per_sqmi;
+   let ppop = feature.properties.pop;
+   let pvalue = feature.properties.value;
+   let pper = pvalue/ppop*1000;
+   let pttl = feature.properties.valuettl;
+   let ppct = pvalue/pttl;
+
+   pstyle.fillColor = (pvalue==null) ? 'none'
+      :(isNaN(ppct))?'darkgray'
+      :fisdataset('cfr')?fhslscale(60,100,50,(ppct*5),120)
+      :fisdataset('acc')?fhslscale(60,100,50,ppct,120)
+      :(pvalue===0)?'darkgray'
+      :fisdataviz('per')?
+         (fisdataset('cc')?fhslscale(60,100,50,(pper/60),120)
+         :fisdataset('ac')?fhslscale(60,100,50,(pper/30),120)
+         :fisdataset('cf')?fhslscale(60,100,50,pper,120)
+         :fisdataset('cc_d')?fhslscale(60,100,50,(pper/5),120)
+         :fisdataset('ac_d')?fhslscale(60,100,50,(pper/2),120)
+         :fisdataset('cf_d')?fhslscale(60,100,50,pper*2,120)
+         :'purple')
+//      :fisdataviz('psm')? // pvalue/pareami
+      :fisdataviz('lin')?
+         (fisdataset('cc')?fhslscale(60,100,50,(pvalue/30000),120)
+         :fisdataset('ac')?fhslscale(60,100,50,(pvalue/20000),120)
+         :fisdataset('cf')?fhslscale(60,100,50,(pvalue/400),120)
+         :fisdataset('cc_d')?fhslscale(60,100,50,(pvalue/1500),120)
+         :fisdataset('ac_d')?fhslscale(60,100,50,(pvalue/1500),120)
+         :fisdataset('cf_d')?fhslscale(60,100,50,(pvalue/20),120)
+         :'purple')
+/*
+      :fisdataviz('log')?
+         (fisdataset('cc')?fhslscale(60,100,50,(flogbase(pvalue,10)/5),120) // fhsl( 60-fscale((flogbase(pvalue,10)/5),120), 100, 50 )
+         :fisdataset('ac')?fhslscale(60,100,50,(flogbase(pvalue,10)/5),120) // fhsl( 60-fscale((flogbase(pvalue,10)/5),120), 100, 50 )
+         :fisdataset('cf')?fhslscale(60,100,50,(flogbase(pvalue,10)/4),120) //fhsl( 60-fscale((flogbase(pvalue,10)/4),120), 100, 50 )
+         :fisdataset('cc_d')?fhslscale(60,100,50,(flogbase(pvalue,10)/3),120) // fhsl( 60-fscale((flogbase(pvalue,10)/5),120), 100, 50 )
+         :fisdataset('ac_d')?fhslscale(60,100,50,(flogbase(pvalue,10)/3),120) // fhsl( 60-fscale((flogbase(pvalue,10)/5),120), 100, 50 )
+         :fisdataset('cf_d')?fhslscale(60,100,50,(flogbase(pvalue,10)/2),120) //fhsl( 60-fscale((flogbase(pvalue,10)/4),120), 100, 50 )
+         :'purple')
+*/
+      :fisdataviz('pct')?fhslscale(60,100,50,(ppct*3),120,true)
+      :'purple';
+   return pstyle;
+};
+// this is a general function to add interactive actions (interactions) to the feature polygons:
+// 1. popup text on click
+// 2. increase polygon opacity and use yellow border when moused over
+// 3. reset polygon opacity and border when moused out
+function foneachfeature(feature,layer) {
+   var popupary = [];
+   var popupstr = '';
+   let fp = feature.properties;
+   if (fp && fp.NAME) {
+      layer._polygonId = fp.NAME;
+      //layer.bindTooltip(fp.NAME);
+      popupary.push({label:fp.NAME+' County'});
+      popupary.push({label:fp.valuename+(fp.valuename.search('&Delta;')<0?' as of ':' from ')+fp.date});
+      if (fisdataset('cfr')) {
+         popupary.push({label:fp.valueshortnm,value:fround(fp.value/fp.valuettl,6)});
+         popupary.push({label:'Fatalities',value:fcomnum(fp.value)});
+         popupary.push({label:'Cases',value:fcomnum(fp.valuettl)});
+      }
+      else if (fisdataset('acc')) {
+         popupary.push({label:fp.valueshortnm,value:fround(fp.value/fp.valuettl,6)});
+         popupary.push({label:'Active',value:fcomnum(fp.value)});
+         popupary.push({label:'Cumulative',value:fcomnum(fp.valuettl)});
+      }
+      else {
+         popupary.push({label:fp.valueshortnm,value:fcomnum(fp.value)});
+         popupary.push({label:'Per 1000',value:fround(fp.value/fp.pop*1000,6)});
+         popupary.push({label:'Population',value:fcomnum(fp.pop)});
+         popupary.push({label:'% of TX',value:fround(fp.value/fp.valuettl*100,3)});
+         popupary.push({label:'Texas '+fp.valueshortnm,value:fcomnum(fp.valuettl)});
+      };
+   };
+   for (i=0; i<popupary.length; i++) {
+      popupstr += (i>0?'<br />':'')+popupary[i].label+((popupary[i].value!=null)?': '+popupary[i].value:'');
+   };
+   layer.bindPopup(popupstr);
+   layer.on('mouseover', function () {
+      this.setStyle(polygonstyle.highlight);
+      var tr = L.DomUtil.get('tr'+this._polygonId);
+      tr.style.background='white';
+   });
+   layer.on('mouseout', function () {
+      this.setStyle(polygonstyle.unhighlight);
+      var tr = L.DomUtil.get('tr'+this._polygonId);
+      tr.style.background='whitesmoke';
+   });
+};
+function fbinddata(gobj,dobj,idx) {
+   var dset = dobj.dataset;
+   for(i=0;i<gobj.length;i++) {
+      delete gobj[i].properties.date;
+      delete gobj[i].properties.count;
+      delete gobj[i].properties.ttlcount;
+      gobj[i].properties['date']=dset.dates[idx];
+      gobj[i].properties['valuename']=dobj.name;
+      gobj[i].properties['valueshortnm']=dobj.shortname;
+      if (fisdatasets(['cfr','acc'])) {
+         gobj[i].properties['value']=dset[gobj[i].properties.NAME][idx][0];
+         gobj[i].properties['valuettl']=dset[gobj[i].properties.NAME][idx][1];
+      }
+      else {
+         gobj[i].properties['value']=dset[gobj[i].properties.NAME][idx];
+         gobj[i].properties['valuettl']=dset.totals[idx];
+      };
+   };
+   return gobj;
+};
+function fgetpop(gobj,dobj) {
+   for(i=0;i<gobj.length;i++) {
+      delete gobj[i].properties.pop;
+      gobj[i].properties['pop']=dobj[gobj[i].properties.NAME];
+   }
+   return gobj;
+};
+var aryset = [
+   {name:'Active Cases',code:'ac',dataset:active_cases,shortname:'Cases',selected:true,vizoptions:true},
+   {name:'Cumulative Cases',code:'cc',dataset:cumulative_cases,shortname:'Cases',selected:false,vizoptions:true},
+   {name:'Cumulative Fatalities',code:'cf',dataset:cumulative_fatalities,shortname:'Deaths',selected:false,vizoptions:true},
+];
+function faddchangeset() {
+   const l = aryset.length;
+   for (i=0;i<l;i++) {
+      var d = {}; // destination
+      var s = aryset[i].dataset; // source
+      for (p in s) {
+         d[p]=[];
+         for (j=1;j<s[p].length;j++) {
+            if (p==='dates') { d[p].push( s[p][j-1]+' to '+s[p][j] ) }
+            else { d[p].push( s[p][j]-s[p][j-1] ) };
+         };
+      };
+      aryset.push({
+         name:aryset[i].name+' &Delta;',
+         code:aryset[i].code+'_d',
+          dataset:d,
+         shortname:aryset[i].shortname+' &Delta;',
+         selected:false,
+         vizoptions:aryset[i].vizoptions,
+      });
+   };
+};
+function faddcalcset(num,den,code,name,shortnm) {
+   f = fgetdatasetobj(num).dataset;
+   c = fgetdatasetobj(den).dataset;
+   var cis=0;
+   var a = {};
+   for (fi=0;fi<f.dates.length;fi++) {
+      var d = f.dates[fi];
+      for (ci=(cis||0);ci<c.dates.length;ci++) {
+         if (d===c.dates[ci]) {
+            if (cis===0) { // first time
+               for (p in f) { a[p] = []; };
+            };
+            for (q in f) {
+               if (q==='dates') { a[q].push(f[q][fi]); }
+               else { a[q].push([f[q][fi],c[q][ci]]); };
+            };
+            cis=ci+1;
+            break;
+         };
+      };
+   };
+   if (a.dates) {
+      aryset.push({
+         name:name,
+         code:code,
+         dataset:a,
+         shortname:shortnm,
+         selected:false,
+         vizoptions:false,
+      });
+   };
+};
+
+function fgetdataset() { return document.getElementById('dataset').value; };
+function fgetdatasetname() { return document.getElementById('dataset').options.item(document.getElementById('dataset').options.selectedIndex).innerText; };
+function fgetdatasetobj(code=fgetdataset()) {
+   var obj = aryset.find(o=>o.code===code);
+   return obj;
+};
+function fgetdataviz() { return document.getElementById('dataviz').value; };
+function fgetdatavizname() { return document.getElementById('dataviz').options.item(document.getElementById('dataviz').options.selectedIndex).innerText; };
+function fgetdatapt() { return document.getElementById('datapt').options.selectedIndex; };
+function fgetdataptmax() { return document.getElementById('datapt').options.length-1; };
+function fgetdataptvalue() { return document.getElementById('datapt').value; };
+function fsetdatapt(idx) {
+   var idxmax = fgetdataptmax();
+   if (idx<=0 || idxmax<=0) { idx=0; }
+   else if (idx>idxmax) { idx = document.getElementById('animloop').checked ? 0 : idxmax }; 
+   return document.getElementById('datapt').options.selectedIndex=idx;
+};
+function fgetdelay() {
+   var animate = document.getElementById('animate').checked;
+   if (!animate) {return -1;};
+   var aloop = document.getElementById('animloop').checked;
+   if (!aloop && (fgetdatapt()===fgetdataptmax())) {return -1;};
+   return document.getElementById('animspeed').value;
+};
+function fisdataset(set) { return fgetdataset()===set; };
+function fisdatasets(typeary) { return typeary.includes(fgetdataset()); };
+function fisdataviz(type) { return fgetdataviz()===type; };
+
+var ldatasetlayer;
+
+function fdelay(time,value) {
+   return new Promise(function(resolve) { 
+       setTimeout(resolve.bind(null, value), time)
+       //console.log('Pausing '+time+'ms...')
+   });
+};
+
+async function fdatapt(idx=fgetdatapt()) {
+   animthread++;
+   document.getElementById("title").innerHTML = '<span id="titledate">'+fgetdataptvalue()+'</span><br />'+fgetdatasetname()+(fisdatasets(['cfr','acc'])?'':('<br />'+fgetdatavizname()));
+   var set = fgetdatasetobj();
+   var odata = fbinddata(cb_2018_TX_county_500k.features,set,idx);
+   if (ldatasetlayer) {
+      mainmap.removeLayer(ldatasetlayer);
+      lcontrol.removeLayer(ldatasetlayer);
+   };
+   ldatasetlayer = L.geoJSON(cb_2018_TX_county_500k,{
+      attribution:'<a href="https://uscensusbureau.github.io/citysdk/">US Census Bureau CitySDK</a> 2018 500k County GeoJSON and <a href="https://dshs.texas.gov/coronavirus/AdditionalData.aspx">Texas DSHS Covid-19 Data</a>',
+      style: function(feature) { return fpolygonstyle(feature); },
+      onEachFeature:foneachfeature
+   });
+   ldatasetlayer.addTo(mainmap);
+   lcontrol.addOverlay(ldatasetlayer,"Covid-19 Data");
+   fdatatable(odata);
+   var delay = fgetdelay();
+   if (delay>0) {
+      var at = animthread;
+      await fdelay(delay);
+      if (at===animthread) {
+         fsetdatapt(idx+1);
+         //fdatapt(idx+1);
+         fdatapt();
+      };
+   };
+   return ldatasetlayer;
+};
+
+function fdataset() {
+   var list = document.getElementById("datapt");
+   while (list.firstChild) { list.removeChild(list.lastChild); };
+   var set = fgetdatasetobj();
+   for (i=0;i<set.dataset.dates.length;i++) {
+      var n = document.createElement("option");
+      n.value = set.dataset.dates[i];
+      n.innerHTML = set.dataset.dates[i];
+      list.appendChild(n);
+   };
+   //fcalcttl(set.dataset);
+   var viz = document.getElementById("dataviz");
+   viz.style.visibility = fgetdatasetobj().vizoptions?'visible':'hidden';
+   fdatapt();
+};
+function fdatasetlist() {
+   var list = document.getElementById("dataset");
+   while (list.firstChild) { list.removeChild(list.lastChild); };
+   for (i=0;i<aryset.length;i++) {
+      var n = document.createElement("option");
+      n.value = aryset[i].code;
+      n.innerHTML = aryset[i].name;
+      list.appendChild(n);
+      if (aryset[i].selected) { n.selected=true; };
+   };
+};
+function fcalcttl(set) {
+   var length = set.dates.length;
+   //if (!length || set.Totals || set.Total) { return false; };
+   if (!length) { return false; };
+   var ttl=[];
+   for (p in set) {
+      if (p==='dates') { }
+      else if (['TOTAL','TOTALS'].includes(p.toUpperCase())) { delete set[p]; } // this delete could be removed, if desired
+      else {
+         for (i=0;i<length;i++) {
+            if (ttl.length-1 < i) { ttl.push(set[p][i]); }
+            else { ttl[i]+=set[p][i]; };
+         };
+      };
+   };
+   set['totals']=ttl;
+};
+function fchangept(option) {
+   animthread++;
+   if (option===-2) { fsetdatapt(0); }
+   else if (option===2) { fsetdatapt(fgetdataptmax()); }
+   else if (option===-1) {
+      var idx = fgetdatapt()-1;
+      if (idx<0) { idx++; }
+      fsetdatapt(idx);
+   }
+   else if (option===1) {
+      var idx = fgetdatapt()+1;
+      if (idx>fgetdataptmax()) { idx--; }
+      fsetdatapt(idx);
+   }
+   fdatapt();
+};
+
+var luspan = document.getElementById('lastupdate');
+luspan.innerText = '(last update: '+(lastupdate||'unknown')+')'
+fmapresize();
+var animthread = 0;
+mainmap.fitBounds([[36.500704,-93.508039],[25.837164,-106.645646]]);
+fgetpop(cb_2018_TX_county_500k.features,population);
+for (a=0;a<aryset.length;a++) { fcalcttl(aryset[a].dataset); };
+faddchangeset();
+faddcalcset('cf','cc','cfr','Case Fatality Rate','CFR');
+faddcalcset('ac','cc','acc','Active to Cum. Cases','A/C');
+fdatasetlist();
+fdataset();
+
+</script>
+
+</body>
+</html>
