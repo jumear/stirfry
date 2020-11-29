@@ -20,13 +20,26 @@
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fshorten(num) { return num<10000 ? num : num<1000000 ? (num/1000).toFixed(1)+'K' : (num/1000000).toFixed(1)+'M'; };
-function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
+function faddelem(etype,eparent=null,eattributes={}) {
    var eobj = document.createElement(etype);
-   if (eclass!==null) { eobj.classList = eclass };
-   if (eid!==null) { eobj.id = eid };
-   if (ehtml!==null) { eobj.innerHTML = ehtml };
-   eparent.appendChild(eobj);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
    return eobj;
+};
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
 };
 
 //get parameters from the url
@@ -54,16 +67,15 @@ function fresults(data) {
    var results = data.results;
    var recsfound = results ? results.length : 0;
    var obsseq = 0; 
-   var grid = faddelem('div',document.body,null,'grid');
-   grid.style.height = cellpx+'px';
-   grid.style.width = cellpx+'px';
+   var grid = faddelem('div',document.body,{id:'grid',style:{height:cellpx+'px',width:cellpx+'px'}});
    for (r=1;r<=rows;r++) {
       for (c=1;c<=columns;c++) { 
-         var gcell = faddelem('div',grid,'gridcell');
-         gcell.style.height = cellpx+'px';
-         gcell.style.width = cellpx+'px';
-         gcell.style.top = ((r-1)*cellpx+(r<=1?0:r-1)*spacerpx)+'px';
-         gcell.style.left = ((c-1)*cellpx+(c<=1?0:c-1)*spacerpx)+'px';
+         var gcell = faddelem('div',grid,{classList:'gridcell',style:{
+            height:cellpx+'px',
+            width:cellpx+'px',
+            top:((r-1)*cellpx+(r<=1?0:r-1)*spacerpx)+'px',
+            left:((c-1)*cellpx+(c<=1?0:c-1)*spacerpx)+'px'
+            }});
          if (recsfound===0&&data.total_results===0) { 
             gcell.innerHTML = furl(famp(obsurl),'<span>no<br />data</span>');
             break;
@@ -75,14 +87,19 @@ function fresults(data) {
             break;
          }
          else {
-            var photourl = (results[obsseq].photos.length>0) ? results[obsseq].photos[0].url : null;
-            var photo = (photourl===null) ? '<span>❎</span>'
-               : ('<img width="'+cellpx+'px" height="'+cellpx+'px" src="'
-                  + ((cellpx<=75) ? photourl
+            let obs = results[obsseq];
+            let photourl = (obs.photos.length>0) ? obs.photos[0].url : null;
+            let taxon = obs.taxon?(obs.taxon.preferred_common_name?(obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'):obs.taxon.name)+(obs.taxon.rank?' ('+obs.taxon.rank+')':''):'(Unknown Taxon)';
+            let user = obs.user.login+((obs.user.name&&obs.user.name!='')?(' ('+obs.user.name+')'):'');
+            let obsdt = obs.time_observed_at?fdate(obs.time_observed_at,true):(obs.observed_on||'(Unknown Date)');
+            let anchor = faddelem('a',gcell,{href:famp(obsurlbase+'/'+obs.id)});
+            let photo = (photourl===null) ? faddelem('span',anchor,{innerText:'❎'})
+               : faddelem('img',anchor,{style:{width:cellpx+'px',height:cellpx+'px'},
+                  title: taxon + ' observed by ' + user + ' on ' + obsdt,
+                  src: ((cellpx<=75) ? photourl
                      : (cellpx<=150) ? photourl.replace('square','small')
                      : photourl.replace('square','medium'))
-                  + '" />');
-            gcell.innerHTML = furl(famp(obsurlbase+'/'+results[obsseq].id),photo);
+                  });
             if (r===1&&c>1) { grid.style.width = (c*cellpx+(c-1)*spacerpx)+'px'; };
             obsseq++;
          };
@@ -93,9 +110,9 @@ function fresults(data) {
 };
 
 if (window.location.search==='') {
-   faddelem('p',document.body,null,null,'This is a quick and dirty example of a widget to display iNaturalist observations in a grid. It is based on the '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search API endpoint')+' and can accept any of the parameters for that endpoint. Additionally, it accepts 4 more parameters that will allow the grid to be customized: columns, rows, cellpx, and spacerpx.');
-   faddelem('p',document.body,null,null,'Suppose the address of this page is '+furl(winurlexsearchstr)+', and you want to see '+furl(famp(apiurlbase+'?taxon_id=3&place_id=9'),'birds in New Mexico')+' in a 3 (high) x 5 (wide) grid where each cell is 75px x 75px and where each cell is separated by a 2px spacer, then you would open '+furl(famp(winurlexsearchstr+'?rows=3&columns=5&cellpx=75&spacerpx=2&taxon_id=3&place_id=9'))+' in your browser.');
-   faddelem('p',document.body,null,null,'Note that the actual size of the image files is 75px x 75px. So setting the cellpx higher than 75 will make the images look blurry. Only the first photo in an observation will be shown, or else ❎ will be shown when an observation has no photos. The last cell in the grid will always be either a "no data" or "more" button. So a 3x5 grid will show only up to 14 observations.');
+   faddelem('p',document.body,{innerHTML:'This is a quick and dirty example of a widget to display iNaturalist observations in a grid. It is based on the '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search API endpoint')+' and can accept any of the parameters for that endpoint. Additionally, it accepts 4 more parameters that will allow the grid to be customized: columns, rows, cellpx, and spacerpx.'});
+   faddelem('p',document.body,{innerHTML:'Suppose the address of this page is '+furl(winurlexsearchstr)+', and you want to see '+furl(famp(apiurlbase+'?taxon_id=3&place_id=9'),'birds in New Mexico')+' in a 3 (high) x 5 (wide) grid where each cell is 75px x 75px and where each cell is separated by a 2px spacer, then you would open '+furl(famp(winurlexsearchstr+'?rows=3&columns=5&cellpx=75&spacerpx=2&taxon_id=3&place_id=9'))+' in your browser.'});
+   faddelem('p',document.body,{innerHTML:'Note that the actual size of the image files is 75px x 75px. So setting the cellpx higher than 75 will make the images look blurry. Only the first photo in an observation will be shown, or else ❎ will be shown when an observation has no photos. The last cell in the grid will always be either a "no data" or "more" button. So a 3x5 grid will show only up to 14 observations.'});
 }
 else {
    fetch(apiurl)
@@ -106,10 +123,9 @@ else {
       .then((data) => { fresults(data); })
       .catch((err) => {
          console.error(err.message);
-         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
+         faddelem('p',document.body,{innerHTML:'There was a problem retrieving data. Error '+err.message+'.'})
       });
 };
-
 
 </script>
 </body>
