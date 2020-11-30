@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observation Slideshow" />
+<title>iNaturalist Observation Slideshow</title>
+<style>
+   body { margin:0px; padding:0px; font:10pt Sans-Serif; }
+   img { margin:0px; padding:0px; border:0px; display:block; width:100%; height:100%; object-fit:contain; object-position:center; }
+   a { text-decoration:none; color:#006600; }
+   p { margin:15px; }
+   .slidediv { position:absolute; top:0px; left:0px; background:black; text-align:center; display:flex; justify-content:center; align-items:center; }
+   .caption { position:absolute; width:100%; top:15px; left:0px; text-align:center; justify-content:center; align-items:center; }
+   .caption span { padding:5px 10px; background:rgba(255,255,255,0.65); border-radius:10px; } 
+</style>
+</head>
+
+<body>
+<script>
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fshorten(num) { return num<10000 ? num : num<1000000 ? (num/1000).toFixed(1)+'K' : (num/1000000).toFixed(1)+'M'; };
+function faddelem(etype,eparent=null,eattributes={}) {
+   var eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function ffetch(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      .then((data) => { return data; })
+      .catch((err) => { console.error(err); });
+};
+function fdelay(time,value) {
+   return new Promise(function(resolve) { 
+       setTimeout(resolve.bind(null, value), time)
+       console.log('Pausing '+time+'ms...')
+   });
+}
+
+//get parameters from the url
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr);
+
+var page = winurlparams.get('page');
+if (page===null) {
+   page = 1; 
+   winurlparams.append('page',page);
+};  
+var pages = winurlparams.get('pages') || 1;
+pages = (pages>5) ? 5 : (pages<1) ? 1 : pages; // limit to max 5 pages, since 5 x 200 per page max = 1000 observations, which is more than enough for a slideshow
+winurlparams.delete('pages');
+
+var delay = winurlparams.get('delay') || 5000; // 5 seconds default delay
+winurlparams.delete('delay');
+
+var obsurlbase = 'https://www.inaturalist.org/observations';
+var obsurl = obsurlbase+'?'+winurlparams.toString();
+var apiurlbase = 'https://api.inaturalist.org/v1/observations'
+var apiurl = apiurlbase+'?'+winurlparams.toString();
+
+if (window.location.search==='') {
+   faddelem('p',document.body,{innerHTML:'This is a quick and dirty example of a slideshow to display iNaturalist observations. It uses the '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search API endpoint')+' and can accept any of the parameters for that endpoint. Additionally, it accepts a "pages" parameter that allows a user to specify how many pages of observations to return (up to 5, for a maximum of 1000 observations, at 200 max observations per page). Also, a "delay" parameter can be used to specify how long (in milliseconds) to display each slide. (The default value is 5000ms, which translates to 5 seconds.)'});
+   faddelem('p',document.body,{innerHTML:'Suppose the address of this page is '+furl(winurlexsearchstr)+', and you want to see '+furl(famp(apiurlbase+'?place_id=7332&per_page=5'),'the 5 latest observations in Fiji')+', then you would open '+furl(famp(winurlexsearchstr+'?place_id=7332&per_page=5&pages=1'))+' in your browser.'});
+   faddelem('p',document.body,{innerHTML:'Since this is quick and dirty, it has not yet been optimized to handle resizing of the browser window. (So to view a full-screen slideshow on Chrome in Windows, I have to press F11 to enter full-screen mode, and then F5 to restart the slideshow. F11 exits full-screen mode once the slideshow is done. The exact steps needed to achieve this may vary by browser.) If there are multiple photos for an observation, only the first photo per observation will be displayed (for now). There also are no transition options and no functionality to skip forward, backward, pause, stop, etc. These options might be added later...'});
+}
+else {
+
+   var promiseary = [];
+   for (i=page;i<=pages;i++) {
+      winurlparams.set('page',i);
+      promiseary.push(ffetch(apiurlbase+'?'+winurlparams));
+   };
+   Promise.all(promiseary).then(data=>{
+      var imgary = [];
+      for (d=0;d<data.length;d++) {
+         for (p=0;p<data[d].results.length;p++) {
+            let obs = data[d].results[p];
+            if (obs.photos.length>0) {
+               imgary.push({
+                  taxon: obs.taxon?(obs.taxon.preferred_common_name?(obs.taxon.preferred_common_name+' ('+obs.taxon.name+')'):obs.taxon.name)+(obs.taxon.rank?' ('+obs.taxon.rank+')':''):'(Unknown Taxon)',
+                  user: obs.user.login+((obs.user.name&&obs.user.name!='')?(' ('+obs.user.name+')'):''),
+                  obsdt: obs.time_observed_at?fdate(obs.time_observed_at,true):(obs.observed_on||'(Unknown Date)'),
+                  photourl: obs.photos[0].url.replace('square','original'),
+               });
+            };
+         };
+      };
+      return imgary;
+   })
+   .then(async imgs=>{
+      var maxsize = {x:window.innerWidth, y:window.innerHeight};
+      // this slideshow uses 2 divs to load and display images.
+      // each of the divs fills the entire browser window, but only one div is displayed at any given time.
+      // the idea is to load the next image in the background on the non-displayed div, and then bring the div+image into view only after a delay (default 5 seconds), which is hopefully long enough for the image to have loaded fully.
+      var slidediv = [];
+      for (sd=0;sd<=1;sd++) { slidediv.push(faddelem('div',document.body,{id:'div'+sd,classList:'slidediv',style:{display:'none',width:maxsize.x+'px',height:maxsize.y+'px'}})); }
+      slidediv[0].style.display = 'initial';
+      if (imgs.length===0) {
+         faddelem('p',slidediv[0],{style:{color:'white'},innerText:'No images found'});
+         return;
+      }
+      faddelem('p',slidediv[0],{style:{color:'white'},innerText:'Beginning slideshow...'});
+      for (var i=0; i<imgs.length; i++) {
+         var sd_curr = i%2;
+         var sd_next = (i+1)%2;
+         faddelem('img',slidediv[sd_next],{src:imgs[i].photourl});
+         let caption = faddelem('div',slidediv[sd_next],{classList:'caption'});
+         faddelem('span',caption,{innerText:imgs[i].taxon+' observed by '+imgs[i].user+' on '+imgs[i].obsdt});
+         await fdelay(delay);
+         slidediv[sd_curr].innerHTML = null;
+         slidediv[sd_curr].style.display = 'none';
+         slidediv[sd_next].style.display = 'initial';
+         if (i+1===imgs.length) {
+            await fdelay(delay);
+            slidediv[sd_next].innerHTML = null;
+            faddelem('p',slidediv[sd_next],{style:{color:'white'},innerText:'End of slideshow'});
+         };
+      };
+   });
+};
+
+</script>
+</body>
+
+</html>
