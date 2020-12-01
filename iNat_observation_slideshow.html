@@ -64,12 +64,12 @@ let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr);
 
-var page = winurlparams.get('page');
-if (page===null) {
+var page = winurlparams.get('page')*1;
+if ((page||0)===0) {
    page = 1; 
    winurlparams.append('page',page);
 };  
-var pages = winurlparams.get('pages') || 1;
+var pages = winurlparams.get('pages')*1 || 1;
 pages = (pages>5) ? 5 : (pages<1) ? 1 : pages; // limit to max 5 pages, since 5 x 200 per page max = 1000 observations, which is more than enough for a slideshow
 winurlparams.delete('pages');
 
@@ -85,11 +85,12 @@ if (window.location.search==='') {
    faddelem('p',document.body,{innerHTML:'This is a quick and dirty example of a slideshow to display iNaturalist observations. It uses the '+furl('https://api.inaturalist.org/v1/docs/#!/Observations/get_observations','Observation Search API endpoint')+' and can accept any of the parameters for that endpoint. Additionally, it accepts a "pages" parameter that allows a user to specify how many pages of observations to return (up to 5, for a maximum of 1000 observations, at 200 max observations per page). Also, a "delay" parameter can be used to specify how long (in milliseconds) to display each slide. (The default value is 5000ms, which translates to 5 seconds.)'});
    faddelem('p',document.body,{innerHTML:'Suppose the address of this page is '+furl(winurlexsearchstr)+', and you want to see '+furl(famp(apiurlbase+'?place_id=7332&per_page=5'),'the 5 latest observations in Fiji')+', then you would open '+furl(famp(winurlexsearchstr+'?place_id=7332&per_page=5&pages=1'))+' in your browser.'});
    faddelem('p',document.body,{innerHTML:'Since this is quick and dirty, it has not yet been optimized to handle resizing of the browser window. (So to view a full-screen slideshow on Chrome in Windows, I have to press F11 to enter full-screen mode, and then F5 to restart the slideshow. F11 exits full-screen mode once the slideshow is done. The exact steps needed to achieve this may vary by browser.) If there are multiple photos for an observation, only the first photo per observation will be displayed (for now). There also are no transition options and no functionality to skip forward, backward, pause, stop, etc. These options might be added later...'});
+   faddelem('p',document.body,{innerHTML:'When using this page, keep in mind that each high-quality photo displayed requires about 2MB of data to be downloaded. So displaying 1000 photos would require downloading about 2GB. According to the iNaturalist '+furl('https://www.inaturalist.org/pages/api+recommended+practices','API developer recommended practices page')+', you could be blocked permanently if you download more than 5GB per hour or 24GB per day. So be smart about how you choose to use this page.'});
 }
 else {
 
    var promiseary = [];
-   for (i=page;i<=pages;i++) {
+   for (i=page;i<(page+pages);i++) {
       winurlparams.set('page',i);
       promiseary.push(ffetch(apiurlbase+'?'+winurlparams));
    };
