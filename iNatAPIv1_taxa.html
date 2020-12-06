@@ -10,9 +10,9 @@
    .tar { text-align:right; }
    #main { width:100%; }
    table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
-   thead tr { font-weight:600; background:green; color:white; }
+   thead tr { font-weight:600; background:green; color:white; text-align:left; vertical-align:bottom }
    tr { background:whitesmoke; }
-   tr:nth-child(even) {background-color:white }
+   tr:nth-child(even) { background-color:white }
    .icon { height:48px; width:48px; border-radius:50%; }
    .photo { height:64px; width:64px; }
    img { margin:0px; padding:0px; border:0px; }
@@ -27,26 +27,29 @@
 let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
-var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-//var p_per_page = winurlparams.get('per_page') || 200;
-//var p_page = winurlparams.get('page') || 1;
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+//let p_per_page = winurlparams.get('per_page') || 200;
+//let p_page = winurlparams.get('page') || 1;
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
-   var eobj = document.createElement(etype);
-   if (eclass!==null) { eobj.classList = eclass };
-   if (eid!==null) { eobj.id = eid };
-   if (ehtml!==null) { eobj.innerHTML = ehtml };
-   if (etext!==null) { eobj.innerText = etext };
-   if (eparent!==null) { eparent.appendChild(eobj); };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
    return eobj;
 };
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
 function fpageurl(urlbase,urlparams,per_page,page) {
-   var params = new URLSearchParams(urlparams);
-   var url_per_page = params.get('per_page');
-   var url_page = params.get('page');
+   let params = new URLSearchParams(urlparams);
+   let url_per_page = params.get('per_page');
+   let url_page = params.get('page');
    (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
    (url_page===null) ? params.append('page',page) : params.set('page',page);
    return urlbase+'?'+params;
@@ -60,10 +63,10 @@ function ffetch(url) {
    .catch((err) => { console.error(err); });
 };
 function fexport(count=0) {
-   var ebutton = document.getElementById('export');
+   let ebutton = document.getElementById('export');
    ebutton.innerHTML = 'exporting...';
    // generally the API will return no more than the first 10000 records for a given set of parameters
-   var maxcount = 10000;
+   let maxcount = 10000;
    if (count>maxcount) {
       count=maxcount;
       alert('Can export only a maximum of '+maxcount+' records due to API limits.')
@@ -72,12 +75,12 @@ function fexport(count=0) {
    // because this particular endpoint allows 500 records, that means we can do 20 requests before we hit a maximum of 10000 records.
    // in other words, 20 requests can bring back all the records available, and we are below 100 requests per minute.
    // so here, we'll just make all the requests in parallel rather than doing them in serial, since it's unlikely we'll encounter API request limits here.
-   var pary = [];
-   var maxper = 500;
+   let pary = [];
+   let maxper = 500;
    for (i=0;i<Math.ceil(count/maxper);i++) { pary.push(ffetch(fpageurl(apibase,winurlparams,maxper,i+1))); };
    Promise.all(pary)
    .then(results=>{
-      var ary = [[
+      let ary = [[
          'id',
          'name',
          'rank',
@@ -88,7 +91,7 @@ function fexport(count=0) {
          'observations_count',
       ]];
       for (r=0;r<results.length;r++) {
-         var data = results[r].results;
+         let data = results[r].results;
          for (j=0;j<data.length;j++) {
             ary.push([
                data[j].id||'',
@@ -103,9 +106,9 @@ function fexport(count=0) {
          };
       };
       // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
-      var csv = 'data:text/csv;charset=utf-8,'+ ary.map(e => e.join(',')).join('\n');
-      var euri = encodeURI(csv);
-      var link = document.createElement('a');
+      let csv = 'data:text/csv;charset=utf-8,'+ ary.map(e => e.join(',')).join('\n');
+      let euri = encodeURI(csv);
+      let link = document.createElement('a');
       link.href = euri;
       link.download = 'inat_taxa.csv';
       document.body.appendChild(link); // for FF
@@ -114,103 +117,114 @@ function fexport(count=0) {
    });
 };
 function fresults(xobj) {
-   //faddelem('p',document.body,null,null,furl(famp(apiurl)));
-   var results = xobj.results;
+   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
+   let results = xobj.results;
    if (results) {
-      var total_results = xobj.total_results;
-      var per_page = xobj.per_page;
-      var page_curr = xobj.page;
-      var page_max = Math.ceil(total_results/per_page);
-      var page_prev = ((page_curr>1)?page_curr-1:null);
-      var page_next = ((page_curr<page_max)?page_curr+1:null);
+      let total_results = xobj.total_results;
+      let per_page = xobj.per_page;
+      let page_curr = xobj.page;
+      let page_max = Math.ceil(total_results/per_page);
+      let page_prev = ((page_curr>1)?page_curr-1:null);
+      let page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      faddelem('p',document.body,null,null,'total observations: '+fcomnum(total_results)+' '
+      faddelem('p',document.body,{innerHTML:'total observations: '+fcomnum(total_results)+' '
          +'[<span id="export"><a href="javascript:fexport('+total_results+');">export</a></span>]<br />' 
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
-         );
+         });
 
-      var table = faddelem('table',document.body,null,'main');
-      var thead = faddelem('thead',table);
-      var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'#');
-      faddelem('td',hrow,null,null,'id');
-      faddelem('td',hrow,null,null,'photo');
-      faddelem('td',hrow,null,null,'name');
-      faddelem('td',hrow,null,null,'rank');
-      faddelem('td',hrow,null,null,'rank level');
-      //faddelem('td',hrow,null,null,'iconic taxon id');
-      faddelem('td',hrow,null,null,'active');
-      faddelem('td',hrow,null,null,'extinct');
-      faddelem('td',hrow,null,null,'parent id');
-      faddelem('td',hrow,null,null,'synonymous ids');
-      faddelem('td',hrow,null,null,'atlas id');
-      faddelem('td',hrow,'tar',null,'unresolved flags');
-      faddelem('td',hrow,'tar',null,'resolved flags');
-      faddelem('td',hrow,'tar',null,'taxon schemes');
-      faddelem('td',hrow,'tar',null,'taxon changes');
-      faddelem('td',hrow,'tar',null,'observations');
- 
-      var tbody = faddelem('tbody',table);
-      for (var i=0; i<results.length; i++) {
-         var brow = faddelem('tr',tbody);
-         faddelem('td',brow,null,null,i+1);
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id,results[i].id));
-         faddelem('td',brow,null,null,'<img class="icon" src="'+((results[i].default_photo)?results[i].default_photo.square_url:'')+'" />');
-         faddelem('td',brow,null,null,!results[i].name?'':results[i].wikipedia_url?furl(results[i].wikipedia_url,results[i].name):results[i].name);
-         faddelem('td',brow,null,null,results[i].rank);
-         faddelem('td',brow,null,null,results[i].rank_level);
-         //faddelem('td',brow,null,null,results[i].iconic_taxon_id);
-         faddelem('td',brow,null,null,results[i].is_active);
-         faddelem('td',brow,null,null,results[i].extinct);
-         faddelem('td',brow,null,null,results[i].parent_id?furl('https://www.inaturalist.org/taxa/'+results[i].parent_id,results[i].parent_id):'');
-         faddelem('td',brow,null,null,results[i].current_synonymous_taxon_ids?results[i].current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)):'');
-         faddelem('td',brow,null,null,results[i].atlas_id?furl('https://www.inaturalist.org/atlases/'+results[i].atlas_id,results[i].atlas_id):'');
-         faddelem('td',brow,'tar',null,fcomnum(results[i].flag_counts.unresolved));
-         faddelem('td',brow,'tar',null,fcomnum(results[i].flag_counts.resolved));
-         faddelem('td',brow,'tar',null,furl('https://www.inaturalist.org/taxon_changes?taxon_id='+results[i].id,fcomnum(results[i].taxon_schemes_count)));
-         faddelem('td',brow,'tar',null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/schemes',fcomnum(results[i].taxon_changes_count)));
-         faddelem('td',brow,'tar',null,furl('https://www.inaturalist.org/observations?taxon_id='+results[i].id,fcomnum(results[i].observations_count)));
+      let table = faddelem('table',document.body,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let headers = [
+         {innerText:'#'},
+         {innerText:'ID'},
+         {innerText:'Photo'},
+         {innerText:'Name'},
+         {innerText:'Rank'},
+         {innerText:'Rank Level'},
+         // {innerText:'Iconic Taxon ID'},
+         {innerText:'Active'},
+         {innerText:'Extinct'},
+         {innerText:'Parent ID'},
+         {innerText:'Synonymous ID'},
+         {innerText:'Atlas ID'},
+         {classList:'tar',innerText:'Unresolved Flags'},
+         {classList:'tar',innerText:'Resolved Flags'},
+         {classList:'tar',innerText:'Taxon Changes'},
+         {classList:'tar',innerText:'Taxon Schemes'},
+         {classList:'tar',innerText:'Observations'},
+      ];
+      faddelems('th',hrow,headers);
+
+      let tbody = faddelem('tbody',table);
+      for (let i=0; i<results.length; i++) {
+         let brow = faddelem('tr',tbody);
+         let rec = results[i];
+         let values = [
+            {innerText:i+1},
+            {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
+            {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
+            {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
+            {innerText:rec.rank},
+            {innerText:rec.rank_level},
+            //{innerText:rec.iconic_taxon_id},
+            {innerText:rec.is_active},
+            {innerText:rec.extinct},
+            {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/taxa/'+rec.parent_id,rec.parent_id):''},
+            {innerHTML:rec.current_synonymous_taxon_ids?rec.current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)):''},
+            {innerHTML:rec.atlas_id?furl('https://www.inaturalist.org/atlases/'+rec.atlas_id,rec.atlas_id):''},
+            {classList:'tar',innerText:fcomnum(rec.flag_counts.unresolved)},
+            {classList:'tar',innerText:fcomnum(rec.flag_counts.resolved)},
+            {classList:'tar',innerHTML:furl('https://www.inaturalist.org/taxon_changes?taxon_id='+rec.id,fcomnum(rec.taxon_changes_count))},
+            {classList:'tar',innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id+'/schemes',fcomnum(rec.taxon_schemes_count))},
+            {classList:'tar',innerHTML:furl('https://www.inaturalist.org/observations?taxon_id='+rec.id,fcomnum(rec.observations_count))},
+         ];
+         faddelems('td',brow,values);
       };
 
       // buttons to go to prev or next page
-      var buttons = faddelem('p',document.body);
-      (page_curr<=1)?faddelem('span',buttons,'button_inactive',null,'⏮'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,1),'⏮'));
-      (page_prev===null)?faddelem('span',buttons,'button_inactive',null,'◀'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev),'◀'));
-      (page_next===null)?faddelem('span',buttons,'button_inactive',null,'▶'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_next),'▶'));
-      (page_curr>=page_max)?faddelem('span',buttons,'button_inactive',null,'⏭'):faddelem('span',buttons,'button',null,furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_max),'⏭'));
+      let buttons = faddelem('p',document.body);
+      let buttonary = [
+         (page_curr<=1)?{classList:'button_inactive',innerHTML:'⏮'}:{classList:'button',innerHTML:furl(fpageurl(winurlexsearchstr,winurlparams,per_page,1),'⏮')},
+         (page_prev===null)?{classList:'button_inactive',innerHTML:'◀'}:{classList:'button',innerHTML:furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev),'◀')},
+         (page_next===null)?{classList:'button_inactive',innerHTML:'▶'}:{classList:'button',innerHTML:furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_next),'▶')},
+         (page_curr>=page_max)?{classList:'button_inactive',innerHTML:'⏭'}:{classList:'button',innerHTML:furl(fpageurl(winurlexsearchstr,winurlparams,per_page,page_max),'⏭')},
+      ];
+      faddelems('span',buttons,buttonary);
    }
-   else { faddelem('p',document.body,null,null,'No results returned.'); };
+   else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
-var apibase = 'https://api.inaturalist.org/v1/taxa';
-var apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
-var apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
-var apirefname = 'iNaturalist Taxa';
-var apiref = furl(apirefurl,apirefname);
-faddelem('h1',document.body,null,null,apirefname);
+let apibase = 'https://api.inaturalist.org/v1/taxa';
+let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
+let apirefname = 'iNaturalist Taxa';
+let apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:apirefname});
 
 if (window.location.search==='') {
-   faddelem('p',document.body,null,null,'This page displays the response from the '+apiref+' API endpoint in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.');
-   faddelem('p',document.body,null,null,'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?q=dracopis&is_active=any&per_page=500'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?q=dracopis&is_active=any&per_page=500'))+' in your browser.');
-   faddelem('p',document.body,null,null,'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.');
-   faddelem('p',document.body,null,null,'Also note that is_active=any is undocumented, but that is the thing to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.');
-
+   let text = [
+      {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
+      {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?q=dracopis&is_active=any&per_page=500'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?q=dracopis&is_active=any&per_page=500'))+' in your browser.'},
+      {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
+      {innerHTML:'Also note that is_active=any is undocumented, but that is the thing to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
+   ];
+   faddelems('p',document.body,text);
 }
 else {
-   faddelem('p',document.body,null,null,'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)');
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
    fetch(apiurl)
-      .then((response) => {
-         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
-         return response.json();
-      })
-      .then((data) => { fresults(data); })
-      .catch((err) => {
-         console.error(err.message);
-         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
-      });
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'})
+   });
 };
 </script>
 </body>
-
 
 </html>
