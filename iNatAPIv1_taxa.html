@@ -21,6 +21,8 @@
    .button { background:whitesmoke; }
    .button:hover { background:lightgray; }
    .button_inactive { background:none; color:lightgray; }
+   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
 </style>
 </head>
 
@@ -171,8 +173,8 @@ function fresults(xobj) {
             {innerText:rec.rank||''},
             {innerText:rec.rank_level||''},
             //{innerText:rec.iconic_taxon_id||''},
-            {innerText:rec.is_active},
-            {innerText:rec.extinct},
+            {innerText:rec.is_active,classList:(rec.is_active)?'bin_1':'bin_0'},
+            {innerText:rec.extinct,classList:(rec.extinct)?'bin_1':'bin_0'},
             {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/taxa/'+rec.parent_id,rec.parent_id):''},
             {innerHTML:rec.current_synonymous_taxon_ids?rec.current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)):''},
             {innerHTML:rec.atlas_id?furl('https://www.inaturalist.org/atlases/'+rec.atlas_id,rec.atlas_id):''},
