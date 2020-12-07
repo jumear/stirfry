@@ -138,14 +138,14 @@ function fresults(xobj) {
       let table = faddelem('table',document.body,{id:'main'});
       let thead = faddelem('thead',table);
       let hrow = faddelem('tr',thead);
-      let headers = [
+      let labels = [
          {innerText:'#'},
          {innerText:'ID'},
          {innerText:'Photo'},
          {innerText:'Name'},
          {innerText:'Rank'},
          {innerText:'Rank Level'},
-         // {innerText:'Iconic Taxon ID'},
+         //{innerText:'Iconic Taxon ID'},
          {innerText:'Active'},
          {innerText:'Extinct'},
          {innerText:'Parent ID'},
@@ -157,7 +157,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Taxon Schemes'},
          {classList:'tar',innerText:'Observations'},
       ];
-      faddelems('th',hrow,headers);
+      faddelems('th',hrow,labels);
 
       let tbody = faddelem('tbody',table);
       for (let i=0; i<results.length; i++) {
@@ -168,9 +168,9 @@ function fresults(xobj) {
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
             {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
             {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
-            {innerText:rec.rank},
-            {innerText:rec.rank_level},
-            //{innerText:rec.iconic_taxon_id},
+            {innerText:rec.rank||''},
+            {innerText:rec.rank_level||''},
+            //{innerText:rec.iconic_taxon_id||''},
             {innerText:rec.is_active},
             {innerText:rec.extinct},
             {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/taxa/'+rec.parent_id,rec.parent_id):''},
@@ -186,14 +186,14 @@ function fresults(xobj) {
       };
 
       // buttons to go to prev or next page
-      let buttons = faddelem('div',document.body);
-      let buttonary = [
+      let nav = faddelem('div',document.body);
+      let buttons = [
          (page_curr<=1)?{classList:'button_inactive',title:'first',innerHTML:'&laquo'}:{classList:'button',title:'first',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
          (page_prev===null)?{classList:'button_inactive',title:'previous',innerHTML:'&#8249'}:{classList:'button',title:'previous',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
          (page_next===null)?{classList:'button_inactive',title:'next',innerHTML:'&#8250'}:{classList:'button',title:'next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
          (page_curr>=page_max)?{classList:'button_inactive',title:'last',innerHTML:'&raquo'}:{classList:'button',title:'last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
       ];
-      faddelems('a',buttons,buttonary);
+      faddelems('a',nav,buttons);
    }
    else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
@@ -205,13 +205,13 @@ let apiref = furl(apirefurl,apirefname);
 faddelem('h1',document.body,{innerText:apirefname});
 
 if (window.location.search==='') {
-   let text = [
+   let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?q=dracopis&is_active=any&per_page=500'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?q=dracopis&is_active=any&per_page=500'))+' in your browser.'},
       {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
       {innerHTML:'Also note that is_active=any is undocumented, but that is the thing to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
    ];
-   faddelems('p',document.body,text);
+   faddelems('p',document.body,instructions);
 }
 else {
    faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
