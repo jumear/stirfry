@@ -3,89 +3,156 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="iNaturalist API Get Identifiers" />
-<title>iNaturalist API Get Identifiers</title>
+<meta name="description" content="iNaturalist API Get Identification Identifiers" />
+<title>iNaturalist API Get Identification Identifiers</title>
 <style>
    body { font:10pt Sans-Serif; }
-   .tar { text-align:right; }
    #main { width:100%; }
-   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
-   thead tr { font-weight:600; background:green; color:white; }
+   table, thead, tbody, tr, td, th { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
    tr { background:whitesmoke; }
-   tr:nth-child(even) {background-color:white }
+   tr:nth-child(even) { background-color:white }
+   .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
    img { margin:0px; padding:0px; border:0px; }
-   a { text-decoration:none; }
+   a { text-decoration:none; color:royalblue; }
+   .button, .button_inactive { display:inline-block; margin-right:5px; margin-top:8px; height:30px; width:30px; border:1px solid lightgray; border-radius:35%; font-size:18pt; vertical-align:middle; text-align:center; }
+   .button { background:whitesmoke; }
+   .button:hover { background:lightgray; }
+   .button_inactive { background:none; color:lightgray; }
 </style>
 </head>
 
 <body>
 <script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+//let p_per_page = winurlparams.get('per_page') || 200;
+//let p_page = winurlparams.get('page') || 1;
+
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
-function fdate(str) {
-//   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-//   str = str.replace(/z/i,' GMT'); //replaces Z (case insensitve) with GMT
-//   str = str.replace(/([+-]\d{2}\:?\d{2})/,' GMT$1'); //adds GMT prefix to timezone offset
-//   return str;
-   return str.substring(0,10);
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
 };
-function faddelem(etype,eparent,eclass=null,eid=null,ehtml=null) {
-   var eobj = document.createElement(etype);
-   if (eclass!==null) { eobj.classList = eclass };
-   if (eid!==null) { eobj.id = eid };
-   if (ehtml!==null) { eobj.innerHTML = ehtml };
-   eparent.appendChild(eobj);
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
    return eobj;
 };
-function fresults(xobj) {
-   faddelem('p',document.body,null,null,furl(famp(apiurl)));
-   var results = xobj.results;
-   if (results) {
-      faddelem('p',document.body,null,null,'total identifiers: '+xobj.total_results);
-      var table = faddelem('table',document.body,null,'main');
-      var thead = faddelem('thead',table);
-      var hrow = faddelem('tr',thead);
-      faddelem('td',hrow,null,null,'rank');
-      faddelem('td',hrow,null,null,'icon');
-      faddelem('td',hrow,null,null,'user id');
-      faddelem('td',hrow,null,null,'login id');
-      faddelem('td',hrow,null,null,'user name');
-      faddelem('td',hrow,null,null,'joined date');
-      faddelem('td',hrow,'tar',null,'ids');
-      faddelem('td',hrow,'tar',null,'all ids (for others only)');
-      var tbody = faddelem('tbody',table);
-      for (var i=0; i<results.length; i++) {
-         var brow = faddelem('tr',tbody);
-         faddelem('td',brow,null,null,i+1);
-         faddelem('td',brow,null,null,'<img class="icon" src="'+results[i].user.icon+'" />');
-         faddelem('td',brow,null,null,furl('https://www.inaturalist.org/users/'+results[i].user_id,results[i].user_id));
-         faddelem('td',brow,null,null,results[i].user.login);
-         faddelem('td',brow,null,null,results[i].user.name);
-         faddelem('td',brow,null,null,fdate(results[i].user.created_at));
-         faddelem('td',brow,'tar',null,results[i].count);
-         faddelem('td',brow,'tar',null,results[i].user.identifications_count);
-      };
-   }
-   else { faddelem('p',document.body,null,null,'No results returned.'); };
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function fpageurl(urlbase,urlparams,per_page,page) {
+   let params = new URLSearchParams(urlparams);
+   let url_per_page = params.get('per_page');
+   let url_page = params.get('page');
+   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
+   (url_page===null) ? params.append('page',page) : params.set('page',page);
+   return urlbase+'?'+params;
 };
-var apiurl = 'https://api.inaturalist.org/v1/identifications/identifiers'+window.location.search;
+function fresults(xobj) {
+   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
+   let results = xobj.results;
+   if (results) {
+      let total_results = xobj.total_results;
+      let per_page = xobj.per_page;
+      let page_curr = xobj.page;
+      let page_max = Math.ceil(total_results/per_page);
+      let page_prev = ((page_curr>1)?page_curr-1:null);
+      let page_next = ((page_curr<page_max)?page_curr+1:null);
+
+      faddelem('p',document.body,{innerHTML:'total identifiers: '+fcomnum(total_results)+'<br />'
+         +'per page: '+fcomnum(per_page)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
+         });
+      let table = faddelem('table',document.body,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let labels = [
+         {innerText:'Rank'},
+         {innerText:'Icon'},
+         {innerText:'User ID'},
+         {innerText:'Login ID'},
+         {innerText:'User Name'},
+         {innerText:'Joined Date'},
+         {classList:'tar',innerText:'IDs'},
+         {classList:'tar',innerText:'All IDs (For Others Only)'},
+      ];
+      faddelems('th',hrow,labels);
+
+      let tbody = faddelem('tbody',table);
+      for (let i=0; i<results.length; i++) {
+         let brow = faddelem('tr',tbody);
+         let rec = results[i];
+         let values = [
+            {innerText:i+1},
+            {innerHTML:'<img class="icon" src="'+rec.user.icon+'" />'},
+            {innerHTML:furl('https://www.inaturalist.org/users/'+rec.user_id,rec.user_id)},
+            {innerText:rec.user.login||''},
+            {innerText:rec.user.name||''},
+            {innerText:fdate(rec.user.created_at,true)},
+            {classList:'tar',innerText:fcomnum(rec.count)},
+            {classList:'tar',innerText:fcomnum(rec.user.identifications_count)},
+         ];
+         faddelems('td',brow,values);
+      };
+
+      // buttons to go to prev or next page
+      let nav = faddelem('div',document.body);
+      let buttons = [
+         (page_curr<=1)?{classList:'button_inactive',title:'first',innerHTML:'&laquo'}:{classList:'button',title:'first',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
+         (page_prev===null)?{classList:'button_inactive',title:'previous',innerHTML:'&#8249'}:{classList:'button',title:'previous',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
+         (page_next===null)?{classList:'button_inactive',title:'next',innerHTML:'&#8250'}:{classList:'button',title:'next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'last',innerHTML:'&raquo'}:{classList:'button',title:'last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
+      ];
+      faddelems('a',nav,buttons);
+   }
+   else { faddelem('p',document.body,{innerText:'No results returned.'}); };
+};
+let apibase = 'https://api.inaturalist.org/v1/identifications/identifiers';
+let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_identifiers';
+let apirefname = 'iNaturalist Identification Identifiers';
+let apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:apirefname});
+
 if (window.location.search==='') {
-   faddelem('p',document.body,null,null,'This page displays the results of a request to the iNaturalist Identifiers API in a user-friendly format. To use this page, add at least one query parameter to the URL. See '+furl('https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications_identifiers')+' for available query parameters.');
-   faddelem('p',document.body,null,null,'Suppose the address of this page is '+window.location+', <br />and you want to see the results of '+furl(famp(apiurl+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in a friendly format, <br />then you would open '+furl(famp(window.location+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in your browser.');
+   let instructions = [
+      {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
+      {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?&own_observation=false&is_change=false&current=true&category=improving&taxon_id=55401&per_page=50'))+' in your browser.'},
+   ];
+   faddelems('p',document.body,instructions);
 }
 else {
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
    fetch(apiurl)
-      .then((response) => {
-         if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
-         return response.json();
-      })
-      .then((data) => { fresults(data); })
-      .catch((err) => {
-         console.error(err.message);
-         faddelem('p',document.body,null,null,'There was a problem retrieving data. Error '+err.message+'.')
-      });
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'})
+   });
 };
+
 </script>
 </body>
+
 </html>
