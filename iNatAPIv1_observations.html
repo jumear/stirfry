@@ -6,9 +6,9 @@
 <meta name="description" content="iNaturalist API Get Observations" />
 <title>iNaturalist API Get Observations</title>
 <style>
-   body { font:10pt Sans-Serif; }
+   html { font:14px Sans-Serif; }
    #main { width:100%; }
-   table, thead, tbody, tr, td, th { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   table, thead, tbody, tr, td, th { margin:0px; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
    th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
    tr { background:whitesmoke; }
    tr:nth-child(even) { background-color:white }
@@ -17,10 +17,12 @@
    .photo { height:64px; width:64px; }
    img { margin:0px; padding:0px; border:0px; }
    a { text-decoration:none; color:royalblue; }
-   .button, .button_inactive { display:inline-block; margin-right:5px; margin-top:8px; height:30px; width:30px; border:1px solid lightgray; border-radius:35%; font-size:18pt; vertical-align:middle; text-align:center; }
+   a:hover { background:lightgray; }
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
    .button { background:whitesmoke; }
-   .button:hover { background:lightgray; }
-   .button_inactive { background:none; color:lightgray; }
+   .button_inactive { background:white; color:lightgray; }
+   .button_inactive:hover { background:none; }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0px; bottom:0px; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
 </style>
 </head>
 
@@ -76,13 +78,13 @@ function fidextra(obs) {
    if (!ids || !taxon) { return null; }
    let taxa = {obs:[],ancestor:[],descendant:[],other:[]};
    let countall = 0;
-   for (i=0;i<ids.length;i++) {
-      if (ids[i].current && !ids[i].hidden) {
+   for (let i of ids) {
+      if (i.current && !i.hidden) {
          countall++;
-         let id = ids[i].taxon.id;
+         let id = i.taxon.id;
          if ( id===taxon.id ) { fpushifnew(taxa.obs,id); }
-         else if ( taxon.ancestry.split('/').map(s=>Number(s)).includes(id) ) { fpushifnew(taxa.ancestor,id); }
-         else if ( ids[i].taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { fpushifnew(taxa.descendant,id); }
+         else if ( taxon.ancestry && taxon.ancestry.split('/').map(s=>Number(s)).includes(id) ) { fpushifnew(taxa.ancestor,id); }
+         else if ( i.taxon.ancestry && i.taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { fpushifnew(taxa.descendant,id); }
          else { fpushifnew(taxa.other,id); };
       };
    };
@@ -143,7 +145,7 @@ function fresults(xobj) {
             for (let p=0; p<rec.photos.length; p++) {
                let url = (p>0)?' ':'';
                url += rec.photos[p].url.substring(0,rec.photos[p].url.search('\\?'));
-               photos.push(furl(url.replace('square','medium'),url.replace('square','medium')));
+               photos.push(furl(url.replace('square','medium')));
             };
          };
          let values = [
@@ -173,12 +175,12 @@ function fresults(xobj) {
       };
 
       // buttons to go to prev or next page
-      let nav = faddelem('div',document.body);
+      let nav = faddelem('div',document.body,{id:'nav'});
       let buttons = [
-         (page_curr<=1)?{classList:'button_inactive',title:'first',innerHTML:'&laquo'}:{classList:'button',title:'first',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
-         (page_prev===null)?{classList:'button_inactive',title:'previous',innerHTML:'&#8249'}:{classList:'button',title:'previous',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
-         (page_next===null)?{classList:'button_inactive',title:'next',innerHTML:'&#8250'}:{classList:'button',title:'next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
-         (page_curr>=page_max)?{classList:'button_inactive',title:'last',innerHTML:'&raquo'}:{classList:'button',title:'last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
+         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
+         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
+         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
       ];
       faddelems('a',nav,buttons);
    }
