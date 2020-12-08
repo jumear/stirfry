@@ -4,23 +4,26 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="description" content="iNaturalist Identifications Search" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
 <title>iNaturalist Identifications Search</title>
 <style>
-   body { font:10pt Sans-Serif; }
+   html,body { font:14px Sans-Serif; }
    #main { width:100%; }
-   table, thead, tbody, tr, td, th { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
    th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
    tr { background:whitesmoke; }
-   tr:nth-child(even) { background-color:white }
+   tr:nth-child(even) { background-color:white; }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
    .photo { height:64px; width:64px; }
-   img { margin:0px; padding:0px; border:0px; }
+   img { margin:0; padding:0; border:0; }
    a { text-decoration:none; color:royalblue; }
-   .button, .button_inactive { display:inline-block; margin-right:5px; margin-top:8px; height:30px; width:30px; border:1px solid lightgray; border-radius:35%; font-size:18pt; vertical-align:middle; text-align:center; }
+   a:hover { background:lightgray; }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
    .button { background:whitesmoke; }
-   .button:hover { background:lightgray; }
-   .button_inactive { background:none; color:lightgray; }
+   .button_inactive { background:white; color:lightgray; }
+   .button_inactive:hover { background:none; }
    .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
    .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
 </style>
@@ -172,12 +175,12 @@ function fresults(xobj) {
       };
 
       // buttons to go to prev or next page
-      let nav = faddelem('div',document.body);
+      let nav = faddelem('div',document.body,{id:'nav'});
       let buttons = [
-         (page_curr<=1)?{classList:'button_inactive',title:'first',innerHTML:'&laquo'}:{classList:'button',title:'first',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
-         (page_prev===null)?{classList:'button_inactive',title:'previous',innerHTML:'&#8249'}:{classList:'button',title:'previous',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
-         (page_next===null)?{classList:'button_inactive',title:'next',innerHTML:'&#8250'}:{classList:'button',title:'next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
-         (page_curr>=page_max)?{classList:'button_inactive',title:'last',innerHTML:'&raquo'}:{classList:'button',title:'last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
+         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
+         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
+         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
       ];
       faddelems('a',nav,buttons);
    }
