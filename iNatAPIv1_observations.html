@@ -154,7 +154,7 @@ function fresults(xobj) {
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
             {innerHTML:rec.taxon?furl('https://www.inaturalist.org/taxa/'+rec.taxon.id,rec.taxon.name):''},
-            {innerText:rec.taxon?rec.taxon.preferred_common_name:''},
+            {innerText:rec.taxon?(rec.taxon.preferred_common_name||''):''},
             {innerText:rec.taxon?rec.taxon.rank:''},
             {innerText:rec.quality_grade},
             {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
