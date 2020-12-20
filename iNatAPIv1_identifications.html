@@ -167,7 +167,7 @@ function fresults(xobj) {
             {innerText:iddetail.current,classList:(iddetail.current)?'bin_1':'bin_0'},
             {innerText:iddetail.disagreement||false,classList:(iddetail.disagreement)?'bin_1':'bin_0'},
             {innerText:iddetail.vision,classList:(iddetail.vision)?'bin_1':'bin_0'},
-            {innerText:iddetail.taxon_change||false,classList:(iddetail.taxon_change)?'bin_1':'bin_0'},
+            {innerText:(iddetail.taxon_change)?true:false,classList:(iddetail.taxon_change)?'bin_1':'bin_0'},
             {innerText:iddetail.previous_observation_taxon?iddetail.previous_observation_taxon.name:''},
             {innerText:iddetail.body},
          ];
