@@ -90,6 +90,7 @@ function fexport(count=0) {
       let ary = [[
          'id',
          'name',
+         'common_name',
          'rank',
          'rank_level',
          'active',
@@ -97,18 +98,18 @@ function fexport(count=0) {
          'parent_id',
          'observations_count',
       ]];
-      for (r=0;r<results.length;r++) {
-         let data = results[r].results;
-         for (j=0;j<data.length;j++) {
+      for (let result of results) {
+         for (let data of result.results) {
             ary.push([
-               data[j].id||'',
-               data[j].name||'',
-               data[j].rank||'',
-               data[j].rank_level||'',
-               data[j].is_active,
-               data[j].extinct,
-               (data[j].parent_id!=null)?data[j].parent_id:'',
-               data[j].observations_count,
+               data.id||'',
+               data.name||'',
+               (!data.preferred_common_name)?'':(data.preferred_common_name.search(',')===-1)?data.preferred_common_name:'"'+data.preferred_common_name+'"',
+               data.rank||'',
+               data.rank_level||'',
+               data.is_active,
+               data.extinct,
+               (data.parent_id!=null)?data.parent_id:'',
+               data.observations_count,
             ]);
          };
       };
@@ -148,6 +149,7 @@ function fresults(xobj) {
          {innerText:'ID'},
          {innerText:'Photo'},
          {innerText:'Name'},
+         {innerText:'Common Name'},
          {innerText:'Rank'},
          {innerText:'Rank Level'},
          //{innerText:'Iconic Taxon ID'},
@@ -173,6 +175,7 @@ function fresults(xobj) {
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
             {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
             {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
+            {innerHTML:rec.preferred_common_name||''},
             {innerText:rec.rank||''},
             {innerText:rec.rank_level||''},
             //{innerText:rec.iconic_taxon_id||''},
