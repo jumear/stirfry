@@ -182,7 +182,7 @@ function fresults(xobj) {
             {innerText:rec.is_active,classList:(rec.is_active)?'bin_1':'bin_0'},
             {innerText:rec.extinct,classList:(rec.extinct)?'bin_1':'bin_0'},
             {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/taxa/'+rec.parent_id,rec.parent_id):''},
-            {innerHTML:rec.current_synonymous_taxon_ids?rec.current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)):''},
+            {innerHTML:rec.current_synonymous_taxon_ids?rec.current_synonymous_taxon_ids.map(e => furl('https://www.inaturalist.org/taxa/'+e,e)).toString():''},
             {innerHTML:rec.atlas_id?furl('https://www.inaturalist.org/atlases/'+rec.atlas_id,rec.atlas_id):''},
             {classList:'tar',innerText:fcomnum(rec.flag_counts.unresolved)},
             {classList:'tar',innerText:fcomnum(rec.flag_counts.resolved)},
