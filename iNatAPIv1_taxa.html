@@ -175,7 +175,7 @@ function fresults(xobj) {
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
             {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
             {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
-            {innerHTML:rec.preferred_common_name||''},
+            {innerText:rec.preferred_common_name||''},
             {innerText:rec.rank||''},
             {innerText:rec.rank_level||''},
             //{innerText:rec.iconic_taxon_id||''},
