@@ -33,8 +33,11 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let winurlparamsplusoptions = new URLSearchParams(winurlsearchstr.substring(1));
 //let p_per_page = winurlparams.get('per_page') || 200;
 //let p_page = winurlparams.get('page') || 1;
+let p_options = winurlparams.get('options') || [];
+winurlparams.delete('options');
 
 function fdate(str,dateonly=false) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
@@ -111,7 +114,7 @@ function fresults(xobj) {
       let table = faddelem('table',document.body,{id:'main'});
       let thead = faddelem('thead',table);
       let hrow = faddelem('tr',thead);
-      let labels = [
+      let labels_core = [
          {innerText:'#'},
          {innerText:'ID'},
          {innerText:'Photo'},
@@ -119,11 +122,6 @@ function fresults(xobj) {
          {innerText:'Common Name'},
          {innerText:'Rank'},
          {innerText:'Grade'},
-         {classList:'tar',innerText:'ID Count'},
-         {classList:'tar',innerText:'ID Taxa @ Obs'},
-         {classList:'tar',innerText:'ID Taxa @ Ansc'},
-         {classList:'tar',innerText:'ID Taxa @ Desc'},
-         {classList:'tar',innerText:'ID Taxa @ Other'},
          {innerText:'User Photo'},
          {innerText:'User Login'},
          {innerText:'Observe Date'},
@@ -132,8 +130,16 @@ function fresults(xobj) {
          {innerText:'Coordinates'},
          {innerText:'Location Description'},
          {innerText:'Description'},
-         {innerText:'Photo URLs'},
       ];
+      let labels_id = [
+         {classList:'tar',innerText:'ID Count'},
+         {classList:'tar',innerText:'ID Taxa @ Obs'},
+         {classList:'tar',innerText:'ID Taxa @ Ansc'},
+         {classList:'tar',innerText:'ID Taxa @ Desc'},
+         {classList:'tar',innerText:'ID Taxa @ Other'},
+      ];
+      let labels = p_options.includes('idextra') ? [...labels_core.slice(0,7),...labels_id,...labels_core.slice(7)] : labels_core ;
+      if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };   
       faddelems('th',hrow,labels);
  
       let tbody = faddelem('tbody',table);
@@ -149,7 +155,7 @@ function fresults(xobj) {
                photos.push(furl(url.replace('square','medium')));
             };
          };
-         let values = [
+         let values_core = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
@@ -157,11 +163,6 @@ function fresults(xobj) {
             {innerText:rec.taxon?(rec.taxon.preferred_common_name||''):''},
             {innerText:rec.taxon?rec.taxon.rank:''},
             {innerText:rec.quality_grade},
-            {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.obs.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
             {innerHTML:'<img class="icon" src="'+rec.user.icon+'" />'},
             {innerHTML:furl('https://www.inaturalist.org/people/'+rec.user.login,rec.user.login)},
             {innerText:(rec.time_observed_at?fdate(rec.time_observed_at):(rec.observed_on||''))},
@@ -170,18 +171,26 @@ function fresults(xobj) {
             {innerText:rec.location?rec.location.replace(',',', '):''},
             {innerText:rec.place_guess},
             {innerText:rec.description},
-            {innerHTML:photos.toString()},
          ];
+         let values_id = [
+            {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
+            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.obs.length},
+            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
+            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
+            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
+         ];
+         let values = p_options.includes('idextra') ? [...values_core.slice(0,7),...values_id,...values_core.slice(7)] : values_core ;
+         if (p_options.includes('photourl')) { values.push({innerHTML:photos.toString()}); };   
          faddelems('td',brow,values);
       };
 
       // buttons to go to prev or next page
       let nav = faddelem('div',document.body,{id:'nav'});
       let buttons = [
-         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
-         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
-         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
-         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
+         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparamsplusoptions,per_page,1)},
+         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparamsplusoptions,per_page,page_prev)},
+         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparamsplusoptions,per_page,page_next)},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparamsplusoptions,per_page,page_max)},
       ];
       faddelems('a',nav,buttons);
    }
@@ -198,7 +207,9 @@ if (window.location.search==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
-      {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
+      {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
+      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Both options can be invoked like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl'))+'. '},
+
    ];
    faddelems('p',document.body,instructions);
 }
