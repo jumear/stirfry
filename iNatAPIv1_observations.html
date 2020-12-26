@@ -82,17 +82,21 @@ function fidextra(obs) {
    if (!ids || !taxon) { return null; }
    let taxa = {obs:[],ancestor:[],descendant:[],other:[]};
    let countall = 0;
+   let countobs = 0;
    for (let i of ids) {
       if (i.current && !i.hidden) {
          countall++;
          let id = i.taxon.id;
-         if ( id===taxon.id ) { fpushifnew(taxa.obs,id); }
+         if ( id===taxon.id ) {
+            countobs++;
+            fpushifnew(taxa.obs,id);
+         }
          else if ( taxon.ancestry && taxon.ancestry.split('/').map(s=>Number(s)).includes(id) ) { fpushifnew(taxa.ancestor,id); }
          else if ( i.taxon.ancestry && i.taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { fpushifnew(taxa.descendant,id); }
          else { fpushifnew(taxa.other,id); };
       };
    };
-   return {count:{all:countall,by_others:obs.identifications_count},taxa};
+   return {count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa};
 };
 
 function fresults(xobj) {
@@ -133,6 +137,7 @@ function fresults(xobj) {
       ];
       let labels_id = [
          {classList:'tar',innerText:'ID Count'},
+         {classList:'tar',innerText:'ID Count @ Obs'},
          {classList:'tar',innerText:'ID Taxa @ Obs'},
          {classList:'tar',innerText:'ID Taxa @ Ansc'},
          {classList:'tar',innerText:'ID Taxa @ Desc'},
@@ -174,6 +179,7 @@ function fresults(xobj) {
          ];
          let values_id = [
             {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
+            {classList:'tar',innerText:(idextra===null)?0:idextra.count.obs},
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.obs.length},
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
