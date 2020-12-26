@@ -24,6 +24,8 @@
    .button { background:whitesmoke; }
    .button_inactive { background:white; color:lightgray; }
    .button_inactive:hover { background:none; }
+   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
 </style>
 </head>
 
@@ -96,7 +98,7 @@ function fidextra(obs) {
          else { fpushifnew(taxa.other,id); };
       };
    };
-   return {count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa};
+   return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa};
 };
 
 function fresults(xobj) {
@@ -142,6 +144,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'ID Taxa @ Ansc'},
          {classList:'tar',innerText:'ID Taxa @ Desc'},
          {classList:'tar',innerText:'ID Taxa @ Other'},
+         {innerText:'Obs Taxon = Community Taxon'},
       ];
       let labels = p_options.includes('idextra') ? [...labels_core.slice(0,7),...labels_id,...labels_core.slice(7)] : labels_core ;
       if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };   
@@ -184,6 +187,7 @@ function fresults(xobj) {
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
             {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
+            {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:(idextra===null||idextra.obs_taxon_is_community)?'bin_1':'bin_0'},
          ];
          let values = p_options.includes('idextra') ? [...values_core.slice(0,7),...values_id,...values_core.slice(7)] : values_core ;
          if (p_options.includes('photourl')) { values.push({innerHTML:photos.toString()}); };   
