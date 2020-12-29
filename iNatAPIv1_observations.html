@@ -213,7 +213,7 @@ let apirefname = 'iNaturalist Observations';
 let apiref = furl(apirefurl,apirefname);
 faddelem('h1',document.body,{innerText:apirefname});
 
-if (window.location.search==='') {
+if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
@@ -233,7 +233,7 @@ else {
    .then((data) => { fresults(data); })
    .catch((err) => {
       console.error(err.message);
-      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'})
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
    });
 };
 </script>
