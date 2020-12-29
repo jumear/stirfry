@@ -213,7 +213,7 @@ else {
    .then((data) => { fresults(data); })
    .catch((err) => {
       console.error(err.message);
-      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'})
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
    });
 };
 

@@ -32,16 +32,6 @@ winurlparams.delete('per_page');
 winurlparams.set('per_page',0); // set to 0 since we need only total record counts, not details.
 winurlparams.delete('category');
 
-function fdate(str,dateonly=false) {
-   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   if (dateonly) { str = str.split(' ')[0]; }
-   else {
-      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
-      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
-      str = str.replace('+00:00','±00:00');
-   };
-   return str;
-};
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
@@ -61,10 +51,7 @@ function faddelem(etype,eparent=null,eattributes={}) {
    return eobj;
 };
 function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
-function fsettdvalue(rlabel,clabel,val) {
-   document.getElementById(rlabel+'_'+clabel).innerHTML = val;
-};
-
+function fsettdvalue(rlabel,clabel,val) { document.getElementById(rlabel+'_'+clabel).innerHTML = val; };
 function fgetcount(url) {
    return fetch(url)
    .then((response) => {
@@ -85,13 +72,15 @@ let pagetitle = document.title;
 faddelem('h1',document.body,{innerText:pagetitle});
 faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
 
+const cOther = 'Other';
+const cTotal = 'Total';
 let ary_category = [
    {description:'Leading',param_value:'leading',fetch:true},
    {description:'Improving',param_value:'improving',fetch:true},
    {description:'Supporting',param_value:'supporting',fetch:true},
    {description:'Maverick',param_value:'maverick',fetch:true},
-   {description:'Other',param_value:null,fetch:false},
-   {description:'Total',param_value:null,fetch:true},
+   {description:cOther,param_value:null,fetch:false},
+   {description:cTotal,param_value:null,fetch:true},
 ];
 
 let table = faddelem('table',document.body,{id:'main'});
@@ -109,39 +98,31 @@ let data = [];
 for (let category of ary_category) {
    let description = category.description;
    let param_value = category.param_value;
-   let row = faddelem('tr',(description==="Total")?tfoot:tbody);
+   let row = faddelem('tr',(description===cTotal)?tfoot:tbody);
    let values = [
       {innerText:description},
       {classList:'tar',id:description+'_count'},
       {classList:'tar',id:description+'_pct'},
    ];
    faddelems('td',row,values);
+
    if (category.fetch) {
       if (param_value) { winurlparams.set('category',param_value); }
       else { winurlparams.delete('category'); };
-
       let prom0 = Promise.resolve(description);
       let prom1 = fgetcount(apibase+'?'+winurlparams);
-      Promise.all([prom0,prom1]).then(function(values) {
-         let cat = values[0];
-         let count = values[1] || 0;
+      Promise.all([prom0,prom1]).then(results=>{
+         let cat = results[0];
+         let count = results[1] || 0;
          fsettdvalue(cat,'count',fcomnum(count));
          data.push({category:cat,count:count});
 
-         //if this is the last count to be returned, go on and calculate the "Other" category and percents
-         if (data.length===(ary_category.length-1)) {
-            let plug = 0;
-            let ttlcount = 0;
-            for (d of data) {
-               let value = d.count;
-               if (d.category==="Total") {
-                  ttlcount = value;
-                  value = -value;
-               };
-               plug -= value;
-            };
-            fsettdvalue('Other','count',fcomnum(plug));
-            data.push({category:'Other',count:plug});
+         //if this is the last count to be returned, go on and calculate the "Other" category count, and then calculate percents for all categories
+         if (data.length===(ary_category.filter(v=>v.fetch).length)) {
+            let ttlcount = data.filter(d=>d.category===cTotal)[0].count;
+            let plug = data.filter(d=>d.category!==cTotal).reduce((cum,curr)=>cum-curr.count,ttlcount); // subtract non-total counts from total count
+            fsettdvalue(cOther,'count',fcomnum(plug));
+            data.push({category:cOther,count:plug});
             for (p of data) {
                p['pct'] = ttlcount?p.count/ttlcount:null;
                fsettdvalue(p.category,'pct',ttlcount?fpct(p.count/ttlcount):'N/A');
@@ -150,7 +131,6 @@ for (let category of ary_category) {
       });
    };
 };
-
 </script>
 </body>
 
