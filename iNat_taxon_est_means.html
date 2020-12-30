@@ -3,18 +3,22 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
 <meta name="description" content="iNaturalist Taxon Establishment Means" />
 <title>iNaturalist Taxon Establishment Means</title>
 <style>
-   body { font:10pt Sans-Serif; }
-   .tar { text-align:right; }
+   html,body { font:14px Sans-Serif; }
    #main { width:100%; }
-   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
-   thead tr { font-weight:600; background:green; color:white; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; z-index:100; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
    tr { background:whitesmoke; }
-   tr:nth-child(even) {background-color:white }
-   img { margin:0px; padding:0px; border:0px; }
-   a { text-decoration:none; }
+   tr:nth-child(even) { background-color:white; }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:royalblue; }
+   a:hover { background:lightgray; }
 </style>
 </head>
 
@@ -23,40 +27,37 @@
 let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
-var winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-var p_taxon_id = winurlparams.get('taxon_id');
-var p_disp_coords = winurlparams.get('disp_coords') || false;
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let p_taxon_id = winurlparams.get('taxon_id');
+let p_options = winurlparams.get('options') || [];
+winurlparams.delete('options');
 
-function fdate(str) {
-   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
-   str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
-   str = str.replace('+00:00','±00:00');
-   return str;
-};
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
-   var eobj = document.createElement(etype);
-   if (eclass!==null) { eobj.classList = eclass };
-   if (eid!==null) { eobj.id = eid };
-   if (ehtml!==null) { eobj.innerHTML = ehtml };
-   if (etext!==null) { eobj.innerText = etext };
-   if (eparent!==null) { eparent.appendChild(eobj); };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
    return eobj;
 };
-function fround(num,places) {
-   var n = num*1;
-   return n.toFixed(places); 
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function fround(num,p=0) {
+   let n = num*1;
+   return n.toFixed(p); 
 };
 // functions to sort data in a table
 function fsort(columnNo,asc=true,blanksatend=true) {
-   var tb = document.getElementById('tbody');
-   var ary = Array.from(tb.children);
+   let tb = document.getElementById('tbody');
+   let ary = Array.from(tb.children);
    ary.sort(function(a, b) {
-      var val_a = a.children[columnNo].innerText;
-      var val_b = b.children[columnNo].innerText;
+      let val_a = a.children[columnNo].innerText;
+      let val_b = b.children[columnNo].innerText;
       if (val_a===''&&val_b==='') { return 0; }
       else if (val_a!==''&&val_b==='') { return blanksatend?-1:1; }
       else if (val_b!==''&&val_a==='') { return blanksatend?1:-1; }
@@ -70,9 +71,9 @@ function fsort(columnNo,asc=true,blanksatend=true) {
    });
 };
 function frenum(columnNo=0) {
-   var tb = document.getElementById('tbody');
-   for (var r = 0, row; row = tb.rows[r]; r++) { row.children[columnNo].innerText = r+1; };
-}
+   let tb = document.getElementById('tbody');
+   for (let r = 0, row; row = tb.rows[r]; r++) { row.children[columnNo].innerText = r+1; };
+};
 
 //need to do some geometry to figure out the vertical position of a point at given lattitude on a Mercator projection
 //this is not necessary for longitudes
@@ -80,133 +81,151 @@ function latidx(lat) { return (1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(l
 
 //this adds a small map with a point marker
 function faddmapthumb (eparent,lat,lng) {
-   var mappx = 40;
-   var mapx = (lng+180)/360*mappx;
-   var mapy = latidx(lat)*mappx;
-
-   var map = faddelem('div',eparent);
-   map.style.height = mappx+'px';
-   map.style.width = mappx+'px';
-   map.style.position = 'relative';
-   map.style.border = '0.75px solid black';
-   map.style.borderRadius = (mappx*0.25)+'px';
-   map.style.overflow = 'hidden';
-   map.style.marginTop = '0px';
-
-   var basemap = faddelem('div',map);
-   basemap.style.height = mappx+'px';
-   basemap.style.width = mappx+'px';
-   //basemap.style.filter = 'invert(65%) brightness(85%)';
-   basemap.style.background = 'url(https://stamen-tiles.a.ssl.fastly.net/toner-lite/0/0/0.png)';
-   basemap.style.backgroundSize = mappx+'px '+mappx+'px';
-   basemap.style.backgroundPosition = (-mapx)+'px 0px';
-
-   var marker = faddelem('div',map);
-   marker.style.height = '3px';
-   marker.style.width = '3px';
-   marker.style.filter = 'none';
-   marker.style.borderRadius ='1.5px';
-   marker.style.position = 'absolute';
-   marker.style.left = (mappx/2-1)+'px';
-   marker.style.top = (mapy-1)+'px';
-   marker.style.background = '#000000';
+   let mappx = 40;
+   let mapx = (lng+180)/360*mappx;
+   let mapy = latidx(lat)*mappx;
+   let map = faddelem('div',eparent,{style:{
+      height:mappx+'px',
+      width:mappx+'px',
+      position:'relative',
+      border:'0.75px solid black',
+      borderRadius:(mappx*0.25)+'px',
+      overflow:'hidden',
+      marginTop:'0px',
+      zIndex:0,
+   }});
+   let basemap = faddelem('div',map,{style:{
+      height:mappx+'px',
+      width:mappx+'px',
+      //filter:'invert(65%) brightness(85%)',
+      background:'url(https://stamen-tiles.a.ssl.fastly.net/toner-lite/0/0/0.png)',
+      backgroundSize:mappx+'px '+mappx+'px',
+      backgroundPosition:(-mapx)+'px 0px',
+   }});
+   let marker = faddelem('div',map,{style:{
+      height:'3px',
+      width:'3px',
+      //filter:'none',
+      borderRadius:'1.5px',
+      position:'absolute',
+      left:(mappx/2-1)+'px',
+      top:(mapy-1)+'px',
+      background:'#000000',
+   }});
 };
 
 async function fresults(taxon) {
-   if (taxon.listed_taxa_count=0) {return false;};
+   if (taxon.listed_taxa_count=0) { return false; };
 
    // table and headers
-   var table = faddelem('table',document.body,null,'main');
-   var thead = faddelem('thead',table);
-   var hrow = faddelem('tr',thead);
-   faddelem('td',hrow,null,null,'#');
-   faddelem('td',hrow,null,null,'Tiny Map');
-   faddelem('td',hrow,null,null,'Est Means');
-   faddelem('td',hrow,null,null,'Check List ID');
-   faddelem('td',hrow,null,null,'Place Name');
-   faddelem('td',hrow,null,null,'Place ID');
-//   faddelem('td',hrow,null,null,'Alpha-2 Code');
-//   faddelem('td',hrow,null,null,'display_name');
-//   faddelem('td',hrow,null,null,'slug');
-//   faddelem('td',hrow,null,null,'Create Date');
-//   faddelem('td',hrow,null,null,'Update Date');
-   faddelem('td',hrow,null,null,'Parent Place ID');
-   faddelem('td',hrow,null,null,'Type');
-   faddelem('td',hrow,null,null,'Type Name');
-   faddelem('td',hrow,null,null,'Admin Level');
-   if (p_disp_coords) {
-      faddelem('td',hrow,'tar',null,'Lat');
-      faddelem('td',hrow,'tar',null,'Long');
-      faddelem('td',hrow,'tar',null,'NE Lat');
-      faddelem('td',hrow,'tar',null,'NE Long');
-      faddelem('td',hrow,'tar',null,'SW Lat');
-      faddelem('td',hrow,'tar',null,'SW Long');
+   let table = faddelem('table',document.body,{id:'main'});
+   let thead = faddelem('thead',table);
+   let hrow = faddelem('tr',thead);
+   let labels = [
+      {innerText:'#'},
+      {innerText:'Est Means'},
+      {innerText:'Check List ID'},
+      {innerText:'Place Name'},
+      {innerText:'Place ID'},
+//      {innerText:'Alpha-2 Code'},
+//      {innerText:'display_name'},
+//      {innerText:'slug'},
+//      {innerText:'Create Date'},
+//      {innerText:'Update Date'},
+      {innerText:'Parent Place ID'},
+      {innerText:'Type'},
+      {innerText:'Type Name'},
+      {innerText:'Admin Level'},
+//      {innerText:'source_id'},
+//      {innerText:'source_identifier'},
+//      {innerText:'source_name'},
+//      {innerText:'user_id'},
+//      {innerText:'woeid'},
+//      {innerText:'uuid'},
+   ];
+   if (p_options.includes('coords')) {
+      let labels_coords = [
+         {classList:'tar',innerText:'Lat'},
+         {classList:'tar',innerText:'Long'},
+         {classList:'tar',innerText:'NE Lat'},
+         {classList:'tar',innerText:'NE Long'},
+         {classList:'tar',innerText:'SW Lat'},
+         {classList:'tar',innerText:'SW Long'},
+      ];
+      labels = [...labels,...labels_coords];
    };
-//   faddelem('td',hrow,null,null,'source_id');
-//   faddelem('td',hrow,null,null,'source_identifier');
-//   faddelem('td',hrow,null,null,'source_name');
-//   faddelem('td',hrow,null,null,'user_id');
-//   faddelem('td',hrow,null,null,'woeid');
-//   faddelem('td',hrow,null,null,'uuid');
+   if (p_options.includes('map')) { labels = [...labels.slice(0,1),{innerText:'Tiny Map'},...labels.slice(1)]; };
+   faddelems('th',hrow,labels);
 
    // table body
-   var tbody = faddelem('tbody',table,null,'tbody');
+   let tbody = faddelem('tbody',table,{id:'tbody'});
 
    // a few variables
-   var means = ['endemic','native','introduced'];
-   var recnum = 0;
-   var page = 0;
+   let estmeans = ['endemic','native','introduced'];
+   let recnum = 0;
+   let page = 0;
 
    // there shouldn't be that many establishment records. so i'll keep track of fetch attempts and set an arbitrary max limit for attempts just in case something goes wrong.
-   var fetchattempt = 0;
-   var maxfetchattempt = 10; 
+   let fetchattempt = 0;
+   let maxfetchattempt = 10; 
 
-   for (m=0;m<means.length;m++) {
+   for (let em of estmeans) {
       page++;
       while (page>0 && fetchattempt<maxfetchattempt) {
          fetchattempt++;
-         await fetch('https://www.inaturalist.org/places.json?per_page=200&page='+page+'&taxon='+taxon.id+'&establishment_means='+means[m])
+         await fetch('https://www.inaturalist.org/places.json?per_page=200&page='+page+'&taxon='+taxon.id+'&establishment_means='+em)
          .then((response) => {
             if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
             return response.json();
          })
-         .then((data) => {
-            if (data.length>0) {
+         .then((results) => {
+            if (results.length>0) {
                page++;
                // add table rows
-               for (var i=0; i<data.length; i++) {
+               for (let rec of results) {
                   recnum++;
-                  var brow = faddelem('tr',tbody);
-                  faddelem('td',brow,null,null,recnum);
-                  var tdmap = faddelem('td',brow);
-                  faddmapthumb (tdmap,data[i].latitude,data[i].longitude);
-                  faddelem('td',brow,null,null,means[m]);
-                  faddelem('td',brow,null,null,data[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+data[i].check_list_id+'?taxon='+taxon.id,data[i].check_list_id):'');
-                  faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+data[i].id+'&taxon_id='+taxon.id,data[i].name));
-                  faddelem('td',brow,null,null,furl('https://www.inaturalist.org/places/'+data[i].id,data[i].id));
-//                  faddelem('td',brow,null,null,furl('https://www.iso.org/obp/ui/#iso:code:3166:'+data[i].code,data[i].code));
-//                  faddelem('td',brow,null,null,data[i].display_name);
-//                  faddelem('td',brow,null,null,data[i].slug);
-//                  faddelem('td',brow,null,null,fdate(data[i].created_at,true));
-//                  faddelem('td',brow,null,null,fdate(data[i].updated_at,true));
-                  faddelem('td',brow,null,null,data[i].parent_id?furl('https://www.inaturalist.org/places/'+data[i].parent_id,data[i].parent_id):'');
-                  faddelem('td',brow,null,null,data[i].place_type);
-                  faddelem('td',brow,null,null,data[i].place_type_name);
-                  faddelem('td',brow,null,null,data[i].admin_level);
-                  if (p_disp_coords) {
-                     faddelem('td',brow,'tar',null,fround(data[i].latitude,4));
-                     faddelem('td',brow,'tar',null,fround(data[i].longitude,4));
-                     faddelem('td',brow,'tar',null,fround(data[i].nelat,4));
-                     faddelem('td',brow,'tar',null,fround(data[i].nelng,4));
-                     faddelem('td',brow,'tar',null,fround(data[i].swlat,4));
-                     faddelem('td',brow,'tar',null,fround(data[i].swlng,4));
+                  let brow = faddelem('tr',tbody);
+                  let values = [
+                     {innerText:recnum},
+                     {innerText:em},
+                     {innerHTML:rec.check_list_id?furl('https://www.inaturalist.org/check_lists/'+rec.check_list_id+'?taxon='+taxon.id,rec.check_list_id):''},
+                     {innerHTML:furl('https://www.inaturalist.org/observations?place_id='+rec.id+'&taxon_id='+taxon.id,rec.name)},
+                     {innerHTML:furl('https://www.inaturalist.org/places/'+rec.id,rec.id)},
+//                     {innerHTML:furl('https://www.iso.org/obp/ui/#iso:code:3166:'+rec.code,rec.code)},
+//                     {innerText:rec.display_name},
+//                     {innerText:rec.slug},
+//                     {innerText:fdate(rec.created_at,true)},
+//                     {innerText:fdate(rec.updated_at,true)},
+                     {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/places/'+rec.parent_id,rec.parent_id):''},
+                     {innerText:rec.place_type},
+                     {innerText:rec.place_type_name},
+                     {innerText:rec.admin_level},
+//                     {innerText:rec.source_id},
+//                     {innerText:rec.source_identifier},
+//                     {innerText:rec.source_name},
+//                     {innerText:rec.user_id},
+//                     {innerText:rec.woeid},
+//                     {innerText:rec.uuid},
+                  ];
+                  if (p_options.includes('coords')) {
+                     let values_coords = [
+                        {classList:'tar',innerText:fround(rec.latitude,4)},
+                        {classList:'tar',innerText:fround(rec.longitude,4)},
+                        {classList:'tar',innerText:fround(rec.nelat,4)},
+                        {classList:'tar',innerText:fround(rec.nelng,4)},
+                        {classList:'tar',innerText:fround(rec.swlat,4)},
+                        {classList:'tar',innerText:fround(rec.swlng,4)},
+                     ];
+                     values = [...values,...values_coords];
                   };
-//                  faddelem('td',brow,null,null,data[i].source_id);
-//                  faddelem('td',brow,null,null,data[i].source_identifier);
-//                  faddelem('td',brow,null,null,data[i].source_name);
-//                  faddelem('td',brow,null,null,data[i].user_id);
-//                  faddelem('td',brow,null,null,data[i].woeid);
-//                  faddelem('td',brow,null,null,data[i].uuid);
+                  
+                  if (p_options.includes('map')) {
+                     faddelem('td',brow,values.slice(0,1)[0]);
+                     let tdmap = faddelem('td',brow);
+                     faddmapthumb(tdmap,rec.latitude,rec.longitude);
+                     faddelems('td',brow,values.slice(1));
+                  }
+                  else { faddelems('td',brow,values); };
                };
             }
             else { page = 0; }; 
@@ -219,40 +238,44 @@ async function fresults(taxon) {
    };
    
    // the count returned from the taxon endpoint is incorrect. so this is just a workaround to get a proper count for now.
-   var reccount = document.getElementById('reccount');
+   let reccount = document.getElementById('reccount');
    reccount.innerText = fcomnum(recnum);
    
    //sort by admin level, parent place id, place name, place id
-   fsort(5);
-   fsort(4);
-   fsort(6);
-   fsort(9);
+   let coloffset = (p_options.includes('map'))?1:0;
+   fsort(4+coloffset);
+   fsort(3+coloffset);
+   fsort(5+coloffset);
+   fsort(8+coloffset);
    frenum();
 };
 
-faddelem('h1',document.body,null,null,'iNaturalist Taxon Establishment Means');
-if (window.location.search==='' || p_taxon_id===null) {
-   faddelem('p',document.body,null,null,'This page provides establishment means records for a given taxon. It is useful when the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).')
-   faddelem('p',document.body,null,null,'To use this page, add a taxon_id parameter and value to the URL. For example, if you want to get establishment means for Liquidambar stryaciflua (American Sweetgum), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=49658'))+' in your browser.');
-   faddelem('p',document.body,null,null,'It is also possible to display coordinates for places by adding disp_coords=true to the URL. For example, if you want to get establishment means with coordinates for Berberis aquifolium (Oregon Grape), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=126887&disp_coords=true'))+' in your browser.');
+faddelem('h1',document.body,{innerText:'iNaturalist Taxon Establishment Means'});
+if (winurlsearchstr===''||p_taxon_id===null) {
+   let instructions = [
+      {innerHTML:'This page provides establishment means records for a given taxon. It is useful when the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).'},
+      {innerHTML:'To use this page, add a taxon_id parameter and value to the URL. For example, if you want to get establishment means for Liquidambar stryaciflua (American Sweetgum), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=49658'))+' in your browser.'},
+      {innerHTML:'It it also possible to use an options parameter to display extra columns for coordinates (options=coords) and/or an extra column containing a tiny map (options=map). (Separate columns and maps with a comma if you want to see both.) For example, if you want to get establishment means with both coordinates and map for Berberis aquifolium (Oregon Grape), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=126887&options=coords,map'))+' in your browser.'},
+   ];
+   faddelems('p',document.body,instructions);
 }
 else {
-   var apibase = 'https://api.inaturalist.org/v1/taxa/';
-   var apiurl = apibase+p_taxon_id;
+   let apibase = 'https://api.inaturalist.org/v1/taxa/';
+   let apiurl = apibase+p_taxon_id;
    fetch(apiurl)
    .then((response) => {
       if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
       return response.json();
    })
    .then((data) => {
-      var firstrec = data.results[0]; // always just get the first result
-      var taxon = {
+      let firstrec = data.results[0]; // always just get the first result
+      let taxon = {
          id: firstrec.id,
          name: firstrec.name, 
          listed_taxa_count: firstrec.listed_taxa_count,
       };
-      faddelem('p',document.body,null,null,'taxon: '+taxon.name+' ('+furl('https://www.inaturalist.org/taxa/'+taxon.id,taxon.id)+')<br />'
-         +'total establishment means records: <span id="reccount">'+fcomnum(taxon.listed_taxa_count)+'</span>');
+      faddelem('p',document.body,{innerHTML:'taxon: '+taxon.name+' ('+furl('https://www.inaturalist.org/taxa/'+taxon.id,taxon.id)+')<br />'
+         +'total establishment means records: <span id="reccount">'+fcomnum(taxon.listed_taxa_count)+'</span>'});
       fresults(taxon); 
    })
    .catch((err) => {
@@ -262,6 +285,5 @@ else {
 };
 </script>
 </body>
-
 
 </html>

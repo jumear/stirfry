@@ -3,8 +3,8 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="iNaturalist API Get Observations" />
 <meta name="viewport" content="width=device-width, minimum-scale=0.6">
+<meta name="description" content="iNaturalist API Get Observations" />
 <title>iNaturalist API Get Observations</title>
 <style>
    html,body { font:14px Sans-Serif; }
@@ -120,7 +120,7 @@ function fresults(xobj) {
       let table = faddelem('table',document.body,{id:'main'});
       let thead = faddelem('thead',table);
       let hrow = faddelem('tr',thead);
-      let labels_core = [
+      let labels = [
          {innerText:'#'},
          {innerText:'ID'},
          {innerText:'Photo'},
@@ -137,16 +137,18 @@ function fresults(xobj) {
          {innerText:'Location Description'},
          {innerText:'Description'},
       ];
-      let labels_id = [
-         {classList:'tar',innerText:'ID Count'},
-         {classList:'tar',innerText:'ID Count @ Obs'},
-         {classList:'tar',innerText:'ID Taxa @ Obs'},
-         {classList:'tar',innerText:'ID Taxa @ Ansc'},
-         {classList:'tar',innerText:'ID Taxa @ Desc'},
-         {classList:'tar',innerText:'ID Taxa @ Other'},
-         {innerText:'Obs Taxon = Community Taxon'},
-      ];
-      let labels = p_options.includes('idextra') ? [...labels_core.slice(0,7),...labels_id,...labels_core.slice(7)] : labels_core ;
+      if (p_options.includes('idextra')) {
+         let labels_id = [
+            {classList:'tar',innerText:'ID Count'},
+            {classList:'tar',innerText:'ID Count @ Obs'},
+            {classList:'tar',innerText:'ID Taxa @ Obs'},
+            {classList:'tar',innerText:'ID Taxa @ Ansc'},
+            {classList:'tar',innerText:'ID Taxa @ Desc'},
+            {classList:'tar',innerText:'ID Taxa @ Other'},
+            {innerText:'Obs Taxon = Community Taxon'},
+         ];
+         labels = [...labels.slice(0,7),...labels_id,...labels.slice(7)];
+      };
       if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };   
       faddelems('th',hrow,labels);
  
@@ -163,7 +165,7 @@ function fresults(xobj) {
                photos.push(furl(url.replace('square','medium')));
             };
          };
-         let values_core = [
+         let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
@@ -180,17 +182,19 @@ function fresults(xobj) {
             {innerText:rec.place_guess},
             {innerText:rec.description},
          ];
-         let values_id = [
-            {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
-            {classList:'tar',innerText:(idextra===null)?0:idextra.count.obs},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.obs.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
-            {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
-            {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:(idextra===null||idextra.obs_taxon_is_community)?'bin_1':'bin_0'},
-         ];
-         let values = p_options.includes('idextra') ? [...values_core.slice(0,7),...values_id,...values_core.slice(7)] : values_core ;
-         if (p_options.includes('photourl')) { values.push({innerHTML:photos.toString()}); };   
+         if (p_options.includes('idextra')) {
+            let values_id = [
+               {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
+               {classList:'tar',innerText:(idextra===null)?0:idextra.count.obs},
+               {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.obs.length},
+               {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
+               {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
+               {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
+               {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:(idextra===null||idextra.obs_taxon_is_community)?'bin_1':'bin_0'},
+            ];
+            values = [...values.slice(0,7),...values_id,...values.slice(7)];
+         };
+         if (p_options.includes('photourl')) { values.push({innerHTML:photos.join(',')}); };   
          faddelems('td',brow,values);
       };
 
@@ -219,7 +223,6 @@ if (winurlsearchstr==='') {
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
       {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
       {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Both options can be invoked like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl'))+'. '},
-
    ];
    faddelems('p',document.body,instructions);
 }
