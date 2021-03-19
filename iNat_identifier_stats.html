@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Identifier Stats" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
+<title>iNaturalist Identifier Stats</title>
+<style>
+   html,body { font:14px Sans-Serif; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) { background-color:white; }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:royalblue; }
+   a:hover { background:lightgray; }
+</style>
+</head>
+
+<body>
+<form action="javascript:fgetuser()">
+   <input type='text' id="input_user" placeholder='Input a User ID here' />
+   <input type='submit' value='Get Identifier Stats' />
+</form>
+<hr />
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+//let p_per_page = winurlparams.get('per_page') || 200;
+//let p_page = winurlparams.get('page') || 1;
+let input_user = document.getElementById('input_user');
+let p_user_id = winurlparams.get('user_id');
+if (p_user_id) {
+   input_user.value = p_user_id;
+   fresults();
+}
+else {
+   faddelem('p',document.body,{innerText:'Input a valid User Login or ID, and click the button to retrieve identifier stats. Alternatively, you may select a user by adding user_id as a query parameter in the URL.'});
+};
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function faddtr(tparent,td=[]) {
+   let row = faddelem('tr',tparent);
+   faddelems('td',row,td);
+};
+function fISOdate(s) {
+  let d = s.split(/\D+/);
+  return new Date(Date.UTC(d[0], d[1], d[2], d[3], d[4], d[5], d[6]));
+};
+function ffetch(url) {
+   return fetch(url)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .catch((err) => { console.error(err); });
+};
+function fgetuser() {
+   if (input_user.value.length === 0) { document.location.href=winurlexsearchstr } 
+   else { 
+      winurlparams.set('user_id',input_user.value);
+      input_user.value = p_user_id;
+      document.location.href=winurlexsearchstr+'?'+winurlparams;
+   }; 
+};
+function fresults() {
+   let div_main = document.getElementById('main');
+   if (div_main) { div_main.remove(); }
+   div_main = faddelem('div',document.body,{id:'main'});
+   let user_id = input_user.value 
+
+   let apibase = 'https://api.inaturalist.org/v1/';
+   let prom_user = ffetch(apibase + 'users/' + user_id);
+   let prom_id_all = ffetch(apibase + 'identifications?per_page=0&only_id=true&user_id=' + user_id);
+   let prom_id_others = ffetch(apibase + 'identifications?per_page=0&only_id=true&own_observation=false&user_id=' + user_id);
+   Promise.all([prom_user,prom_id_all,prom_id_others])
+   .then(req=>{
+      if (!req[0]) {
+         faddelem('p',div_main,{innerText:'No Data found. Input a valid User Login or ID and try again.'});
+         return false;
+      }
+      else {
+         let user = req[0].results[0];
+         let id_all = req[1].total_results || user.identifications_count || 0 ;
+         let id_others = req[2].total_results || user.identifications_count || 0 ;
+         let date_curr = new Date();
+         let date_join = fISOdate(user.created_at);
+         let diff_days = (date_curr-date_join) / 1000 / 60 / 60 / 24;
+         if (user.icon_url) { faddelem('img',div_main,{src:user.icon_url}); };
+         let table = faddelem('table',div_main);
+         let tbody = faddelem('tbody',table);
+         faddtr(tbody,[{innerText:'User Login:'},{innerText:user.login}]);
+         faddtr(tbody,[{innerText:'User ID:'},{innerText:user.id}]);
+         if (user.name) { faddtr(tbody,[{innerText:'User Name:'},{innerText:user.name}]); };
+         faddtr(tbody,[{innerText:'Current Date:'},{innerText:date_curr.toString()}]);
+         faddtr(tbody,[{innerText:'Date Joined:'},{innerText:date_join.toString()}]);
+         faddtr(tbody,[{innerText:'Days Since Joining:'},{innerText:fcomnum(diff_days.toFixed(2))}]);
+         faddtr(tbody,[{innerText:'IDs (all):'},{innerText:fcomnum(id_all)}]);
+         faddtr(tbody,[{innerText:'IDs (for others):'},{innerText:fcomnum(id_others)}]);
+         faddtr(tbody,[{innerText:'IDs (for others) per day:'},{innerText:fcomnum((id_others/diff_days).toFixed(2))}]);
+      };
+   });
+};
+</script>
+</body>
+
+</html>
