@@ -42,7 +42,7 @@ if (p_user_id) {
    fresults();
 }
 else {
-   faddelem('p',document.body,{innerText:'Input a valid User Login or ID, and click the button to retrieve identifier stats. Alternatively, you may select a user by adding user_id as a query parameter in the URL.'});
+   faddelem('p',document.body,{innerText:'Input a valid User Login or ID, and click the button to retrieve identifier stats. Alternatively, you may select a user by adding user_id as a query parameter in the URL. Note that user logins input into the text input field on the page will be automatically translated to lowercase. In the rare cases of users with mixed-case logins, those can be searched by querying for user_id=[Login] in the URL or by searching using a numeric ID.'});
 };
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
@@ -79,7 +79,7 @@ function ffetch(url) {
 function fgetuser() {
    if (input_user.value.length === 0) { document.location.href=winurlexsearchstr } 
    else { 
-      winurlparams.set('user_id',input_user.value);
+      winurlparams.set('user_id',input_user.value.toLowerCase());
       input_user.value = p_user_id;
       document.location.href=winurlexsearchstr+'?'+winurlparams;
    }; 
@@ -97,7 +97,7 @@ function fresults() {
    Promise.all([prom_user,prom_id_all,prom_id_others])
    .then(req=>{
       if (!req[0]) {
-         faddelem('p',div_main,{innerText:'No Data found. Input a valid User Login or ID and try again.'});
+         faddelem('p',div_main,{innerText:'No data found. Input a valid User Login or ID and try again.'});
          return false;
       }
       else {
