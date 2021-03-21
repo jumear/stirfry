@@ -135,7 +135,7 @@ function fresults(xobj) {
       let page_prev = ((page_curr>1)?page_curr-1:null);
       let page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      faddelem('p',document.body,{innerHTML:'total observations: '+fcomnum(total_results)+' '
+      faddelem('p',document.body,{innerHTML:'total taxa: '+fcomnum(total_results)+' '
          +'[<span id="export"><a href="javascript:fexport('+total_results+');">export</a></span>]<br />' 
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
