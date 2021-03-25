@@ -156,15 +156,6 @@ function fresults(xobj) {
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
-         let idextra = fidextra(rec);
-         let photos = [];
-         if (rec.photos&&rec.photos.length>0) {
-            for (let p=0; p<rec.photos.length; p++) {
-               let url = (p>0)?' ':'';
-               url += rec.photos[p].url.substring(0,rec.photos[p].url.search('\\?'));
-               photos.push(furl(url.replace('square','medium')));
-            };
-         };
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
@@ -183,6 +174,7 @@ function fresults(xobj) {
             {innerText:rec.description},
          ];
          if (p_options.includes('idextra')) {
+            let idextra = fidextra(rec);
             let values_id = [
                {classList:'tar',innerText:(idextra===null)?0:idextra.count.all},
                {classList:'tar',innerText:(idextra===null)?0:idextra.count.obs},
@@ -194,7 +186,17 @@ function fresults(xobj) {
             ];
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
-         if (p_options.includes('photourl')) { values.push({innerHTML:photos.join(',')}); };   
+         if (p_options.includes('photourl')) { 
+            let photos = [];
+            if (rec.photos&&rec.photos.length>0) {
+               for (let p=0; p<rec.photos.length; p++) {
+                  let url = (p>0)?' ':'';
+                  url += (!rec.photos[p].url) ? 'null' : rec.photos[p].url.substring(0,rec.photos[p].url.search('\\?'));
+                  photos.push(furl(url.replace('square','medium')));
+               };
+            };
+            values.push({innerHTML:photos.join(',')}); 
+         };   
          faddelems('td',brow,values);
       };
 
