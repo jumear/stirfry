@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="description" content="iNaturalist API Get Observation Leaf Taxa Counts" />
@@ -26,7 +25,6 @@
    .button_inactive:hover { background:none; }
 </style>
 </head>
-
 <body>
 <script>
 let winurlstr = window.location.href;
@@ -35,7 +33,6 @@ let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 //let p_per_page = winurlparams.get('per_page') || 500;
 //let p_page = winurlparams.get('page') || 1;
-
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
@@ -69,12 +66,10 @@ function fresults(xobj) {
       let page_max = Math.ceil(total_results/per_page);
       let page_prev = ((page_curr>1)?page_curr-1:null);
       let page_next = ((page_curr<page_max)?page_curr+1:null);
-
       faddelem('p',document.body,{innerHTML:'total leaf taxa: '+fcomnum(total_results)+'<br />'
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
          });
-
       let table = faddelem('table',document.body,{id:'main'});
       let thead = faddelem('thead',table);
       let hrow = faddelem('tr',thead);
@@ -89,15 +84,23 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Taxon Ttl Obs Count'},
       ];
       faddelems('th',hrow,labels);
-
       let tbody = faddelem('tbody',table);
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
+         
+         // this section sets up parameters for hyperlinks to Explore page
+         // won't be able properly to handle situations where user inputs subspecies in URL parameters
+         // also, won't always tie exactly because Explore page always filters for spam=false (cannot change this parameter on that page) 
          let obsparams = new URLSearchParams(winurlparams);
          obsparams.delete('order');
          obsparams.delete('page');
          obsparams.delete('per_page');
+         obsparams.delete('taxon_id'); 
+         let url_explore = 'https://www.inaturalist.org/observations?taxon_id='+rec.taxon.id
+         let obsparam_verifiable = (obsparams.get('verifiable')===null)?'&verifiable=any':('&verifiable='+obsparams.get('verifiable'));
+         obsparams.delete('verifiable');
+
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.taxon.id,rec.taxon.id)},
@@ -105,12 +108,11 @@ function fresults(xobj) {
             {innerText:rec.taxon.name||''},
             {innerText:rec.taxon.preferred_common_name||''},
             {innerText:rec.taxon.rank||''},
-            {classList:'tar',innerHTML:furl('https://www.inaturalist.org/observations?taxon_id='+rec.taxon.id+'&'+obsparams,fcomnum(rec.count))},
-            {classList:'tar',innerText:fcomnum(rec.taxon.observations_count)},
+            {classList:'tar',innerHTML:furl(url_explore+obsparam_verifiable+(obsparams?('&'+obsparams):''),fcomnum(rec.count))},
+            {classList:'tar',innerHTML:furl(url_explore+'&verifiable=any',fcomnum(rec.taxon.observations_count))},
          ];
          faddelems('td',brow,values);
       };
-
       // buttons to go to prev or next page
       let nav = faddelem('div',document.body,{id:'nav'});
       let buttons = [
@@ -129,7 +131,6 @@ let apirefurl = 'http://api.inaturalist.org/v1/docs/#!/Observations/get_observat
 let apirefname = 'iNaturalist Observation Species Counts';
 let apiref = furl(apirefurl,apirefname);
 faddelem('h1',document.body,{innerText:apirefname});
-
 if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
