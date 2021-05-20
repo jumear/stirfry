@@ -94,6 +94,10 @@ function fresults(xobj) {
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
+         let obsparams = new URLSearchParams(winurlparams);
+         obsparams.delete('order');
+         obsparams.delete('page');
+         obsparams.delete('per_page');
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.taxon.id,rec.taxon.id)},
@@ -101,7 +105,7 @@ function fresults(xobj) {
             {innerText:rec.taxon.name||''},
             {innerText:rec.taxon.preferred_common_name||''},
             {innerText:rec.taxon.rank||''},
-            {classList:'tar',innerText:fcomnum(rec.count)},
+            {classList:'tar',innerHTML:furl('https://www.inaturalist.org/observations?taxon_id='+rec.taxon.id+'&'+obsparams,fcomnum(rec.count))},
             {classList:'tar',innerText:fcomnum(rec.taxon.observations_count)},
          ];
          faddelems('td',brow,values);
