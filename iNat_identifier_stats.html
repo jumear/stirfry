@@ -90,6 +90,8 @@ function fresults() {
    div_main = faddelem('div',document.body,{id:'main'});
    let user_id = input_user.value 
 
+   let urlsumbycat = 'iNat_id_summary_by_category.html';
+   let urlids = 'iNatAPIv1_identifications.html'
    let apibase = 'https://api.inaturalist.org/v1/';
    let prom_user = ffetch(apibase + 'users/' + user_id);
    let prom_id_all = ffetch(apibase + 'identifications?per_page=0&only_id=true&user_id=' + user_id);
@@ -110,14 +112,14 @@ function fresults() {
          if (user.icon_url) { faddelem('img',div_main,{src:user.icon_url}); };
          let table = faddelem('table',div_main);
          let tbody = faddelem('tbody',table);
-         faddtr(tbody,[{innerText:'User Login:'},{innerText:user.login}]);
+         faddtr(tbody,[{innerText:'User Login:'},{innerHTML:furl('https://www.inaturalist.org/people/'+user.login,user.login)}]);
          faddtr(tbody,[{innerText:'User ID:'},{innerText:user.id}]);
          if (user.name) { faddtr(tbody,[{innerText:'User Name:'},{innerText:user.name}]); };
          faddtr(tbody,[{innerText:'Current Date:'},{innerText:date_curr.toString()}]);
          faddtr(tbody,[{innerText:'Date Joined:'},{innerText:date_join.toString()}]);
          faddtr(tbody,[{innerText:'Days Since Joining:'},{innerText:fcomnum(diff_days.toFixed(2))}]);
-         faddtr(tbody,[{innerText:'IDs (all):'},{innerText:fcomnum(id_all)}]);
-         faddtr(tbody,[{innerText:'IDs (for others):'},{innerText:fcomnum(id_others)}]);
+         faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' )'}]);
+         faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' )'}]);
          faddtr(tbody,[{innerText:'IDs (for others) per day:'},{innerText:fcomnum((id_others/diff_days).toFixed(2))}]);
       };
    });
