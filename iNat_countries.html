@@ -4,18 +4,19 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="description" content="iNaturalist Countries" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
 <title>iNaturalist Countries</title>
 <style>
-   body { font:10pt Sans-Serif; }
-   .tar { text-align:right; }
+   html,body { font:14px Sans-Serif; }
    #main { width:100%; }
-   table, thead, tbody, tr, td { margin:0px; padding:3px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0px; border-collapse:collapse; }
-   thead tr { font-weight:600; background:green; color:white; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
    tr { background:whitesmoke; }
-   tr:nth-child(even) {background-color:white }
-   a { text-decoration:none; }
-   .button { font-size:18pt; }
-   .button_inactive { font-size:18pt; opacity:0.5; }
+   tr:nth-child(even) { background-color:white; }
+   .tar { text-align:right; }
+   a { text-decoration:none; color:royalblue; }
+   a:hover { background:lightgray; }
+   .button_more_less { margin-left:5px; }
 </style>
 </head>
 
@@ -27,6 +28,12 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+var p_country_code = winurlparams.get('country_code');
+var p_place_id = winurlparams.get('place_id');
+var p_parent_place_id = winurlparams.get('parent_place_id');
+if (p_country_code!==null) { p_country_code = p_country_code.toLowerCase().split(','); };
+if (p_place_id!==null) { p_place_id = p_place_id.split(','); };
+if (p_parent_place_id!==null) { p_parent_place_id = p_parent_place_id.split(','); }; 
 var stats = winurlparams.get('stats')||[];
 var show = {};
 show.observations = stats.includes('observations');
@@ -34,7 +41,9 @@ show.species = stats.includes('species');
 show.observers = stats.includes('observers');
 show.identifiers = stats.includes('identifiers');
 winurlparams.delete('stats');
+winurlparams.delete('country_code');
 winurlparams.delete('place_id'); // will be set to individual countries
+winurlparams.delete('parent_place_id');
 winurlparams.delete('page');
 winurlparams.append('page',1);
 winurlparams.delete('per_page');
@@ -52,15 +61,19 @@ function fdate(str,dateonly=false) {
 };
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function faddelem(etype,eparent=null,eclass=null,eid=null,ehtml=null,etext=null) {
-   var eobj = document.createElement(etype);
-   if (eclass!==null) { eobj.classList = eclass };
-   if (eid!==null) { eobj.id = eid };
-   if (ehtml!==null) { eobj.innerHTML = ehtml };
-   if (etext!==null) { eobj.innerText = etext };
-   if (eparent!==null) { eparent.appendChild(eobj); };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
    return eobj;
 };
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+
 function fgetname(ary,key) {
    var obj = ary.find(o=>o.id===key);
    return obj?obj.name:key;
@@ -97,14 +110,27 @@ function delay(time,value) {
 }
 
 var apiref = {};
-apiref.observations = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations';
-apiref.species = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_species_counts';
-apiref.identifiers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_identifiers';
-apiref.observers = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_observers';
-faddelem('h1',document.body,null,null,'iNaturalist Countries');
-faddelem('p',document.body,null,null,'By default, this page pulls back a list of countries set up in iNaturalist. It also will get population and area from Wikidata, if available, keying on ISO 3166-1 Alpha-2 Code. Optionally, it can pull back counts of observations, species, identifiers, and observers for each country. To get the extra statistics, add a "stats" parameter to the URL, and set it to a comma-separated list of values including "observations", "species", "identifiers", and/or "observers". These extra stats can also be filtered in the URL using the parameters available in the '+furl(apiref.observations,'observations')+', '+furl(apiref.species,'species')+', '+furl(apiref.identifiers,'identifiers')+', and '+furl(apiref.observers,'observers')+' API endpoints.');
-faddelem('p',document.body,null,null,'For example, to add number of research-grade bird observations and associated observers to the list of countries, open '+furl(winurlexsearchstr+'?taxon_id=3&quality_grade=research&stats=observations,observers')+' in your browser.');
-faddelem('p',document.body,null,null,'To adhere to recommended API request limits when getting the additional stats, this page will request one data point per second. Additionally, you should be careful of how often you use this page to get those additional stats so that you do not exceed the recommended maximum 10,000 daily API request limit. See the '+furl('https://www.inaturalist.org/pages/api+recommended+practices','API recommended practices page')+' for more information.');
+apiref.base = 'https://api.inaturalist.org/v1/docs/#!/Observations/';
+apiref.observations = apiref.base+'get_observations';
+apiref.species = apiref.base+'get_observations_species_counts';
+apiref.identifiers = apiref.base+'get_observations_identifiers';
+apiref.observers = apiref.base+'get_observations_observers';
+faddelem('h1',document.body,{innerText:'iNaturalist Countries'});
+let info = faddelem('p',document.body,{innerHTML:'By default, this page pulls back a list of all countries set up in iNaturalist. It also will get population and area from Wikidata, if available, keying on ISO 3166-1 Alpha-2 Code. Optionally, it can pull back counts of observations, species, identifiers, and observers for each country.'});
+let info_more = faddelem('div',document.body,{style:{display:'none'}});
+faddelem('p',info_more,{innerHTML:'To get the extra statistics, add a "stats" parameter to the URL, and set it to a comma-separated list of values including "observations", "species", "identifiers", and/or "observers". These extra stats can also be filtered in the URL using the parameters available in the '+furl(apiref.observations,'observations')+', '+furl(apiref.species,'species')+', '+furl(apiref.identifiers,'identifiers')+', and '+furl(apiref.observers,'observers')+' API endpoints. It is also possible to return only specific countries using "country_code" (alpha-2 code), "place_id" (country place id), and "parent_place_id" (continent place id) parameters, each of which can accept a comma-separated list of values.'});
+faddelem('p',info_more,{innerHTML:'For example, to get countries in North and South America, along with counts of research-grade bird observations and associated observers, open '+furl(winurlexsearchstr+'?parent_place_id=97389,97394&taxon_id=3&quality_grade=research&stats=observations,observers')+' in your browser.'});
+faddelem('p',info_more,{innerHTML:'To adhere to recommended API request limits when getting the additional stats, this page will request one data point per second. Additionally, you should be careful of how often you use this page to get those additional stats so that you do not exceed the recommended maximum 10,000 daily API request limit. See the '+furl('https://www.inaturalist.org/pages/api+recommended+practices','API recommended practices page')+' for more information.'});
+let button_more = faddelem('button',info,{classList:'button_more_less',innerHTML:'show more &#9660;'});
+let button_less = faddelem('button',info_more.lastChild,{classList:'button_more_less',innerHTML:'show less &#9650;'});
+button_more.addEventListener("click", function() {
+   button_more.style.display='none';
+   info_more.style.display='initial';
+});
+button_less.addEventListener("click", function() {
+   button_more.style.display='initial';
+   info_more.style.display='none';
+});
 
 // get places where the place type = country
 // note that not all of these are countries. so we separately filter for admin level = 0 (since that filter doesn't exist in the API itself).
@@ -115,9 +141,13 @@ for (i=1;i<=2;i++) { // there shouldn't be more than 2 sets needed
 };
 Promise.all(promiseary).then(data=>{
    var placeary = [];
-   for (d=0;d<data.length;d++) {
-      for (p=0;p<data[d].length;p++) {
-         if (data[d][p].admin_level===0) { placeary.push(data[d][p]); }
+   for (set of data) {
+      for (place of set) {
+         if (place.admin_level!==0) { continue; }
+         else if (p_country_code && (place.code==null || !p_country_code.includes(place.code.toLowerCase()))) { continue; }
+         else if (p_place_id && !p_place_id.includes(place.id.toString())) { continue; }
+         else if (p_parent_place_id && (place.parent_id==null || !p_parent_place_id.includes(place.parent_id.toString()))) { continue; }
+         else { placeary.push(place); };
       };
    };
    return placeary;
@@ -126,11 +156,8 @@ Promise.all(promiseary).then(data=>{
 // also get population and area information from Wikidata. (after writing an appropriate sparql query using the Wikidata query service at https://query.wikidata.org/, the javascript code for below was taken more or less as suggested by the service.)
 .then(async countries=>{
    var continents = [];
-   for (i=0;i<countries.length;i++) {
-      var c = countries[i].parent_id;
-      if(!continents.includes(c)) { continents.push(c) };
-   };
-   var d = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
+   for (country of countries) { if(!continents.includes(country.parent_id)) { continents.push(country.parent_id) }; };
+   var parents = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
 
    class SPARQLQueryDispatcher {
       constructor( endpoint ) {
@@ -155,92 +182,101 @@ Promise.all(promiseary).then(data=>{
    var wd = await queryDispatcher.query( sparqlQuery );
   // .then( console.log );
 
-   return [countries,d,wd];
+   return [countries,parents,wd];
 })
 // create the the country list
 // if any stats are specified in the parameters, then create the cells to hold the data, but don't populate the cells at this point.
 .then(data=>{
    var countries = data[0];
-   var continents = data[1].results;
-   var wd = data[2].results.bindings;
-   if (!countries) {
-      faddelem('p',document.body,null,null,'No results returned.');
+   if (!countries || countries.length===0) {
+      faddelem('p',document.body,{innerText:'No results returned.'});
       return;
    }
+   var continents = data[1].results;
+   var wd = data[2].results.bindings;
+
    // sort the list alphabetically by name
    countries.sort(function(a, b) { // sort by name
        if(a.name < b.name) { return -1; }
        if(a.name > b.name) { return 1; }
        return 0;
    });
+
    // table and headers
-   var table = faddelem('table',document.body,null,'main');
+   var table = faddelem('table',document.body,{id:'main'});
    var thead = faddelem('thead',table);
    var hrow = faddelem('tr',thead);
-   faddelem('td',hrow,null,null,'#');
-   faddelem('td',hrow,null,null,'ID');
-   faddelem('td',hrow,null,null,'Alpha-2 Code');
-   faddelem('td',hrow,null,null,'Name');
-//   faddelem('td',hrow,null,null,'display_name');
-//   faddelem('td',hrow,null,null,'slug');
-   faddelem('td',hrow,null,null,'Check List ID');
-   faddelem('td',hrow,null,null,'Create Date');
-   faddelem('td',hrow,null,null,'Update Date');
-   faddelem('td',hrow,null,null,'Parent Place');
-   faddelem('td',hrow,'tar',null,'Lat');
-   faddelem('td',hrow,'tar',null,'Long');
-   faddelem('td',hrow,'tar',null,'NE Lat');
-   faddelem('td',hrow,'tar',null,'NE Long');
-   faddelem('td',hrow,'tar',null,'SW Lat');
-   faddelem('td',hrow,'tar',null,'SW Long');
-//   faddelem('td',hrow,null,null,'source_id');
-//   faddelem('td',hrow,null,null,'source_identifier');
-//   faddelem('td',hrow,null,null,'source_name');
-//   faddelem('td',hrow,null,null,'user_id');
-//   faddelem('td',hrow,null,null,'woeid');
-//   faddelem('td',hrow,null,null,'uuid');
-   faddelem('td',hrow,'tar',null,'Wikidata ID');
-   faddelem('td',hrow,'tar',null,'Population');
-   faddelem('td',hrow,'tar',null,'Area (sq km)');
-   if (show.observations) { faddelem('td',hrow,'tar',null,'Observations'); }
-   if (show.species) { faddelem('td',hrow,'tar',null,'Species'); }
-   if (show.identifiers) { faddelem('td',hrow,'tar',null,'Identifiers'); }
-   if (show.observers) { faddelem('td',hrow,'tar',null,'Observers'); }
+   let labels = [
+      {innerText:'#'},
+      {innerText:'ID'},
+      {innerText:'Alpha-2 Code'},
+      {innerText:'Name'},
+//      {innerText:'display_name'},
+//      {innerText:'slug'},
+      {innerText:'Check List ID'},
+      {innerText:'Create Date'},
+      {innerText:'Update Date'},
+      {innerText:'Parent Place'},
+      {classList:'tar',innerText:'Lat'},
+      {classList:'tar',innerText:'Long'},
+      {classList:'tar',innerText:'NE Lat'},
+      {classList:'tar',innerText:'NE Long'},
+      {classList:'tar',innerText:'SW Lat'},
+      {classList:'tar',innerText:'SW Long'},
+//      {innerText:'source_id'},
+//      {innerText:'source_identifier'},
+//      {innerText:'source_name'},
+//      {innerText:'user_id'},
+//      {innerText:'woeid'},
+//      {innerText:'uuid'},
+      {classList:'tar',innerText:'Wikidata ID'},
+      {classList:'tar',innerText:'Population'},
+      {classList:'tar',innerText:'Area (sq km)'},
+   ];
+   if (show.observations) { labels.push({classList:'tar',innerText:'Observations'}); }
+   if (show.species) { labels.push({classList:'tar',innerText:'Species'}); }
+   if (show.identifiers) { labels.push({classList:'tar',innerText:'Identifiers'}); }
+   if (show.observers) { labels.push({classList:'tar',innerText:'Observers'}); }
+   faddelems('th',hrow,labels);
 
    // table rows
    var tbody = faddelem('tbody',table);
    for (var i=0; i<countries.length; i++) {
       var brow = faddelem('tr',tbody);
-      faddelem('td',brow,null,null,i+1);
-      faddelem('td',brow,null,null,furl('https://www.inaturalist.org/places/'+countries[i].id,countries[i].id));
-      faddelem('td',brow,null,null,furl('https://www.iso.org/obp/ui/#iso:code:3166:'+countries[i].code,countries[i].code));
-      faddelem('td',brow,null,null,furl('https://www.inaturalist.org/observations?place_id='+countries[i].id,countries[i].name));
-//      faddelem('td',brow,null,null,countries[i].display_name);
-//      faddelem('td',brow,null,null,countries[i].slug);
-      faddelem('td',brow,null,null,countries[i].check_list_id?furl('https://www.inaturalist.org/check_lists/'+countries[i].check_list_id,countries[i].check_list_id):'');
-      faddelem('td',brow,null,null,fdate(countries[i].created_at,true));
-      faddelem('td',brow,null,null,fdate(countries[i].updated_at,true));
-      faddelem('td',brow,null,null,countries[i].parent_id?furl('https://www.inaturalist.org/places/'+countries[i].parent_id,fgetname(continents,countries[i].parent_id)):'');
-      faddelem('td',brow,'tar',null,fround(countries[i].latitude,4));
-      faddelem('td',brow,'tar',null,fround(countries[i].longitude,4));
-      faddelem('td',brow,'tar',null,fround(countries[i].nelat,4));
-      faddelem('td',brow,'tar',null,fround(countries[i].nelng,4));
-      faddelem('td',brow,'tar',null,fround(countries[i].swlat,4));
-      faddelem('td',brow,'tar',null,fround(countries[i].swlng,4));
-//      faddelem('td',brow,null,null,countries[i].source_id);
-//      faddelem('td',brow,null,null,countries[i].source_identifier);
-//      faddelem('td',brow,null,null,countries[i].source_name);
-//      faddelem('td',brow,null,null,countries[i].user_id);
-//      faddelem('td',brow,null,null,countries[i].woeid);
-//      faddelem('td',brow,null,null,countries[i].uuid);
-      var wdinfo = fgetwdinfo(wd,countries[i].code);
-      faddelem('td',brow,'tar',null,wdinfo.entity?furl(wdinfo.url,wdinfo.entity):null);
-      faddelem('td',brow,'tar',null,wdinfo.population?fcomnum(wdinfo.population):null);
-      faddelem('td',brow,'tar',null,wdinfo.area?fcomnum(fround(wdinfo.area,1)):null);
-      if (show.observations) { faddelem('td',brow,'tar','observations_'+countries[i].id); }
-      if (show.species) { faddelem('td',brow,'tar','species_'+countries[i].id); }
-      if (show.identifiers) { faddelem('td',brow,'tar','identifiers_'+countries[i].id); }
-      if (show.observers) { faddelem('td',brow,'tar','observers_'+countries[i].id); }
+      let rec = countries[i];
+      let wdinfo = fgetwdinfo(wd,rec.code);
+      let values = [
+         {innerText:i+1},
+         {innerHTML:furl('https://www.inaturalist.org/places/'+rec.id,rec.id)},
+         {innerHTML:(rec.code==null)?'':furl('https://www.iso.org/obp/ui/#iso:code:3166:'+rec.code,rec.code)},
+         {innerHTML:furl('https://www.inaturalist.org/observations?place_id='+rec.id,rec.name)},
+//         {innerText:rec.display_name},
+//         {innerText:rec.slug},
+         {innerHTML:rec.check_list_id?furl('https://www.inaturalist.org/check_lists/'+rec.check_list_id,rec.check_list_id):''},
+         {innerText:fdate(rec.created_at,true)},
+         {innerText:fdate(rec.updated_at,true)},
+         {innerHTML:rec.parent_id?furl('https://www.inaturalist.org/places/'+rec.parent_id,fgetname(continents,rec.parent_id)):''},
+         {classList:'tar',innerText:fround(rec.latitude,4)},
+         {classList:'tar',innerText:fround(rec.longitude,4)},
+         {classList:'tar',innerText:fround(rec.nelat,4)},
+         {classList:'tar',innerText:fround(rec.nelng,4)},
+         {classList:'tar',innerText:fround(rec.swlat,4)},
+         {classList:'tar',innerText:fround(rec.swlng,4)},
+//         {innerText:rec.source_id},
+//         {innerText:rec.source_identifier},
+//         {innerText:rec.source_name},
+//         {innerText:rec.user_id},
+//         {innerText:rec.woeid},
+//         {innerText:rec.uuid},
+         {classList:'tar',innerHTML:wdinfo.entity?furl(wdinfo.url,wdinfo.entity):null},
+         {classList:'tar',innerText:wdinfo.population?fcomnum(wdinfo.population):null},
+         {classList:'tar',innerText:wdinfo.area?fcomnum(fround(wdinfo.area,1)):null},
+      ];
+      if (show.observations) { values.push({classList:'tar',id:'observations_'+rec.id}); }
+      if (show.species) { values.push({classList:'tar',id:'species_'+rec.id}); }
+      if (show.identifiers) { values.push({classList:'tar',id:'identifiers_'+rec.id}); }
+      if (show.observers) { values.push({classList:'tar',id:'observers_'+rec.id}); }
+      faddelems('td',brow,values);
    };
    return countries;
 })
