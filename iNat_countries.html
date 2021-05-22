@@ -28,14 +28,14 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-var p_country_code = winurlparams.get('country_code');
-var p_place_id = winurlparams.get('place_id');
-var p_parent_place_id = winurlparams.get('parent_place_id');
+let p_country_code = winurlparams.get('country_code');
+let p_place_id = winurlparams.get('place_id');
+let p_parent_place_id = winurlparams.get('parent_place_id');
 if (p_country_code!==null) { p_country_code = p_country_code.toLowerCase().split(','); };
 if (p_place_id!==null) { p_place_id = p_place_id.split(','); };
 if (p_parent_place_id!==null) { p_parent_place_id = p_parent_place_id.split(','); }; 
-var stats = winurlparams.get('stats')||[];
-var show = {};
+let stats = winurlparams.get('stats')||[];
+let show = {};
 show.observations = stats.includes('observations');
 show.species = stats.includes('species');
 show.observers = stats.includes('observers');
@@ -75,11 +75,11 @@ function faddelem(etype,eparent=null,eattributes={}) {
 function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
 
 function fgetname(ary,key) {
-   var obj = ary.find(o=>o.id===key);
+   let obj = ary.find(o=>o.id===key);
    return obj?obj.name:key;
 };
 function fgetwdinfo(ary,key) {
-   var obj = ary.find(o=>o.isoCode.value===key);
+   let obj = ary.find(o=>o.isoCode.value===key);
    return obj ? {
       isoCode : obj.isoCode.value, 
       population : obj.population?obj.population.value:null,
@@ -90,7 +90,7 @@ function fgetwdinfo(ary,key) {
    : { isoCode:key };
 };
 function fround(num,places) {
-   var n = num*1;
+   let n = num*1;
    return n.toFixed(places); 
 };
 function ffetch(url) {
@@ -109,7 +109,7 @@ function delay(time,value) {
    });
 }
 
-var apiref = {};
+let apiref = {};
 apiref.base = 'https://api.inaturalist.org/v1/docs/#!/Observations/';
 apiref.observations = apiref.base+'get_observations';
 apiref.species = apiref.base+'get_observations_species_counts';
@@ -134,13 +134,13 @@ button_less.addEventListener("click", function() {
 
 // get places where the place type = country
 // note that not all of these are countries. so we separately filter for admin level = 0 (since that filter doesn't exist in the API itself).
-var apiurl = 'https://www.inaturalist.org/places.json?place_type=country&per_page=200';
-var promiseary = [];
+let apiurl = 'https://www.inaturalist.org/places.json?place_type=country&per_page=200';
+let promiseary = [];
 for (i=1;i<=2;i++) { // there shouldn't be more than 2 sets needed
    promiseary.push(ffetch(apiurl+'&page='+i));
 };
 Promise.all(promiseary).then(data=>{
-   var placeary = [];
+   let placeary = [];
    for (set of data) {
       for (place of set) {
          if (place.admin_level!==0) { continue; }
@@ -155,9 +155,14 @@ Promise.all(promiseary).then(data=>{
 // get the continents (parent places) associated with the countries
 // also get population and area information from Wikidata. (after writing an appropriate sparql query using the Wikidata query service at https://query.wikidata.org/, the javascript code for below was taken more or less as suggested by the service.)
 .then(async countries=>{
-   var continents = [];
+   let continents = [];
    for (country of countries) { if(!continents.includes(country.parent_id)) { continents.push(country.parent_id) }; };
-   var parents = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
+   if (!countries || countries.length===0) {
+      faddelem('p',document.body,{innerText:'No results returned.'});
+      return; // stop here if no countries are returned
+   };
+
+   let parents = await ffetch('https://api.inaturalist.org/v1/places/'+continents);
 
    class SPARQLQueryDispatcher {
       constructor( endpoint ) {
@@ -179,7 +184,7 @@ Promise.all(promiseary).then(data=>{
       }
       ORDER BY ?isoCode DESC(?population) ?area`;
    const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
-   var wd = await queryDispatcher.query( sparqlQuery );
+   let wd = await queryDispatcher.query( sparqlQuery );
   // .then( console.log );
 
    return [countries,parents,wd];
@@ -187,13 +192,10 @@ Promise.all(promiseary).then(data=>{
 // create the the country list
 // if any stats are specified in the parameters, then create the cells to hold the data, but don't populate the cells at this point.
 .then(data=>{
-   var countries = data[0];
-   if (!countries || countries.length===0) {
-      faddelem('p',document.body,{innerText:'No results returned.'});
-      return;
-   }
-   var continents = data[1].results;
-   var wd = data[2].results.bindings;
+   if (!data) { return; }; // stop here if no data
+   let countries = data[0];
+   let continents = data[1].results;
+   let wd = data[2].results.bindings;
 
    // sort the list alphabetically by name
    countries.sort(function(a, b) { // sort by name
@@ -203,9 +205,9 @@ Promise.all(promiseary).then(data=>{
    });
 
    // table and headers
-   var table = faddelem('table',document.body,{id:'main'});
-   var thead = faddelem('thead',table);
-   var hrow = faddelem('tr',thead);
+   let table = faddelem('table',document.body,{id:'main'});
+   let thead = faddelem('thead',table);
+   let hrow = faddelem('tr',thead);
    let labels = [
       {innerText:'#'},
       {innerText:'ID'},
@@ -240,9 +242,9 @@ Promise.all(promiseary).then(data=>{
    faddelems('th',hrow,labels);
 
    // table rows
-   var tbody = faddelem('tbody',table);
-   for (var i=0; i<countries.length; i++) {
-      var brow = faddelem('tr',tbody);
+   let tbody = faddelem('tbody',table);
+   for (let i=0; i<countries.length; i++) {
+      let brow = faddelem('tr',tbody);
       let rec = countries[i];
       let wdinfo = fgetwdinfo(wd,rec.code);
       let values = [
@@ -283,15 +285,15 @@ Promise.all(promiseary).then(data=>{
 // if stats are specified then populate them
 // recommended API request limits are 1 request per second. so this will wait 1 second between initiating each API request.
 .then(async countries=>{
-   var datatoget = [];
+   let datatoget = [];
    if (show.observations) { datatoget.push({urlsuffix:'',tdid:'observations'}); };
    if (show.species) { datatoget.push({urlsuffix:'/species_counts',tdid:'species'}); };
    if (show.identifiers) { datatoget.push({urlsuffix:'/identifiers',tdid:'identifiers'}); };
    if (show.observers) { datatoget.push({urlsuffix:'/observers',tdid:'observers'}); };
    if (datatoget.length===0) { return; }
 
-   for (var i=0; i<countries.length; i++) {
-      for (var j=0; j<datatoget.length; j++) {
+   for (let i=0; i<countries.length; i++) {
+      for (let j=0; j<datatoget.length; j++) {
          await delay(1000);
          Promise.all([
             Promise.resolve(countries[i].id),
