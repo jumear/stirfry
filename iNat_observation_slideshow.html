@@ -76,6 +76,9 @@ winurlparams.delete('pages');
 var delay = winurlparams.get('delay') || 5000; // 5 seconds default delay
 winurlparams.delete('delay');
 
+var loop = winurlparams.get("loop") || true; //default loop at end of slideshow
+winurlparams.delete("loop");
+   
 var obsurlbase = 'https://www.inaturalist.org/observations';
 var obsurl = obsurlbase+'?'+winurlparams.toString();
 var apiurlbase = 'https://api.inaturalist.org/v1/observations'
@@ -136,8 +139,12 @@ else {
          slidediv[sd_next].style.display = 'initial';
          if (i+1===imgs.length) {
             await fdelay(delay);
-            slidediv[sd_next].innerHTML = null;
-            faddelem('p',slidediv[sd_next],{style:{color:'white'},innerText:'End of slideshow'});
+            if (loop==true) {
+               var i = 0;
+            } else {
+               slidediv[sd_next].innerHTML = null;
+               faddelem('p',slidediv[sd_next],{style:{color:'white'},innerText:'End of slideshow'});
+            }
          };
       };
    });
