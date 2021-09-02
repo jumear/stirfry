@@ -161,46 +161,16 @@ async function pkceChallengeFromVerifier(v) {
 //////////////////////////////////////////////////////////////////////
 var urlbase_iNat = 'https://www.inaturalist.org';
 var urlbase_iNat_v1 = 'https://api.inaturalist.org/v1';
-var urlbase_app = 'https://jumear.github.io/stirfry/iNat_PKCE_flow_example.html';
+var urlbase_app = window.location.href;
 
-function fcoreapp(jwt) {
-   // Remove login link
-   document.getElementById("login").classList = "hidden";
-/*
-   // for now, just display the JWT
-   document.getElementById("access_token").innerText = jwt;
-   document.getElementById("token").classList = "";
-*/
-   fgetuser(jwt)
-   .then((data) => {
-      document.getElementById("user_id").innerText = data.results[0].login;
-      document.getElementById("user").classList = "";
-   });
-};
-
-function fgetuser(jwt) {
-   var endpoint = {method:'GET',url:urlbase_iNat_v1+'/users/me'};
-   var hdr = new Headers();
-   hdr.append('Content-Type','application/json');
-   hdr.append('Authorization',('Bearer '+jwt));
-
-   return fetch(endpoint.url, {
-      method: endpoint.method,
-      headers: hdr,
-   })
-   .then((response) => {
-      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
-      return response.json();
-   })
-   .catch((err) => {
-      console.error(err.message);
-   });
-};
+let reqHeader = new Headers();
+reqHeader.append('Content-Type','application/json');
 
 // this section is only for testing purposes
 // it allows you to skip all the steps needed to get a JWT, if you already have one.
 // var testjwt = '';
-// fcoreapp(testjwt);
+// reqHeader.append('Authorization',('Bearer '+testjwt));
+// fcoreapp();
 // exit;
 
 //////////////////////////////////////////////////////////////////////
@@ -278,7 +248,10 @@ if(q.code) {
          window.history.replaceState({}, null, config.redirect_uri); //"/");
          // Initialize your application now that you have an access token.
          fgetJWT(body.access_token)
-         .then((jwt)=> { fcoreapp(jwt); });
+         .then((jwt)=> {
+            reqHeader.append('Authorization',('Bearer '+jwt));
+            fcoreapp();
+         });
       }, function(request, error) {
          // This could be an error response from the OAuth server, or an error because the 
          // request failed such as if the OAuth server doesn't allow CORS requests
@@ -307,6 +280,31 @@ function fgetJWT(accesstoken) {
    })
    .then((data) => {
       return data.api_token;
+   })
+   .catch((err) => {
+      console.error(err.message);
+   });
+};
+
+function fcoreapp() {
+   // Remove login link
+   document.getElementById("login").classList = "hidden";
+   fgetuser()
+   .then((data) => {
+      document.getElementById("user_id").innerText = data.results[0].login;
+      document.getElementById("user").classList = "";
+   });
+};
+
+function fgetuser() {
+   var endpoint = {method:'GET',url:urlbase_iNat_v1+'/users/me'};
+   return fetch(endpoint.url, {
+      method: endpoint.method,
+      headers: reqHeader,
+   })
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
    })
    .catch((err) => {
       console.error(err.message);
