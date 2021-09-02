@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Observations Updates" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
+<title>iNaturalist Observations Updates</title>
+<style>
+   html,body { font:14px Sans-Serif; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) { background-color:white; }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:royalblue; }
+   a:hover { background:lightgray; }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+   .button { background:whitesmoke; }
+   .button_inactive { background:white; color:lightgray; }
+   .button_inactive:hover { background:none; }
+   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
+   #divresults { padding-top:12px; }
+   select { padding:2px 0px; }
+   form { background:#ddffdd; padding:5px; }
+   h3 { margin:2px 0px 8px 0px; }   
+</style>
+
+<!-- This example app is registered as #658 in iNaturalist:
+https://www.inaturalist.org/oauth/applications/658
+
+Other Notes:
+1. The code for the PKCE flow will not work with Edge / IE.
+2. This page hits only relatively safe endpoints. If you adapt this to hit endpoints like GET /observations, you may want to handle cases where someone could, say, include malicious code in observation descriptions and comments. Be safe out there!
+//-->
+
+<!--//
+Much of the code that handles the PKCE oAuth flow here is adpated from
+https://github.com/aaronpk/pkce-vanilla-js, with license details below:
+
+MIT License
+
+Copyright (c) 2019 Aaron Parecki
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+//-->
+
+<script>
+//////////////////////////////////////////////////////////////////////
+// GENERAL HELPER FUNCTIONS
+
+// Make a POST request and parse the response as JSON
+function sendPostRequest(url, params, success, error) {
+   var request = new XMLHttpRequest();
+   request.open('POST', url, true);
+   request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+   request.onload = function() {
+      var body = {};
+      try {
+         body = JSON.parse(request.response);
+      } catch(e) {}
+
+      if(request.status == 200) {
+         success(request, body);
+      } else {
+         error(request, body);
+      }
+   }
+   request.onerror = function() {
+      error(request, {});
+   }
+   var body = Object.keys(params).map(key => key + '=' + params[key]).join('&');
+   request.send(body);
+}
+// Parse a query string into an object
+function parseQueryString(string) {
+   if(string == "") { return {}; }
+   var segments = string.split("&").map(s => s.split("=") );
+   var queryString = {};
+   segments.forEach(s => queryString[s[0]] = s[1]);
+   return queryString;
+}
+
+//////////////////////////////////////////////////////////////////////
+// PKCE HELPER FUNCTIONS
+
+// Generate a secure random string using the browser crypto functions
+function generateRandomString() {
+   var array = new Uint32Array(28);
+   window.crypto.getRandomValues(array);
+   return Array.from(array, dec => ('0' + dec.toString(16)).substr(-2)).join('');
+}
+// Calculate the SHA256 hash of the input text. 
+// Returns a promise that resolves to an ArrayBuffer
+function sha256(plain) {
+   const encoder = new TextEncoder();
+   const data = encoder.encode(plain);
+   return window.crypto.subtle.digest('SHA-256', data);
+}
+// Base64-urlencodes the input string
+function base64urlencode(str) {
+   // Convert the ArrayBuffer to string using Uint8 array to conver to what btoa accepts.
+   // btoa accepts chars only within ascii 0-255 and base64 encodes them.
+   // Then convert the base64 encoded to base64url encoded
+   //   (replace + with -, replace / with _, trim trailing =)
+   return btoa(String.fromCharCode.apply(null, new Uint8Array(str)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+// Return the base64-urlencoded sha256 hash for the PKCE challenge
+async function pkceChallengeFromVerifier(v) {
+   hashed = await sha256(v);
+   return base64urlencode(hashed);
+}
+</script>
+</head>
+
+<body>
+<script>
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function furltoblank(url,txt=url) { return '<a href="'+url+'" target="_blank">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+   };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+
+function faryget(ary,key) {
+   var obj = ary.find(o=>o.id===key);
+   return obj;
+};
+function ffetch(url,options={}) {
+   return fetch(url,options)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .catch((err) => { console.error(err); });
+};
+async function fresults(xobj) {
+   //faddelem('p',document.body,{innerHTML:furltoblank(famp(apiurl))});
+   if (xobj) {
+      let results = xobj.results;
+      let total_results = xobj.total_results;
+      let per_page = xobj.per_page;
+      let page_curr = xobj.page;
+      let page_max = Math.ceil(total_results/per_page);
+      let page_prev = ((page_curr>1)?page_curr-1:null);
+      let page_next = ((page_curr<page_max)?page_curr+1:null);
+      let obsIDs = [];
+
+      faddelem('p',divresults,{innerHTML:'total records: '+fcomnum(total_results)+'<br />'
+         +'per page: '+fcomnum(per_page)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)
+         });
+
+      let table = faddelem('table',divresults,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let labels = [
+         {innerText:'Rec #'},
+         {innerText:'Notification ID'},
+         //{innerText:'Notification'},
+         {innerText:'Notification Date'},
+         {innerText:'Viewed'},
+         {innerText:'Observation Update Type'},
+         //{innerText:'Observation Update ID'},
+         {innerText:'ID / Comment Created'},
+         //{innerText:'ID / Comment Updated'},
+         {innerText:'Update User Photo'},
+         {innerText:'Update User Login'},
+         {innerText:'ID Notes / Comment'},
+         {innerText:'ID Taxon Photo'},
+         //{innerText:'ID Taxon ID'},
+         {innerText:'ID Taxon Name'},
+         {innerText:'ID Taxon Common Name'},
+         {innerText:'ID Category'},
+         //{innerText:'Resource Type'},
+         {innerText:'Obs ID'},
+         {innerText:'Obs Photo'},
+         {innerText:'Observer'},
+         {innerText:'Obs Quality Grade'},
+         {innerText:'Obs Taxon'},
+         {innerText:'Your ID Taxon'},
+      ];
+      faddelems('th',hrow,labels);
+
+      let tbody = faddelem('tbody',table);
+      for (let i=0; i<results.length; i++) {
+         let brow = faddelem('tr',tbody);
+         let rec = results[i];
+         let isID = rec.identification?true:false;
+         let obsID = rec.resource_id;
+         if (!obsIDs.includes(obsID)) {obsIDs.push(obsID)}; // collect a unique set of observation IDs from the notification set
+
+         let values = [
+            {innerText:i+1},
+            {innerText:rec.id},
+            //{innerText:rec.notification},
+            {innerText:fdate(rec.created_at)},
+            {innerText:rec.viewed,classList:(rec.viewed)?'bin_1':'bin_0'},
+            {innerHTML:furltoblank(('https://www.inaturalist.org/'+(isID?'identifications/':'comments/')+rec.notifier_id),rec.notifier_type)},
+            //{innerHTML:furltoblank(('https://www.inaturalist.org/'+(isID?'identifications/':'comments/')+rec.notifier_id),rec.notifier_id)},
+            {innerText:fdate(isID?rec.identification.created_at:rec.comment.created_at)},
+            //{innerText:fdate(isID?rec.identification.updated_at:rec.comment.updated_at)},
+            {innerHTML:'<img class="icon" src="'+(isID?rec.identification.user.icon:rec.comment.user.icon)+'" />'},
+            {innerHTML:furltoblank('https://www.inaturalist.org/people/'+(isID?rec.identification.user.login:rec.comment.user.login),(isID?rec.identification.user.login:rec.comment.user.login))},
+            {innerText:isID?rec.identification.body:rec.comment.body},
+            {innerHTML:isID?('<img class="icon" src="'+(rec.identification.taxon.default_photo?rec.identification.taxon.default_photo.url:'')+'" />'):null},
+            //{innerText:isID?rec.identification.taxon.id:null},
+            {innerHTML:isID?furltoblank(('https://www.inaturalist.org/taxa/'+rec.identification.taxon.id),rec.identification.taxon.name):null},
+            {innerText:isID?(rec.identification.taxon.preferred_common_name||''):null},
+            {innerText:isID?rec.identification.category:null},
+            //{innerText:rec.resource_type},
+            {innerHTML:furltoblank(('https://www.inaturalist.org/observations/'+obsID),obsID)},
+            {innerText:'...'},
+            {innerHTML:(rec.resource_owner_id===userMe.id)?furltoblank(('https://www.inaturalist.org/users/'+userMe.login),userMe.login):'...'},
+            {innerText:'...'},
+            {innerText:'...'},
+            {innerText:'...'},
+         ];
+         faddelems('td',brow,values);
+      };
+
+      // get and display additional information from associated observatons
+      await ffetch('https://api.inaturalist.org/v1/observations/'+obsIDs)
+      .then(obsdata=>{
+         let table = document.getElementById('main');
+         let tbody = table.children[1];
+         for (let brow of tbody.children) {
+            let obsID = brow.children[13].innerText*1;
+            let obs = faryget(obsdata.results,obsID);
+            brow.children[14].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
+            brow.children[16].innerText=obs.quality_grade;
+            //brow.children[17].innerText=obs.taxon?obs.taxon.name:'';
+            brow.children[17].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
+            if (brow.children[15].innerText==='...') {
+               brow.children[15].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login);
+            };
+	    brow.children[18].innerText='';
+            if (obs.identifications) {
+               for (let identification of obs.identifications) {
+                  if (identification.user.id===userMe.id && identification.current===true) {
+                     //brow.children[18].innerText=identification.taxon.name;
+                     brow.children[18].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
+                     break;
+                  };
+               };
+            };
+         };
+      });
+
+      // buttons to go to prev or next page
+      let nav = faddelem('div',divresults,{id:'nav'});
+      let buttons = [
+         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:'javascript:fgotopage(1);'},
+         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:'javascript:fgotopage('+page_prev+');'},
+         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:'javascript:fgotopage('+page_next+');'},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:'javascript:fgotopage('+page_max+');'},
+      ];
+      faddelems('a',nav,buttons);
+   }
+   else { faddelem('p',divresults,{innerText:'No results returned.'}); };
+   button_get_data.disabled=false; // enable this button now that data retrieval is complete
+};
+function fgetdata() {
+   button_get_data.disabled=true; // disable button to prevent conflicting requests for data 
+   divresults.replaceChildren(); // clear previous results
+   faddelem('h3',divresults,{innerText:'Results'});
+
+   // get request parameters from form inputs
+   let reqParams = new URLSearchParams('');
+   if (input_per_page.value>0) { reqParams.append('per_page',input_per_page.value) };
+   if (input_page.value>0) { reqParams.append('page',input_page.value) };
+   if (input_viewed.value!=='') { reqParams.append('viewed',input_viewed.value) };
+   if (input_obs_by.value) { reqParams.append('observations_by',input_obs_by.value) };
+   if (input_created_after.value) { reqParams.append('created_after',input_created_after.value) };
+   if (input_locale.value) { reqParams.append('locale',input_locale.value) };
+   if (input_preferred_place_id.value) { reqParams.append('preferred_place_id',input_preferred_place_id.value) };
+   let apiurl = apibase+((reqParams!='')?('?'+reqParams):'');
+   faddelem('p',divresults,{innerHTML:'This is the base query: '+furltoblank(famp(apiurl))+'.'});
+
+   // make requests for data
+   // don't need to re-request user information if it has already been retrieved
+   let reqOptions = {method:'GET',headers:reqHeader};
+   let promArray = [ffetch(apiurl,reqOptions)];
+   if (!userMe.id) { promArray.push(ffetch('https://api.inaturalist.org/v1/users/me',reqOptions)); };
+   Promise.all(promArray)
+   .then(values=>{
+      if (values.length>1) {
+         userMe = values[1].results[0];
+         let pageHeader = document.getElementById('pageHeader');
+         pageHeader.innerText+=(' for '+userMe.login);
+      };
+      return values[0];
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',divresults,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
+      button_get_data.disabled=false;
+   });
+};
+function fgotopage(page) {
+   input_page.value=page;
+   fgetdata();
+};
+function faddprow(ptable,pname,formref=null) {
+   let pTRow = faddelem('div',ptable,{style:{display:'table-row'}});
+   formref ? faddelem('label',faddelem('div',pTRow,{style:{display:'table-cell'}}),{innerText:pname,for:formref})
+	: faddelem('div',pTRow,{style:{display:'table-cell'},innerText:pname});
+   let pTCell=faddelem('div',pTRow,{style:{paddingLeft:'8px',display:'table-cell'}});
+   return pTCell;  
+};
+
+let userMe = {};
+let reqHeader = new Headers();
+reqHeader.append('Content-Type','application/json');
+
+let apibase = 'https://api.inaturalist.org/v1/observations/updates';
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_updates';
+let apirefname = 'iNaturalist Observations Updates';
+let apiref = furltoblank(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:apirefname,id:'pageHeader'});
+
+// authorization notification section
+let divauth = faddelem('div',document.body);
+faddelem('h3',divauth,{innerText:'Authorization Required'});
+faddelem('p',divauth,{innerText:'This page requires your authorization to get personal notifications from iNaturalist. To proceed, click on the "Authorize!" link below.'});
+faddelem('a',divauth,{innerText:'Authorize!',id:'start',href:'#',style:{fontWeight:900,fontSize:'20px'}});
+faddelem('p',divauth,{innerText:'If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in as part of this process.'});
+faddelem('p',divauth,{innerText:'The first time you go through this process, iNaturalist will ask you to authorize "Notifications Web Viewer". You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
+
+// parameters input section
+let pForm = faddelem('form',document.body);
+faddelem('h3',pForm,{innerText:'Filter Parameters'});
+let pTable = faddelem('div',pForm,{id:'paramDiv',style:{display:'table'}});
+let input_per_page = faddelem('input',faddprow(pTable,'per page','input_per_page'),{id:'input_per_page',type:'number',min:1,max:200,step:1,value:100});
+let input_page = faddelem('input',faddprow(pTable,'page','input_page'),{id:'input_page',type:'number',min:1,max:50,step:1,value:1});
+let input_viewed = faddelem('select',faddprow(pTable,'viewed','input_viewed'),{id:'input_viewed',type:'text'});
+faddelem('option',input_viewed,{innerText:'',value:''});
+faddelem('option',input_viewed,{innerText:'true',value:'true'});
+faddelem('option',input_viewed,{innerText:'false',value:'false'});
+input_viewed.value=false;
+let input_obs_by = faddelem('select',faddprow(pTable,'observations by','input_obs_by'),{id:'input_obs_by',type:'text',value:''});
+faddelem('option',input_obs_by,{innerText:'',value:''});
+faddelem('option',input_obs_by,{innerText:'you',value:'owner'});
+faddelem('option',input_obs_by,{innerText:'others',value:'following'});
+let input_created_after = faddelem('input',faddprow(pTable,'created after','input_created_after'),{id:'input_created_after',type:'datetime-local'});
+let input_locale = faddelem('input',faddprow(pTable,'locale','input_locale'),{id:'input_locale',type:'text',value:''});
+let input_preferred_place_id = faddelem('input',faddprow(pTable,'preferred place id','input_preferred_place_id'),{id:'input_preferred_place_id',type:'number',min:1,step:1});
+let button_get_data = faddelem('button',pForm,{innerText:'Get Data',type:'button',style:{marginTop:'5px'}});
+button_get_data.addEventListener('click',fgetdata,false);
+pForm.style.display='none'; // hide this section (until after authorization)
+
+// basic div to hold results
+let divresults = faddelem('div',document.body,{id:'divresults'});
+
+//////////////////////////////////////////////////////////////////////
+// Most of the stuff below this point is related to authorization flow
+//////////////////////////////////////////////////////////////////////
+var urlbase_iNat = 'https://www.inaturalist.org';
+var urlbase_iNat_v1 = 'https://api.inaturalist.org/v1';
+var urlbase_app = 'https://jumear.github.io/stirfry/iNat_observations_updates.html';
+
+// this section is only for testing purposes
+// it allows you to skip all the steps needed to get a JWT, if you already have one.
+// var testjwt = '';
+// reqHeader.append('Authorization',('Bearer '+testjwt));
+// fcoreapp();
+// exit;
+
+//////////////////////////////////////////////////////////////////////
+// PKCE flow -- Configure application and authorization server details
+var config = {
+   client_id: "6MfsjEhIatbDAUnoVwclm5NAM7UKc4Oeli7I7pUT7yw",
+   redirect_uri: urlbase_app,
+   authorization_endpoint: urlbase_iNat+"/oauth/authorize",
+   token_endpoint: urlbase_iNat+"/oauth/token",
+   requested_scopes: "write"
+};
+
+//////////////////////////////////////////////////////////////////////
+// OAUTH REQUEST
+
+// Initiate the PKCE Auth Code flow when the link is clicked
+document.getElementById("start").addEventListener("click", async function(e){
+   e.preventDefault();
+
+   // Create and store a random "state" value
+   var state = generateRandomString();
+   localStorage.setItem("pkce_state", state);
+
+   // Create and store a new PKCE code_verifier (the plaintext random secret)
+   var code_verifier = generateRandomString();
+   localStorage.setItem("pkce_code_verifier", code_verifier);
+
+   // Hash and base64-urlencode the secret to use as the challenge
+   var code_challenge = await pkceChallengeFromVerifier(code_verifier);
+
+   // Build the authorization URL
+   var url = config.authorization_endpoint 
+      + "?response_type=code"
+      + "&client_id="+encodeURIComponent(config.client_id)
+      + "&state="+encodeURIComponent(state)
+      + "&scope="+encodeURIComponent(config.requested_scopes)
+      + "&redirect_uri="+encodeURIComponent(config.redirect_uri)
+      + "&code_challenge="+encodeURIComponent(code_challenge)
+      + "&code_challenge_method=S256"
+      ;
+
+   // Redirect to the authorization server
+   window.location = url;
+});
+
+//////////////////////////////////////////////////////////////////////
+// OAUTH REDIRECT HANDLING
+
+// Handle the redirect back from the authorization server and
+// get an access token from the token endpoint
+var q = parseQueryString(window.location.search.substring(1));
+
+// Check if the server returned an error string
+if(q.error) {
+   alert("Error returned from authorization server: "+q.error);
+   document.getElementById("error_details").innerText = q.error+"\n\n"+q.error_description;
+   document.getElementById("error").classList = "";
+}
+
+// If the server returned an authorization code, attempt to exchange it for an access token
+if(q.code) {
+   // Verify state matches what we set at the beginning
+   if(localStorage.getItem("pkce_state") != q.state) {
+      alert("Invalid state");
+   } else {
+      // Exchange the authorization code for an access token
+      sendPostRequest(config.token_endpoint, {
+         grant_type: "authorization_code",
+         code: q.code,
+         client_id: config.client_id,
+         redirect_uri: config.redirect_uri,
+         code_verifier: localStorage.getItem("pkce_code_verifier")
+      }, function(request, body) {
+         // Replace the history entry to remove the auth code from the browser address bar
+         window.history.replaceState({}, null, config.redirect_uri); //"/");
+         // Initialize your application now that you have an access token.
+         fgetJWT(body.access_token)
+         .then((jwt)=> {
+            reqHeader.append('Authorization',('Bearer '+jwt));
+            fcoreapp();
+         });
+      }, function(request, error) {
+         // This could be an error response from the OAuth server, or an error because the 
+         // request failed such as if the OAuth server doesn't allow CORS requests
+         document.getElementById("error_details").innerText = error.error+"\n\n"+error.error_description;
+         document.getElementById("error").classList = "";
+      });
+   }
+   // Clean these up since we don't need them anymore
+   localStorage.removeItem("pkce_state");
+   localStorage.removeItem("pkce_code_verifier");
+}
+
+function fgetJWT(accesstoken) {
+   var endpoint = {method:'GET',url:urlbase_iNat+'/users/api_token'};
+   var hdr = new Headers();
+   hdr.append('Content-Type','application/json');
+   hdr.append('Authorization',('Bearer '+accesstoken));
+
+   return fetch(endpoint.url, {
+      method: endpoint.method,
+      headers: hdr,
+   })
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => {
+      return data.api_token;
+   })
+   .catch((err) => {
+      console.error(err.message);
+   });
+};
+
+function fcoreapp() {
+   divauth.style.display='none'; // remove authorization section, since it's not needed anymore
+   pForm.style.display='inherit'; // show the parameters section 
+   fgetdata();
+};
+</script>
+</body>
+
+</html>
