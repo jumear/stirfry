@@ -262,33 +262,31 @@ async function fresults(xobj) {
          faddelems('td',brow,values);
       };
 
-      // get and display additional information from associated observatons
-      await ffetch('https://api.inaturalist.org/v1/observations/'+obsIDs)
-      .then(obsdata=>{
-         let table = document.getElementById('main');
-         let tbody = table.children[1];
-         for (let brow of tbody.children) {
-            let obsID = brow.children[13].innerText*1;
-            let obs = faryget(obsdata.results,obsID);
-            brow.children[14].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
-            brow.children[16].innerText=obs.quality_grade;
-            //brow.children[17].innerText=obs.taxon?obs.taxon.name:'';
-            brow.children[17].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
-            if (brow.children[15].innerText==='...') {
-               brow.children[15].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login);
-            };
-	    brow.children[18].innerText='';
-            if (obs.identifications) {
-               for (let identification of obs.identifications) {
-                  if (identification.user.id===userMe.id && identification.current===true) {
-                     //brow.children[18].innerText=identification.taxon.name;
-                     brow.children[18].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
-                     break;
+      // get and display additional information from associated observations
+      if (obsIDs.length>0) {
+         await ffetch('https://api.inaturalist.org/v1/observations/'+obsIDs)
+         .then(obsdata=>{
+            let table = document.getElementById('main');
+            let tbody = table.children[1];
+            for (let brow of tbody.children) {
+               let obsID = brow.children[13].innerText*1;
+               let obs = faryget(obsdata.results,obsID);
+               brow.children[14].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
+               brow.children[16].innerText=obs.quality_grade;
+               brow.children[17].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
+               if (brow.children[15].innerText==='...') { brow.children[15].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login); };
+               brow.children[18].innerText='';
+               if (obs.identifications) {
+                  for (let identification of obs.identifications) {
+                     if (identification.user.id===userMe.id && identification.current===true) {
+                        brow.children[18].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
+                        break;
+                     };
                   };
                };
             };
-         };
-      });
+         });
+      }; 
 
       // buttons to go to prev or next page
       let nav = faddelem('div',divresults,{id:'nav'});
