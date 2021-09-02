@@ -356,7 +356,6 @@ function faddprow(ptable,pname,formref=null) {
 let userMe = {};
 let reqHeader = new Headers();
 reqHeader.append('Content-Type','application/json');
-//reqHeader.append('Authorization',('Bearer '+api_token));
 
 let apibase = 'https://api.inaturalist.org/v1/observations/updates';
 let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_updates';
@@ -369,7 +368,8 @@ let divauth = faddelem('div',document.body);
 faddelem('h3',divauth,{innerText:'Authorization Required'});
 faddelem('p',divauth,{innerText:'This page requires your authorization to get personal notifications from iNaturalist. To proceed, click on the "Authorize!" link below.'});
 faddelem('a',divauth,{innerText:'Authorize!',id:'start',href:'#',style:{fontWeight:900,fontSize:'20px'}});
-faddelem('p',divauth,{innerText:'(Note: If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in as part of this process.)'});
+faddelem('p',divauth,{innerText:'If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in as part of this process.'});
+faddelem('p',divauth,{innerText:'The first time you go through this process, iNaturalist will ask you to authorize "Notifications Web Viewer". You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
 
 // parameters input section
 let pForm = faddelem('form',document.body);
