@@ -85,6 +85,7 @@ function fresults(xobj) {
          {innerText:'Name'},
          {innerText:'Common Name'},
          {innerText:'Rank'},
+         {innerText:'Iconic Taxon'},
          {classList:'tar',innerText:'Taxon Obs Count'},
          {classList:'tar',innerText:'Taxon Ttl Obs Count'},
       ];
@@ -114,6 +115,7 @@ function fresults(xobj) {
             {innerText:rec.taxon.name||''},
             {innerText:rec.taxon.preferred_common_name||''},
             {innerText:rec.taxon.rank||''},
+            {innerText:rec.taxon.iconic_taxon_name||''},
             {classList:'tar',innerHTML:furl(url_explore+obsparam_verifiable+(obsparams==''?'':('&'+obsparams)),fcomnum(rec.count))},
             {classList:'tar',innerHTML:furl(url_explore+'&verifiable=any',fcomnum(rec.taxon.observations_count))},
          ];
