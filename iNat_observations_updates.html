@@ -199,7 +199,7 @@ async function fresults(xobj) {
       let hrow = faddelem('tr',thead);
       let labels = [
          {innerText:'Rec #'},
-         {innerText:'Notification ID'},
+         //{innerText:'Notification ID'},
          //{innerText:'Notification'},
          {innerText:'Notification Date'},
          {innerText:'Viewed'},
@@ -235,7 +235,7 @@ async function fresults(xobj) {
 
          let values = [
             {innerText:i+1},
-            {innerText:rec.id},
+            //{innerText:rec.id},
             //{innerText:rec.notification},
             {innerText:fdate(rec.created_at)},
             {innerText:rec.viewed,classList:(rec.viewed)?'bin_1':'bin_0'},
@@ -269,17 +269,17 @@ async function fresults(xobj) {
             let table = document.getElementById('main');
             let tbody = table.children[1];
             for (let brow of tbody.children) {
-               let obsID = brow.children[13].innerText*1;
+               let obsID = brow.children[12].innerText*1;
                let obs = faryget(obsdata.results,obsID);
-               brow.children[14].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
-               brow.children[16].innerText=obs.quality_grade;
-               brow.children[17].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
-               if (brow.children[15].innerText==='...') { brow.children[15].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login); };
-               brow.children[18].innerText='';
+               brow.children[13].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
+               brow.children[15].innerText=obs.quality_grade;
+               brow.children[16].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
+               if (brow.children[14].innerText==='...') { brow.children[14].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login); };
+               brow.children[17].innerText='';
                if (obs.identifications) {
                   for (let identification of obs.identifications) {
                      if (identification.user.id===userMe.id && identification.current===true) {
-                        brow.children[18].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
+                        brow.children[17].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
                         break;
                      };
                   };
@@ -368,6 +368,7 @@ faddelem('p',divauth,{innerText:'This page requires your authorization to get pe
 faddelem('a',divauth,{innerText:'Authorize!',id:'start',href:'#',style:{fontWeight:900,fontSize:'20px'}});
 faddelem('p',divauth,{innerText:'If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in as part of this process.'});
 faddelem('p',divauth,{innerText:'The first time you go through this process, iNaturalist will ask you to authorize "Notifications Web Viewer". You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
+faddelem('p',divauth,{innerHTML:'This page gets data primarily from the '+apiref+' API endpoint (and also gets a few additional data points for each observation). This means that only notifications related to identifications and comments from the last 3 months can be returned. Older notifications and notifications related to other activity like faves and mentions will not be included in these results.'});
 
 // parameters input section
 let pForm = faddelem('form',document.body);
