@@ -269,17 +269,17 @@ async function fresults(xobj) {
             let table = document.getElementById('main');
             let tbody = table.children[1];
             for (let brow of tbody.children) {
-               let obsID = brow.children[13].innerText*1;
+               let obsID = brow.children[12].innerText*1;
                let obs = faryget(obsdata.results,obsID);
-               brow.children[14].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
-               brow.children[16].innerText=obs.quality_grade;
-               brow.children[17].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
-               if (brow.children[15].innerText==='...') { brow.children[15].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login); };
-               brow.children[18].innerText='';
+               brow.children[13].innerHTML=obs.photos[0]?('<img class="photo" src="'+obs.photos[0].url+'" />'):'';
+               brow.children[15].innerText=obs.quality_grade;
+               brow.children[16].innerHTML=obs.taxon?furltoblank(('https://www.inaturalist.org/taxa/'+obs.taxon.id),obs.taxon.name):'';
+               if (brow.children[14].innerText==='...') { brow.children[14].innerHTML = furltoblank(('https://www.inaturalist.org/users/'+obs.user.login),obs.user.login); };
+               brow.children[17].innerText='';
                if (obs.identifications) {
                   for (let identification of obs.identifications) {
                      if (identification.user.id===userMe.id && identification.current===true) {
-                        brow.children[18].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
+                        brow.children[17].innerHTML=furltoblank(('https://www.inaturalist.org/taxa/'+identification.taxon.id),identification.taxon.name);
                         break;
                      };
                   };
