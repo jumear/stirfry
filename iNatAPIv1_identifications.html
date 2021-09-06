@@ -77,6 +77,13 @@ function fgetidfromobs(rec) {
    let idobj = obs.identifications.find(o=>o.id===id);
    return idobj;
 };
+function fcomparetaxa(obs_taxon,id_taxon) {
+   return !obs_taxon?''
+     :obs_taxon.id===id_taxon.id?'identical'
+     :obs_taxon.ancestor_ids.includes(id_taxon.id)?'ancestor'
+     :id_taxon.ancestor_ids.includes(obs_taxon.id)?'descendant'
+     :'different';
+};
 function fresults(xobj) {
    //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
    let results = xobj.results;
@@ -121,13 +128,15 @@ function fresults(xobj) {
          //{innerText:'ID User Name'},
          {innerText:'ID Datetime'},
          {innerText:'ID Category'},
-         {innerText:'ID Taxon = Obs Taxon'},
+         {innerText:'ID vs Obs Taxon'},
+         //{innerText:'ID Taxon = Obs Taxon'},
          {innerText:'ID on Own Obs'},
          {innerText:'ID is Current'},
          {innerText:'ID = Disagree'},
          {innerText:'ID via Comp Vision'},
          {innerText:'ID via Taxon Change'},
          {innerText:'Prev Obs Taxon Name'},
+         {innerText:'ID vs Prev Obs Taxon'},
          {innerText:'ID Notes'},
       ];
       faddelems('th',hrow,labels);
@@ -162,13 +171,15 @@ function fresults(xobj) {
             //{innerText:iddetail.user.name},
             {innerText:fdate(iddetail.created_at)},
             {innerText:iddetail.category},
-            {innerText:(rec.observation.taxon&&(iddetail.taxon.id===rec.observation.taxon.id)),classList:(rec.observation.taxon&&(iddetail.taxon.id===rec.observation.taxon.id))?'bin_1':'bin_0'},
+            {innerText:fcomparetaxa(rec.observation.taxon,rec.taxon)},
+            //{innerText:(rec.observation.taxon&&(iddetail.taxon.id===rec.observation.taxon.id)),classList:(rec.observation.taxon&&(iddetail.taxon.id===rec.observation.taxon.id))?'bin_1':'bin_0'},
             {innerText:iddetail.own_observation,classList:(iddetail.own_observation)?'bin_1':'bin_0'},
             {innerText:iddetail.current,classList:(iddetail.current)?'bin_1':'bin_0'},
             {innerText:iddetail.disagreement||false,classList:(iddetail.disagreement)?'bin_1':'bin_0'},
             {innerText:iddetail.vision,classList:(iddetail.vision)?'bin_1':'bin_0'},
             {innerText:(iddetail.taxon_change)?true:false,classList:(iddetail.taxon_change)?'bin_1':'bin_0'},
-            {innerText:iddetail.previous_observation_taxon?iddetail.previous_observation_taxon.name:''},
+            {innerHTML:iddetail.previous_observation_taxon?furl('https://www.inaturalist.org/taxa/'+iddetail.previous_observation_taxon.id,iddetail.previous_observation_taxon.name):''},
+            {innerText:fcomparetaxa(iddetail.previous_observation_taxon,rec.taxon)},
             {innerText:iddetail.body},
          ];
          faddelems('td',brow,values);
