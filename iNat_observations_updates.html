@@ -388,10 +388,10 @@ faddelem('h1',document.body,{innerText:apirefname,id:'pageHeader'});
 // authorization notification section
 let divauth = faddelem('div',document.body);
 faddelem('h3',divauth,{innerText:'Authorization Required'});
-faddelem('p',divauth,{innerText:'This page requires your authorization to get personal notifications from iNaturalist. To proceed, click on the "Authorize!" link below.'});
+faddelem('p',divauth,{innerText:'This page requires authorization to access your personal notifications in iNaturalist. To proceed, click on the "Authorize!" link below.'});
 faddelem('a',divauth,{innerText:'Authorize!',id:'start',href:'#',style:{fontWeight:900,fontSize:'20px'}});
-faddelem('p',divauth,{innerText:'If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in as part of this process.'});
-faddelem('p',divauth,{innerText:'The first time you go through this process, iNaturalist will ask you to authorize "Notifications Web Viewer". You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
+faddelem('p',divauth,{innerText:'When you click above, the page will ping iNaturalist to check your identity and get access your restricted data. If successful, the page will display your notifications. If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in.'});
+faddelem('p',divauth,{innerHTML:'The first time you go through this process, iNaturalist will ask you to authorize "'+furltoblank('https://www.inaturalist.org/oauth/applications/658','Notifications Web Viewer')+'" to access your restricted data. You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
 faddelem('p',divauth,{innerHTML:'This page gets data primarily from the '+apiref+' API endpoint (and also gets a few additional data points for each observation). This means that only notifications related to identifications and comments from the last 3 months can be returned. Older notifications and notifications related to other activity like faves and mentions will not be included in these results.'});
 
 // parameters input section
