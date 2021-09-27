@@ -66,7 +66,8 @@ function faddtr(tparent,td=[]) {
 };
 function fISOdate(s) {
   let d = s.split(/\D+/);
-  return new Date(Date.UTC(d[0], d[1]-1 /*months:0-11*/, d[2], d[3], d[4], d[5])); // iNat dates don't come with milliseconds
+  let o = (s.search('[\+]')>=0)?-1:1;
+  return new Date(Date.UTC(d[0], d[1]-1 /*months:0-11*/, d[2], d[3], d[4], d[5]) + ((d[6]||0)*3600000*o) + ((d[7]||0)*60000*o) ); // iNat dates don't come with milliseconds
 };
 function ffetch(url) {
    return fetch(url)
@@ -96,7 +97,8 @@ function fresults() {
    let prom_user = ffetch(apibase + 'users/' + user_id);
    let prom_id_all = ffetch(apibase + 'identifications?per_page=0&only_id=true&user_id=' + user_id);
    let prom_id_others = ffetch(apibase + 'identifications?per_page=0&only_id=true&own_observation=false&user_id=' + user_id);
-   Promise.all([prom_user,prom_id_all,prom_id_others])
+   let prom_id_last = ffetch(apibase + 'identifications?per_page=1&only_id=false&current=any&is_change=false&user_id=' + user_id);
+   Promise.all([prom_user,prom_id_all,prom_id_others,prom_id_last])
    .then(req=>{
       if (!req[0]) {
          faddelem('p',div_main,{innerText:'No data found. Input a valid User Login or ID and try again.'});
@@ -107,6 +109,8 @@ function fresults() {
          let id_all = req[1].total_results || user.identifications_count || 0 ;
          let id_others = req[2].total_results || user.identifications_count || 0 ;
          let date_curr = new Date();
+         let date_last_id = (req[3].results && req[3].results[0]) ? fISOdate(req[3].results[0].created_at) : 'N/A';
+         let diff_last_id = (date_curr-date_last_id) / 1000 / 60 / 60 / 24;
          let date_join = fISOdate(user.created_at);
          let diff_days = (date_curr-date_join) / 1000 / 60 / 60 / 24;
          if (user.icon_url) { faddelem('img',div_main,{src:user.icon_url}); };
@@ -116,6 +120,8 @@ function fresults() {
          faddtr(tbody,[{innerText:'User ID:'},{innerText:user.id}]);
          if (user.name) { faddtr(tbody,[{innerText:'User Name:'},{innerText:user.name}]); };
          faddtr(tbody,[{innerText:'Current Date:'},{innerText:date_curr.toString()}]);
+         faddtr(tbody,[{innerText:'Date of Last ID:'},{innerText:date_last_id.toString()}]);
+         faddtr(tbody,[{innerText:'Days Since Last ID:'},{innerText:diff_last_id?fcomnum(diff_last_id.toFixed(2)):'N/A'}]);
          faddtr(tbody,[{innerText:'Date Joined:'},{innerText:date_join.toString()}]);
          faddtr(tbody,[{innerText:'Days Since Joining:'},{innerText:fcomnum(diff_days.toFixed(2))}]);
          faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' )'}]);
