@@ -163,7 +163,7 @@ function fresults(xobj) {
                   status.place?{innerHTML:furltoblank('http://www.inaturalist.org/places/'+status.place.id,status.place.display_name||status.place.id)}:{innerText:'(Global)'},
                   {innerText:fdate(status.created_at,true)},
                   {innerText:fdate(status.updated_at,true)},
-                  status.url?{innerHTML:furltoblank(status.url,status.authority)}:{innerText:status.authority},
+                  (status.authority==='')?((status.updater?{innerHTML:furltoblank('https://www.inaturalist.org/people/'+status.updater.id,status.updater.login)+' (user)'}:{innerText:'(unknown)'})):status.url?{innerHTML:furltoblank(status.url,status.authority)}:{innerText:status.authority},
                   {innerText:status.geoprivacy},
                   //{innerHTML:status.url?furltoblank(status.url,'View'):''},
                ];
