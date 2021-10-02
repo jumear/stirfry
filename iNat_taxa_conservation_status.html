@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="iNaturalist Identifications Search" />
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
+<title>iNaturalist Taxa Conservation Status</title>
+<style>
+   html,body { font:14px Sans-Serif; }
+   #main { width:100%; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
+   tr { background:whitesmoke; }
+   tr:nth-child(even) { background-color:white; }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:royalblue; }
+   a:hover { background:lightgray; }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+   .button { background:whitesmoke; }
+   .button_inactive { background:white; color:lightgray; }
+   .button_inactive:hover { background:none; }
+   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
+   #divresults { padding-top:12px; }
+   select { padding:2px 0px; }
+   form { background:#ddffdd; padding:5px; }
+   h3 { margin:2px 0px 8px 0px; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let p_per_page = winurlparams.get('per_page') || 30;
+let p_page = winurlparams.get('page') || 1;
+let p_taxon_id = winurlparams.get('taxon_id');
+let p_locale = winurlparams.get('locale');
+let p_preferred_place_id = winurlparams.get('preferred_place_id');
+
+// delete these parameters, since we'll default these to specific values elsewhere
+winurlparams.delete('rank');
+winurlparams.delete('only_id');
+winurlparams.delete('is_active');
+
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function furltoblank(url,txt=url) { return '<a href="'+url+'" target="_blank">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function fpageurl(urlbase,urlparams,per_page,page) {
+   let params = new URLSearchParams(urlparams);
+   let url_per_page = params.get('per_page');
+   let url_page = params.get('page');
+   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
+   (url_page===null) ? params.append('page',page) : params.set('page',page);
+   return urlbase+'?'+params;
+};
+function ffetch(url) {
+   return fetch(url)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .then((data) => { return data; })
+   .catch((err) => { console.error(err); });
+};
+function faddprow(ptable,pname,formref=null) {
+   let pTRow = faddelem('div',ptable,{style:{display:'table-row'}});
+   formref ? faddelem('label',faddelem('div',pTRow,{style:{display:'table-cell'}}),{innerText:pname,for:formref})
+	: faddelem('div',pTRow,{style:{display:'table-cell'},innerText:pname});
+   let pTCell=faddelem('div',pTRow,{style:{paddingLeft:'8px',display:'table-cell'}});
+   return pTCell;  
+};
+function fresults(xobj) {
+   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
+   let results = xobj.results;
+   if (results) {
+      let total_results = count_taxon_ttl; // typically, this would be set to xobj.total_results;
+      let per_page = per_page_taxon; // typically, this would set to xobj.per_page;
+      let page_curr = page_taxon; // typically, this would be set to xobj.page;
+      let page_max = Math.ceil(total_results/per_page);
+      let page_prev = ((page_curr>1)?page_curr-1:null);
+      let page_next = ((page_curr<page_max)?page_curr+1:null);
+
+      //faddelem('p',document.body,{innerHTML:'total taxa: '+fcomnum(total_results)+'<br />'
+      faddelem('p',divresults,{innerHTML:'total taxa: '+fcomnum(total_results)+'<br />'
+         +'per page: '+fcomnum(per_page)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)
+         });
+
+      let table = faddelem('table',document.body,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let labels = [
+         {innerText:'Taxon #'},
+         {innerText:'Taxon ID'},
+         {innerText:'Taxon Rank'},
+         {innerText:'Taxon Name'},
+         {innerText:'Common Name'},
+         {innerText:'Conservation Status'},
+         {innerText:'Place'},
+         {innerText:'Created'},
+         {innerText:'Updated'},
+         {innerText:'Authority'},
+         {innerText:'Geoprivacy'},
+         //{innerText:'Assessment'},
+      ];
+      faddelems('th',hrow,labels);
+
+      let tbody = faddelem('tbody',table);
+      for (let i=0; i<results.length; i++) {
+         let rec = results[i];
+         let values = [
+            {innerText:i+1},
+            {innerHTML:furltoblank('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
+            {innerText:rec.rank},
+            {innerText:rec.name},
+            {innerText:(rec.preferred_common_name||'')},
+            {innerHTML:furltoblank('https://www.inaturalist.org/taxa/'+rec.id+'/edit#conservation_statuses','Edit')},
+            ,,,,,
+         ];
+         
+         let statuses = rec.conservation_statuses;
+         if (statuses.length===0) {
+            let brow = faddelem('tr',tbody);
+            faddelems('td',brow,values); 
+         }
+         else {
+            for (cs=0; cs<statuses.length; cs++) {
+               let status = statuses[cs];
+               let values_status = [
+                  {innerText:status.status},
+                  status.place?{innerHTML:furltoblank('http://www.inaturalist.org/places/'+status.place.id,status.place.display_name||status.place.id)}:{innerText:'(Global)'},
+                  {innerText:fdate(status.created_at,true)},
+                  {innerText:fdate(status.updated_at,true)},
+                  status.url?{innerHTML:furltoblank(status.url,status.authority)}:{innerText:status.authority},
+                  {innerText:status.geoprivacy},
+                  //{innerHTML:status.url?furltoblank(status.url,'View'):''},
+               ];
+               let brow = faddelem('tr',tbody);
+               faddelems('td',brow,[...values.slice(0,5),...values_status]);
+            };
+         };
+      };
+
+      // buttons to go to prev or next page
+      let nav = faddelem('div',document.body,{id:'nav'});
+      let buttons = [
+         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
+         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
+         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
+         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
+      ];
+      faddelems('a',nav,buttons);
+   }
+   else { faddelem('p',document.body,{innerText:'No results returned.'}); };
+};
+
+function fgetdata() {
+   //get parameters from input form
+   winurlparams.set('per_page',input_per_page.value||30);
+   winurlparams.set('page',input_page.value||1);
+   input_taxon_id.value ? winurlparams.set('taxon_id',input_taxon_id.value.toLowerCase()) :  winurlparams.delete('taxon_id');
+   input_locale.value ? winurlparams.set('locale',input_locale.value.toLowerCase()) : winurlparams.delete('locale');
+   input_preferred_place_id.value ? winurlparams.set('preferred_place_id',input_preferred_place_id.value) : winurlparams.delete('preferred_place_id');
+
+   //reset input form values to original values (so that input form and URL on previous page will tie if user clicks the browser back button)
+   input_per_page.value = p_per_page;
+   input_page.value = p_page;
+   input_taxon_id.value = p_taxon_id || '';
+   input_locale.value = p_locale;
+   input_preferred_place_id.value = p_preferred_place_id;
+
+   //navigate to new page based on parameters from input form
+   document.location.href=winurlexsearchstr+'?'+winurlparams;
+};
+
+let apibase = 'https://api.inaturalist.org/v1/taxa';
+let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'')+'&rank=species,hybrid,subspecies,variety,form&is_active=true&only_id=true';
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
+let apirefname = 'iNaturalist Taxa';
+let apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:apirefname+' Conservation Status'});
+
+// parameters input section
+let pForm = faddelem('form',document.body);
+faddelem('h3',pForm,{innerText:'Filter Parameters'});
+let pTable = faddelem('div',pForm,{id:'paramDiv',style:{display:'table'}});
+let input_per_page = faddelem('input',faddprow(pTable,'per page','input_per_page'),{id:'input_per_page',type:'number',min:1,max:500,step:1,value:p_per_page});
+let input_page = faddelem('input',faddprow(pTable,'page','input_page'),{id:'input_page',type:'number',min:1,max:500,step:1,value:p_page});
+let input_taxon_id = faddelem('input',faddprow(pTable,'taxon id','input_taxon_id'),{id:'input_taxon_id',type:'text',value:p_taxon_id||''});
+let input_locale = faddelem('input',faddprow(pTable,'locale','input_locale'),{id:'input_locale',type:'text',value:p_locale||''});
+let input_preferred_place_id = faddelem('input',faddprow(pTable,'preferred place id','input_preferred_place_id'),{id:'input_preferred_place_id',type:'number',min:1,step:1,value:p_preferred_place_id||''});
+let button_get_data = faddelem('button',pForm,{innerText:'Get Data',type:'button',style:{marginTop:'5px'}});
+button_get_data.addEventListener('click',fgetdata,false);
+let divresults = faddelem('div',document.body,{id:'divresults'});
+
+let count_taxon_page = 0;
+let count_taxon_ttl = 0;
+let page_taxon = 1;
+let per_page_taxon = 0;
+
+//if (winurlsearchstr==='') {
+if (!p_taxon_id) {
+   let instructions = [
+      {innerText:'This page gets the conservation status records for any set of active taxa at applicable ranks (species, hybrid, subspecies, variety, or form). To use the page, you must input a numeric taxon id or comma-separated list of taxon ids. The page will retrieve the input taxa and any descendants which are active and at the appropriate ranks.'},
+      {innerHTML:'Parameters can be specified either in the Filter Parameters form (above) or directly in the URL. Suppose you want to filter for all taxa within genus Lobivia (taxon_id=429186). You could input 429186 in the taxon id parameter input box, and then click the Get Data button to retrieve results. Alternatively, you could navigate to '+furl(famp(winurlexsearchstr+'?taxon_id=429186'))+' in your browser. The preferred place id and locale parameters allow you to get local common names in your desired language.'},
+      {innerHTML:'This page works by getting a list of taxa from the '+apiref+' API endpoint and then getting conservation status records for those taxa from '+furl('https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa_id','Taxon Details')+'. Note that by default, the API will return up to 30 taxa per page. You can override that by setting a per_page parameter in the form/URL up to 500. You can get the page you are interested in by setting the page parameter in the form/URL or by using the buttons at the bottom of the page. The API will not return results beyond the 10,000th record for a given set of parameters. (So if your set contains more than 10,000 taxa, then try breaking it up into smaller sets of taxa.)'},
+      {innerHTML:'The original prototype for this page was created by Martn Lowry (aka '+furl('https://www.inaturalist.org/people/mrtnlowr','mrtnlowr')+').'},
+   ];
+   faddelem('h3',divresults,{innerText:'Instructions & Notes'});
+   faddelems('p',divresults,instructions);
+}
+else {
+   //faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
+   faddelem('h3',divresults,{innerText:'Results'});
+   faddelem('p',divresults,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'.'});
+   ffetch(apiurl)
+   .then((data) => {
+      if (!data) { return {}; }
+      else {
+         let results = data.results;
+         page_taxon = data.page;
+         per_page_taxon = data.per_page;
+         count_taxon_ttl = data.total_results;
+         count_taxon_page = results.length;
+         if (count_taxon_page===0) { return {}; }
+         else { 
+            let taxa = results.map(t=>{return t.id;})
+            let p_lang = [];
+            if (p_locale) {p_lang.push({param:'locale',value:p_locale})};
+            if (p_preferred_place_id) {p_lang.push({param:'preferred_place_id',value:p_preferred_place_id})};
+            let p_additional = (p_lang.length===0) ? '' : ('?'+p_lang.map(p=>{return p.param+'='+p.value;}).join('&'));
+            let apiurl_cs = apibase+'/'+taxa+p_additional;
+            //faddelem('p',document.body,{innerHTML:'This is the query for statuses: '+furl(famp(apiurl_cs))+'.'});
+            return ffetch(apiurl_cs); 
+         };
+      };
+   })
+   .then((data) => { fresults(data);} )
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
+   });
+};
+
+</script>
+</body>
+
+</html>
