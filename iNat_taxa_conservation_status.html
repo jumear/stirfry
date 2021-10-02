@@ -42,11 +42,12 @@ let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 let p_per_page = winurlparams.get('per_page') || 30;
 let p_page = winurlparams.get('page') || 1;
 let p_taxon_id = winurlparams.get('taxon_id');
+let p_rank = winurlparams.get('rank');
 let p_locale = winurlparams.get('locale');
 let p_preferred_place_id = winurlparams.get('preferred_place_id');
 
 // delete these parameters, since we'll default these to specific values elsewhere
-winurlparams.delete('rank');
+winurlparams.delete('rank_level');
 winurlparams.delete('only_id');
 winurlparams.delete('is_active');
 
@@ -190,6 +191,7 @@ function fgetdata() {
    winurlparams.set('per_page',input_per_page.value||30);
    winurlparams.set('page',input_page.value||1);
    input_taxon_id.value ? winurlparams.set('taxon_id',input_taxon_id.value.toLowerCase()) :  winurlparams.delete('taxon_id');
+   input_rank.value ? winurlparams.set('rank',input_rank.value.toLowerCase()) :  winurlparams.delete('rank');
    input_locale.value ? winurlparams.set('locale',input_locale.value.toLowerCase()) : winurlparams.delete('locale');
    input_preferred_place_id.value ? winurlparams.set('preferred_place_id',input_preferred_place_id.value) : winurlparams.delete('preferred_place_id');
 
@@ -197,6 +199,7 @@ function fgetdata() {
    input_per_page.value = p_per_page;
    input_page.value = p_page;
    input_taxon_id.value = p_taxon_id || '';
+   input_rank.value = p_rank || '';
    input_locale.value = p_locale;
    input_preferred_place_id.value = p_preferred_place_id;
 
@@ -205,7 +208,7 @@ function fgetdata() {
 };
 
 let apibase = 'https://api.inaturalist.org/v1/taxa';
-let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'')+'&rank=species,hybrid,subspecies,variety,form&is_active=true&only_id=true';
+let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'')+'&rank_level=10,5&is_active=true&only_id=true';
 let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa';
 let apirefname = 'iNaturalist Taxa';
 let apiref = furl(apirefurl,apirefname);
@@ -217,7 +220,8 @@ faddelem('h3',pForm,{innerText:'Filter Parameters'});
 let pTable = faddelem('div',pForm,{id:'paramDiv',style:{display:'table'}});
 let input_per_page = faddelem('input',faddprow(pTable,'per page','input_per_page'),{id:'input_per_page',type:'number',min:1,max:500,step:1,value:p_per_page});
 let input_page = faddelem('input',faddprow(pTable,'page','input_page'),{id:'input_page',type:'number',min:1,max:500,step:1,value:p_page});
-let input_taxon_id = faddelem('input',faddprow(pTable,'taxon id','input_taxon_id'),{id:'input_taxon_id',type:'text',value:p_taxon_id||''});
+let input_taxon_id = faddelem('input',faddprow(pTable,'taxon id (required)','input_taxon_id'),{id:'input_taxon_id',type:'text',value:p_taxon_id||''});
+let input_rank = faddelem('input',faddprow(pTable,'rank','input_rank'),{id:'input_rank',type:'text',value:p_rank||''});
 let input_locale = faddelem('input',faddprow(pTable,'locale','input_locale'),{id:'input_locale',type:'text',value:p_locale||''});
 let input_preferred_place_id = faddelem('input',faddprow(pTable,'preferred place id','input_preferred_place_id'),{id:'input_preferred_place_id',type:'number',min:1,step:1,value:p_preferred_place_id||''});
 let button_get_data = faddelem('button',pForm,{innerText:'Get Data',type:'button',style:{marginTop:'5px'}});
@@ -232,8 +236,8 @@ let per_page_taxon = 0;
 //if (winurlsearchstr==='') {
 if (!p_taxon_id) {
    let instructions = [
-      {innerText:'This page gets the conservation status records for any set of active taxa at applicable ranks (species, hybrid, subspecies, variety, or form). To use the page, you must input a numeric taxon id or comma-separated list of taxon ids. The page will retrieve the input taxa and any descendants which are active and at the appropriate ranks.'},
-      {innerHTML:'Parameters can be specified either in the Filter Parameters form (above) or directly in the URL. Suppose you want to filter for all taxa within genus Lobivia (taxon_id=429186). You could input 429186 in the taxon id parameter input box, and then click the Get Data button to retrieve results. Alternatively, you could navigate to '+furl(famp(winurlexsearchstr+'?taxon_id=429186'))+' in your browser. The preferred place id and locale parameters allow you to get local common names in your desired language.'},
+      {innerText:'This page gets the conservation status records for any set of active taxa at either rank level 10 (species, hybrid) or 5 (subspecies, variety, form, infrahybrid). To use the page, you must input a numeric taxon id or comma-separated list of taxon ids. The page will retrieve the input taxa and any descendants which are active and at the appropriate ranks.'},
+      {innerHTML:'Parameters can be specified either in the Filter Parameters form (above) or directly in the URL. Suppose you want to filter for all taxa within genus Lobivia (taxon_id=429186). You could input 429186 in the taxon id parameter input box, and then click the Get Data button to retrieve results. Alternatively, you could navigate to '+furl(famp(winurlexsearchstr+'?taxon_id=429186'))+' in your browser. The rank parameter allows you to filter for a taxon rank or comma-separated list of ranks, although this page will not return ranks above species. The preferred place id and locale parameters allow you to get local common names in your desired language. For example, navigating to '+furl(famp(winurlexsearchstr+'?taxon_id=429186&locale=ru'))+' would give you Russian common names.'},
       {innerHTML:'This page works by getting a list of taxa from the '+apiref+' API endpoint and then getting conservation status records for those taxa from '+furl('https://api.inaturalist.org/v1/docs/#!/Taxa/get_taxa_id','Taxon Details')+'. Note that by default, the API will return up to 30 taxa per page. You can override that by setting a per_page parameter in the form/URL up to 500. You can get the page you are interested in by setting the page parameter in the form/URL or by using the buttons at the bottom of the page. The API will not return results beyond the 10,000th record for a given set of parameters. (So if your set contains more than 10,000 taxa, then try breaking it up into smaller sets of taxa.)'},
       {innerHTML:'The original prototype for this page was created by Martn Lowry (aka '+furl('https://www.inaturalist.org/people/mrtnlowr','mrtnlowr')+').'},
    ];
