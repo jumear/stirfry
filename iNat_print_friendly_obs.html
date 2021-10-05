@@ -217,7 +217,7 @@ function faddplaces(eparent,ary) {
       var s = '[unknown]'
       for (m=0;m<ary.length;m++) {
          var o = faryget(g_place,ary[m]);
-         if (o&&o.admin_level!==null&&o.admin_level==k) {
+         if (o&&o.admin_level!==null&&o.admin_level==k*10) {
             s=o.name+fidlink('places',o.id);
             break;
          };
