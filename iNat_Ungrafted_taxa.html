@@ -21,6 +21,7 @@ const RANK_LEVELS = {
   class: 50,
   subclass: 47,
   infraclass: 45,
+  subterclass: 44,
   superorder: 43,
   order: 40,
   suborder: 37,
@@ -40,6 +41,7 @@ const RANK_LEVELS = {
   subgenus: 15,
   section: 13,
   subsection: 12,
+  complex: 11,
   species: 10,
   hybrid: 10,
   subspecies: 5,
@@ -56,7 +58,7 @@ var tfConfig = {
     },
     btn_reset: true,  // clear button
     no_results_message: true,
-    col_widths: ['310px', '130px', '90px', '70px', '80px', '70px', '370px', '70px', '120px', '90px'],
+    col_widths: ['310px', '130px', '90px', '70px', '80px', '70px', '380px', '70px', '120px', '90px'],
 
     // columns data types
     col_types: [
@@ -151,7 +153,7 @@ function fresults(results) {
        faddelem('td',brow,null,null,furl('https://www.inaturalist.org/taxa/'+results[i].id+'/flags', results[i].flag_counts.unresolved));
        faddelem('td',brow,null,null,
           furl('https://www.google.com/search?q='+results[i].name, 'Google')
-          +' | '+furl('https://duckduckgo.com/?q='+results[i].name, 'DDG')
+          +' | '+furl('https://scholar.google.com/scholar?q='+results[i].name, 'Scholar')
           +' | '+furl('https://www.inaturalist.org/search?q='+results[i].name, 'iNat')
           +' | '+furl('https://www.inaturalist.org/taxa/search?is_active=any&q='+results[i].name, 'old iNat')          
           +' | '+furl('https://eol.org/search?utf8=%E2%9C%93&q='+results[i].name, 'EOL')            
@@ -166,12 +168,21 @@ function fresults(results) {
 };
 
 
-var apiurl = 'https://api.inaturalist.org/v1/taxa?is_active=true&parent_id=0&rank=phylum,subphylum,superclass,class,subclass,infraclass,subterclass,superorder,order,suborder,infraorder,parvorder,zoosection,zoosubsection,superfamily,epifamily,family,subfamily,supertribe,tribe,subtribe,genus,genushybrid,subgenus,section,subsection,complex,species,hybrid,subspecies,variety,form,infrahybrid';
+var apiurl = 'https://api.inaturalist.org/v1/taxa?is_active=true&id_above=0&parent_id=0&rank=phylum,subphylum,superclass,class,subclass,infraclass,subterclass,superorder,order,suborder,infraorder,parvorder,zoosection,zoosubsection,superfamily,epifamily,family,subfamily,supertribe,tribe,subtribe,genus,genushybrid,subgenus,section,subsection,complex,species,hybrid,subspecies,variety,form,infrahybrid';
 faddelem('h1',document.body,null,null,'iNaturalist Ungrafted Taxa');
 faddelem('h3',document.body,null,null,'Note: this page does NOT take query parameters in the URL.');
-faddelem('h3',document.body,null,null, 'External taxonomic authorities and taxon curators can be found ' + furl('https://www.inaturalist.org/pages/curator+guide#authorities', 'here')+'.');
+faddelem('h2',document.body,null,null, 'External taxonomic authorities and taxon curators can be found ' + furl('https://www.inaturalist.org/pages/curator+guide#authorities', 'here')+'.');
+faddelem('h2',document.body,null,null, 'Other taxonomic resources -- NOT iNat authorities: ' + ' ' + 
+furl('https://www.gbif.org/', 'GBIF') 
++', ' + furl('https://www.itis.gov/', 'ITIS')
++', ' + furl('https://www.iucnredlist.org/', 'IUCN')
++', ' + furl('https://species.wikimedia.org/wiki/Main_Page', 'Wikispecies')
++', ' + furl('https://www.ala.org.au/', 'Atlas of Living Australia')
++', ' + furl('https://www.calacademy.org/scientists/projects/eschmeyers-catalog-of-fishes', 'Catalog of Fishes')
++', ' + furl('https://forum.inaturalist.org/t/taxonomic-resources-for-insects-wiki/11584', 'List of insect resources'));
 faddelem('h2',document.body,null,null, furl('https://www.inaturalist.org/taxa/new', 'Add new taxon'));
 faddelem('h2',document.body,null,null, furl('https://www.inaturalist.org/taxon_changes/new', 'Add new taxon change'));
+faddelem('h2',document.body,null,null, furl('https://www.inaturalist.org/taxa/curation', 'Official taxon curation page'));
 faddelem('h3',document.body,null,null, 'Click column headers to sort.');
 
 fgather(apiurl)
