@@ -69,6 +69,11 @@ function fISOdate(s) {
   let o = (s.search('[\+]')>=0)?-1:1;
   return new Date(Date.UTC(d[0], d[1]-1 /*months:0-11*/, d[2], d[3], d[4], d[5]) + ((d[6]||0)*3600000*o) + ((d[7]||0)*60000*o) ); // iNat dates don't come with milliseconds
 };
+function fparamdate(n) {
+  d = new Date(n);
+  function fpad(num) { return num.toString().padStart(2,'0') };
+  return fpad(d.getFullYear())+'-'+fpad(d.getMonth()+1)+'-'+fpad(d.getDate())+'T'+fpad(d.getHours())+':'+fpad(d.getMinutes())+':'+fpad(d.getSeconds());
+};
 function ffetch(url) {
    return fetch(url)
    .then((response) => {
@@ -92,13 +97,16 @@ function fresults() {
    let user_id = input_user.value 
 
    let urlsumbycat = 'iNat_id_summary_by_category.html';
+   let urlsumbyic = 'iNat_id_counts_by_iconic_taxa.html';
    let urlids = 'iNatAPIv1_identifications.html'
    let apibase = 'https://api.inaturalist.org/v1/';
+   let date_curr = new Date();
    let prom_user = ffetch(apibase + 'users/' + user_id);
    let prom_id_all = ffetch(apibase + 'identifications?per_page=0&only_id=true&user_id=' + user_id);
    let prom_id_others = ffetch(apibase + 'identifications?per_page=0&only_id=true&own_observation=false&user_id=' + user_id);
    let prom_id_last = ffetch(apibase + 'identifications?per_page=1&only_id=false&current=any&is_change=false&user_id=' + user_id);
-   Promise.all([prom_user,prom_id_all,prom_id_others,prom_id_last])
+   //let prom_id_t24hrs = ffetch(apibase + 'identifications?per_page=0&only_id=true&is_change=false&user_id=' + user_id +'&d1=' + fparamdate(date_curr-(1000*60*60*24)));
+   Promise.all([prom_user,prom_id_all,prom_id_others,prom_id_last/*,prom_id_t24hrs*/])
    .then(req=>{
       if (!req[0]) {
          faddelem('p',div_main,{innerText:'No data found. Input a valid User Login or ID and try again.'});
@@ -108,9 +116,9 @@ function fresults() {
          let user = req[0].results[0];
          let id_all = req[1].total_results || user.identifications_count || 0 ;
          let id_others = req[2].total_results || user.identifications_count || 0 ;
-         let date_curr = new Date();
          let date_last_id = (req[3].results && req[3].results[0]) ? fISOdate(req[3].results[0].created_at) : 'N/A';
          let diff_last_id = (date_curr-date_last_id) / 1000 / 60 / 60 / 24;
+         //let id_t24hrs = req[4].total_results;
          let date_join = fISOdate(user.created_at);
          let diff_days = (date_curr-date_join) / 1000 / 60 / 60 / 24;
          if (user.icon_url) { faddelem('img',div_main,{src:user.icon_url}); };
@@ -124,9 +132,10 @@ function fresults() {
          faddtr(tbody,[{innerText:'Days Since Last ID:'},{innerText:diff_last_id?fcomnum(diff_last_id.toFixed(2)):'N/A'}]);
          faddtr(tbody,[{innerText:'Date Joined:'},{innerText:date_join.toString()}]);
          faddtr(tbody,[{innerText:'Days Since Joining:'},{innerText:fcomnum(diff_days.toFixed(2))}]);
-         faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' )'}]);
-         faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' )'}]);
+         faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' | '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?user_id='+user.id,'by iconic taxa')+' )'}]);
+         faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' | '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?own_observation=false&user_id='+user.id,'by iconic taxa')+' )'}]);
          faddtr(tbody,[{innerText:'IDs (for others) per day:'},{innerText:fcomnum((id_others/diff_days).toFixed(2))}]);
+         //faddtr(tbody,[{innerText:'IDs (all) last 24hrs:'},{innerHTML:fcomnum(id_t24hrs)}]);
       };
    });
 };
