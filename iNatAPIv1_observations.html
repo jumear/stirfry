@@ -191,7 +191,7 @@ function fresults(xobj) {
             if (rec.photos&&rec.photos.length>0) {
                for (let p=0; p<rec.photos.length; p++) {
                   let url = (p>0)?' ':'';
-                  url += (!rec.photos[p].url) ? 'null' : rec.photos[p].url.substring(0,rec.photos[p].url.search('\\?'));
+                  url += (!rec.photos[p].url) ? 'null' : rec.photos[p].url.split('?')[0];
                   photos.push(furl(url.replace('square','medium')));
                };
             };
