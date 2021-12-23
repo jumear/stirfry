@@ -59,6 +59,7 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    let url_page = params.get('page');
    (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
    (url_page===null) ? params.append('page',page) : params.set('page',page);
+   if (p_options && p_options.length>0) { params.append('options',p_options); };
    return urlbase+'?'+params;
 };
 function fresults(xobj) {
@@ -91,7 +92,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Taxon Obs Count'},
          {classList:'tar',innerText:'Taxon Ttl Obs Count'},
       ];
-      if (p_options.includes('ancestry')) { labels = [...labels.slice(0,7),{innerText:'Ancestry'},...labels.slice(7)]; };
+      if (p_options.includes('ancestry')) { labels.splice(7,0,{innerText:'Ancestry'}); };
       faddelems('th',hrow,labels);
 
       let tbody = faddelem('tbody',table);
@@ -122,7 +123,7 @@ function fresults(xobj) {
             {classList:'tar',innerHTML:furl(url_explore+obsparam_verifiable+(obsparams==''?'':('&'+obsparams)),fcomnum(rec.count))},
             {classList:'tar',innerHTML:furl(url_explore+'&verifiable=any',fcomnum(rec.taxon.observations_count))},
          ];
-         if (p_options.includes('ancestry')) { values = [...values.slice(0,7),{innerHTML:rec.taxon.ancestor_ids.map(function(e){return furl('http://www.inaturalist.org/taxa/'+e,e)}).join('/')||''},...values.slice(7)]; };
+         if (p_options.includes('ancestry')) { values.splice(7,0,{innerHTML:rec.taxon.ancestor_ids.map(function(e){return furl('http://www.inaturalist.org/taxa/'+e,e)}).join('/')||''}); };
          faddelems('td',brow,values);
       };
 
