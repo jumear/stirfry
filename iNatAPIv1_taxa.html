@@ -37,6 +37,8 @@ let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 //let p_per_page = winurlparams.get('per_page') || 200;
 //let p_page = winurlparams.get('page') || 1;
+let p_options = winurlparams.get('options') || [];
+winurlparams.delete('options');
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
@@ -59,6 +61,7 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    let url_page = params.get('page');
    (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
    (url_page===null) ? params.append('page',page) : params.set('page',page);
+   if (p_options && p_options.length>0) { params.append('options',p_options); };
    return urlbase+'?'+params;
 };
 function ffetch(url) {
@@ -98,9 +101,10 @@ function fexport(count=0) {
          'parent_id',
          'observations_count',
       ]];
+      if (p_options.includes('ancestry')) { ary[0].splice(8,0,'ancestry'); }; 
       for (let result of results) {
          for (let data of result.results) {
-            ary.push([
+            let values = [
                data.id||'',
                data.name||'',
                (!data.preferred_common_name)?'':(data.preferred_common_name.search(',')===-1)?data.preferred_common_name:'"'+data.preferred_common_name+'"',
@@ -110,7 +114,9 @@ function fexport(count=0) {
                data.extinct,
                (data.parent_id!=null)?data.parent_id:'',
                data.observations_count,
-            ]);
+            ];
+            if (p_options.includes('ancestry')) { values.splice(8,0,data.ancestor_ids.join('/')||''); };
+            ary.push(values);
          };
       };
       // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
@@ -164,6 +170,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Taxon Schemes'},
          {classList:'tar',innerText:'Observations'},
       ];
+      if (p_options.includes('ancestry')) { labels.splice(11,0,{innerText:'Ancestry'}); };
       faddelems('th',hrow,labels);
 
       let tbody = faddelem('tbody',table);
@@ -190,6 +197,7 @@ function fresults(xobj) {
             {classList:'tar',innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id+'/schemes',fcomnum(rec.taxon_schemes_count))},
             {classList:'tar',innerHTML:furl('https://www.inaturalist.org/observations?taxon_id='+rec.id,fcomnum(rec.observations_count))},
          ];
+         if (p_options.includes('ancestry')) { values.splice(11,0,{innerHTML:rec.ancestor_ids.map(function(e){return furl('http://www.inaturalist.org/taxa/'+e,e)}).join('/')||''}); };
          faddelems('td',brow,values);
       };
 
@@ -217,7 +225,8 @@ if (winurlsearchstr==='') {
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?q=dracopis&is_active=any&per_page=500'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?q=dracopis&is_active=any&per_page=500'))+' in your browser.'},
       {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
-      {innerHTML:'Also note that is_active=any is undocumented, but that is the thing to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
+      {innerHTML:'Also note that &is_active=any is undocumented, but that is the parameter to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
+      {innerHTML:'You can also add &options=ancestry to the URL parameter list to include a column with taxon ancestry in the results.'},
    ];
    faddelems('p',document.body,instructions);
 }
