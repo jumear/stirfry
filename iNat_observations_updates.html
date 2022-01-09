@@ -398,7 +398,7 @@ faddelem('p',divauth,{innerHTML:'This page gets data primarily from the '+apiref
 let pForm = faddelem('form',document.body);
 faddelem('h3',pForm,{innerText:'Filter Parameters'});
 let pTable = faddelem('div',pForm,{id:'paramDiv',style:{display:'table'}});
-let input_per_page = faddelem('input',faddprow(pTable,'per page','input_per_page'),{id:'input_per_page',type:'number',min:1,max:200,step:1,value:100});
+let input_per_page = faddelem('input',faddprow(pTable,'per page','input_per_page'),{id:'input_per_page',type:'number',min:1,max:200,step:1,value:30});
 let input_page = faddelem('input',faddprow(pTable,'page','input_page'),{id:'input_page',type:'number',min:1,max:50,step:1,value:1});
 let input_viewed = faddelem('select',faddprow(pTable,'viewed','input_viewed'),{id:'input_viewed',type:'text'});
 faddelem('option',input_viewed,{innerText:'',value:''});
