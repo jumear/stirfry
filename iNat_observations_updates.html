@@ -266,7 +266,7 @@ async function fresults(xobj) {
       // get and display additional information from associated observations
       // also try to establish a minimum width for the comment column
       if (obsIDs.length>0) {
-         await ffetch('https://api.inaturalist.org/v1/observations/'+obsIDs+'&per_page='+obsIDs.length)
+         await ffetch('https://api.inaturalist.org/v1/observations/'+obsIDs+'?per_page='+obsIDs.length)
          .then(obsdata=>{
             let table = document.getElementById('main');
             let tbody = table.children[1];
