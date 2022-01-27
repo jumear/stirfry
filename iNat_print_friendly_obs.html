@@ -126,6 +126,7 @@ function furl(url) { return '<a href="'+url+'">'+url+'</a>'; };
 function fphotourl(url) {
    var s = ftruncparam(url);
    s = s.replace('static.','www.');
+   s = s.replace('inaturalist-open-data.s3.amazonaws.com','www.inaturalist.org');
    s = s.substring(0,s.search('/small'));
    return s;
 };
