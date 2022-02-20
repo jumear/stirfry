@@ -3,8 +3,8 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
 <meta name="description" content="iNaturalist Identification Recent Taxa" />
-<meta name="viewport" content="width=device-width, minimum-scale=0.6">
 <title>iNaturalist Identification Recent Taxa</title>
 <style>
    :root {
@@ -24,20 +24,20 @@
    @media (prefers-color-scheme: dark) {
       :root {
          --color-base: black;
-         --color-alt: #111;
+         --color-alt: #171717;
          --color-brand: forestgreen;
          --color-text: #bababa;
          --color-text-invert: black;
          --color-text-link: cornflowerblue;
-         --color-border: #333;
-         --color-hover: #333;
+         --color-border: #444;
+         --color-hover: #444;
          --color-base-translucent: rgba(0,0,0,0.85);
       }
    }
    #main { width:100%; }
-   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:var(--color-border); border-spacing:0; border-collapse:collapse; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
    th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
-   tr { background:var(--color-alt); }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
    tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
@@ -46,10 +46,10 @@
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
    #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+   @media print { #nav { display:none; } } 
    .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
    .button { background:var(--color-alt); }
-   .button_inactive { background:var(--color-base); color:var(--color-border); }
-   .button_inactive:hover { background:var(--color-base); }
+   a.button_inactive { background:none; color:var(--color-border); }
    .bin_true { text-decoration: underline wavy rgba(34,139,34,0.35); }
    .bin_false { text-decoration: underline wavy rgba(178,34,34,0.35); }
 </style>
