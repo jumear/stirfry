@@ -7,25 +7,51 @@
 <meta name="description" content="iNaturalist API Get Observations" />
 <title>iNaturalist API Get Observations</title>
 <style>
-   html,body { font:14px Sans-Serif; }
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #111;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #333;
+         --color-hover: #333;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
    #main { width:100%; }
-   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
-   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
-   tr { background:whitesmoke; }
-   tr:nth-child(even) { background-color:white; }
+   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:var(--color-border); border-spacing:0; border-collapse:collapse; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tr { background:var(--color-alt); }
+   tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
-   a { text-decoration:none; color:royalblue; }
-   a:hover { background:lightgray; }
-   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
-   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
-   .button { background:whitesmoke; }
-   .button_inactive { background:white; color:lightgray; }
-   .button_inactive:hover { background:none; }
-   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
-   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+   .button { background:var(--color-alt); }
+   .button_inactive { background:var(--color-base); color:var(--color-border); }
+   .button_inactive:hover { background:var(--color-base); }
+   .bin_true { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_false { text-decoration: underline wavy rgba(178,34,34,0.35); }
 </style>
 </head>
 
@@ -182,7 +208,7 @@ function fresults(xobj) {
                {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.ancestor.length},
                {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.descendant.length},
                {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
-               {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:(idextra===null||idextra.obs_taxon_is_community)?'bin_1':'bin_0'},
+               {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:`bin_${(idextra===null||idextra.obs_taxon_is_community)}`},
             ];
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
