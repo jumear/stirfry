@@ -238,7 +238,7 @@ function fresults(xobj) {
       (page_prev===null)?faddelem('span',nav,{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}):faddelem('a',nav,{classList:'button',title:'previous page',id:'button_prev',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)});
       (page_next===null)?faddelem('span',nav,{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}):faddelem('a',nav,{classList:'button',title:'next page',id:'button_next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)});
       (page_curr>=page_max)?faddelem('span',nav,{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}):faddelem('a',nav,{classList:'button',title:'last page',id:'button_last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)});
-    }
+   }
    else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
 let apibase = 'https://api.inaturalist.org/v1/taxa';
