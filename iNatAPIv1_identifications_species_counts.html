@@ -49,7 +49,7 @@
    @media print { #nav { display:none; } } 
    .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
    .button { background:var(--color-alt); }
-   a.button_inactive { background:none; color:var(--color-border); }
+   .button_inactive { background:none; color:var(--color-border); }
 </style>
 </head>
 
@@ -142,13 +142,10 @@ function fresults(xobj) {
 
       // buttons to go to prev or next page
       let nav = faddelem('div',document.body,{id:'nav'});
-      let buttons = [
-         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)},
-         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)},
-         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)},
-         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)},
-      ];
-      faddelems('a',nav,buttons);
+      (page_curr<=1)?faddelem('span',nav,{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}):faddelem('a',nav,{classList:'button',title:'first page',id:'button_first',innerHTML:'&laquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,1)});
+      (page_prev===null)?faddelem('span',nav,{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}):faddelem('a',nav,{classList:'button',title:'previous page',id:'button_prev',innerHTML:'&#8249',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_prev)});
+      (page_next===null)?faddelem('span',nav,{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}):faddelem('a',nav,{classList:'button',title:'next page',id:'button_next',innerHTML:'&#8250',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_next)});
+      (page_curr>=page_max)?faddelem('span',nav,{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}):faddelem('a',nav,{classList:'button',title:'last page',id:'button_last',innerHTML:'&raquo',href:fpageurl(winurlexsearchstr,winurlparams,per_page,page_max)});
    }
    else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
