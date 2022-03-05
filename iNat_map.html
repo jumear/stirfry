@@ -683,6 +683,9 @@ else {
    var l_inat_obs_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{minZoom:2,maxZoom:9,attribution:inat_grid.attribution});
    var g_inat_obs = L.layerGroup([l_inat_obs_grid,l_inat_obs_points]);
 
+   // iNat Observation Layer mods
+   var l_inat_heat_mod_transparent = L.tileLayer.styleFilter(inat_heat.url+'?'+winurlparams,{minZoom:0, maxZoom:20, attribution:inat_heat.attribution, filter:'opacity(50%)'});
+
    // iNat UTFGrid Selection
    // (hover to see selected area, and click to view selected observation)
    async function fpopup(obs) {
@@ -900,6 +903,7 @@ else {
       "iNaturalist Place": l_inat_place,
 //      "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
+      "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
 //      "iNaturalist Observations Circles": l_inat_circles,
       "iNaturalist Observations Grid": l_inat_grid,
       "iNaturalist Observations Points": l_inat_points,
