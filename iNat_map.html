@@ -673,13 +673,18 @@ else {
    let inat_heat = {url:inat_urlbase+'heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
 //   let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
 //   var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams,{minZoom:2, maxZoom:20, attribution:inat_circles.attribution});
-   var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams,{minZoom:2, maxZoom:20, attribution:inat_heat.attribution});
+   var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams,{minZoom:0, maxZoom:20, attribution:inat_heat.attribution});
 //   var l_gbif = L.tileLayer(gbif_density_point_py.url,{minZoom:2, maxZoom:20, attribution:gbif_density_point_py.attribution});
    let inat_points = {url:inat_urlbase+'points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'};
    let inat_grid = {url:inat_urlbase+'grid/{z}/{x}/{y}.png',description:'iNaturalist Observations (Grid)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist observation data</a>'};
-   var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{minZoom:10,maxZoom:20, attribution:inat_points.attribution});
-   var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{minZoom:2,maxZoom:9,attribution:inat_grid.attribution});
-   var g_inat_obs = L.layerGroup([l_inat_grid,l_inat_points]);
+   var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams,{minZoom:0,maxZoom:20, attribution:inat_points.attribution});
+   var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{minZoom:0,maxZoom:20,attribution:inat_grid.attribution});
+   var l_inat_obs_points = L.tileLayer(inat_points.url+'?'+winurlparams,{minZoom:10,maxZoom:20, attribution:inat_points.attribution});
+   var l_inat_obs_grid = L.tileLayer(inat_grid.url+'?'+winurlparams,{minZoom:2,maxZoom:9,attribution:inat_grid.attribution});
+   var g_inat_obs = L.layerGroup([l_inat_obs_grid,l_inat_obs_points]);
+
+   // iNat Observation Layer mods
+   var l_inat_heat_mod_transparent = L.tileLayer.styleFilter(inat_heat.url+'?'+winurlparams,{minZoom:0, maxZoom:20, attribution:inat_heat.attribution, filter:'opacity(50%)'});
 
    // iNat UTFGrid Selection
    // (hover to see selected area, and click to view selected observation)
@@ -898,9 +903,10 @@ else {
       "iNaturalist Place": l_inat_place,
 //      "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
+      "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
 //      "iNaturalist Observations Circles": l_inat_circles,
-//      "iNaturalist Observations Grid": l_inat_grid,
-//      "iNaturalist Observations Points": l_inat_points,
+      "iNaturalist Observations Grid": l_inat_grid,
+      "iNaturalist Observations Points": l_inat_points,
       "iNaturalist Observations":g_inat_obs,
       "iNaturalist Obs Active Interaction":g_utfgdm_sel,
       "Debug Grid":l_debug,
