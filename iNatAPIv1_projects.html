@@ -97,7 +97,6 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    let url_page = params.get('page');
    (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
    (url_page===null) ? params.append('page',page) : params.set('page',page);
-   if (p_options && p_options.length>0) { params.append('options',p_options); };
    return urlbase+'?'+params;
 };
 function fpageurlplusorderbyid(urlbase,urlparams,per_page,page) {
