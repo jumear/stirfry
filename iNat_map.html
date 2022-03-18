@@ -608,9 +608,9 @@ var taxon_id = winurlparams.get('taxon_id');
 taxon_id = (taxon_id===null?null:taxon_id.split(',')[0]);
 var place_id = winurlparams.get('place_id');
 place_id = (place_id===null?null:place_id.split(',')[0]);
-var centerlat = winurlparams.get('centerlat') || 0;
-var centerlng = winurlparams.get('centerlng') || 0;
-var defaultzoom = winurlparams.get('defaultzoom') || 2;
+var centerlat = winurlparams.get('centerlat');
+var centerlng = winurlparams.get('centerlng');
+var defaultzoom = winurlparams.get('defaultzoom');
 var showtaxonplace = winurlparams.get('showtaxonplace') || 'false';
 var showtaxonrange = winurlparams.get('showtaxonrange') || 'false';
 var showplace = winurlparams.get('showplace') || 'false';
@@ -688,7 +688,7 @@ else {
 
    // iNat UTFGrid Selection
    // (hover to see selected area, and click to view selected observation)
-   async function fpopup(obs) {
+   async function fpopup(obs,count) {
       var s = (obs.photos.length==0) ? '[No Photo]' : '<img src="'+obs.photos[0].url+'" />';
       s += (obs.photos.length>1) ? ' ['+obs.photos.length+']' : '';
       s += '<br />observation #: <a target="_blank" href="'+obs.uri+'">'+obs.id+'</a> (grade: '+obs.quality_grade+')';
@@ -711,6 +711,10 @@ else {
 //      if (obs.description==null) {}
 //      else if (obs.description.length < 200) {s += '<br />'+obs.description }
 //      else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
+      if (count>1) {
+         s += '<hr />'
+         s += `This marker also denotes ${count-1} older observation${(count>2)?'s':''}.`
+      };
       L.popup().setLatLng([obs.geojson.coordinates[1],obs.geojson.coordinates[0]])
          .setContent(s).openOn(mymap);
    };
@@ -724,14 +728,11 @@ else {
    });
    u_inat_points.on("click", function(e) { // "mouseover" and "mouseout" events not used here
       if (e.data) {
-         corslite(inat_urlbase+'observations/'+e.data.id, function(err, response) {
-            if (err) {
-               self.fire('error', {error: err});
-               return;
-            };
-            var obsdata = JSON.parse(response.responseText);
-            fpopup(obsdata.results[0]);
-          }, true);
+         Promise.all([
+            ffetch(inat_urlbase+'observations/'+e.data.id),
+            Promise.resolve(e.data.cellCount)
+         ])
+         .then ((data) => { fpopup(data[0].results[0],data[1]); });
       };
    });
 
@@ -744,14 +745,11 @@ else {
    });
    u_inat_grid.on("click", function(e) { // "mouseover" and "mouseout" events not used here
       if (e.data) {
-         corslite(inat_urlbase+'observations/'+e.data.id, function(err, response) {
-            if (err) {
-               self.fire('error', {error: err});
-               return;
-            };
-            var obsdata = JSON.parse(response.responseText);
-            fpopup(obsdata.results[0]);
-          }, true);
+         Promise.all([
+            ffetch(inat_urlbase+'observations/'+e.data.id),
+            Promise.resolve(e.data.cellCount)
+         ])
+         .then ((data) => { fpopup(data[0].results[0],data[1]); });
       };
    });
 
@@ -846,24 +844,6 @@ else {
       defaultlayers.push(g_utfgdm_sel);
    };
 
-   // create map, and set default center coordinates, zoom level, and layers
-   var mymap = L.map('mapid', {
-      center: [centerlat,centerlng],
-      zoom: defaultzoom,
-      layers: defaultlayers,
-      doubleClickZoom: false
-   });
-
-   // set map extent based on coverage of observations
-   if (!centerlat  && !centerlng) {
-      ffetch(inat_urlbase+'observations?return_bounds=true&per_page=0&'+winurlparams)
-      .then((data) => {
-         var bbox = data.total_bounds;
-         var bounds = [[bbox.nelat,(bbox.swlng<bbox.nelng?bbox.nelng:bbox.nelng+360)],[bbox.swlat,bbox.swlng]];
-         var padding = {padding:[5,5]};
-         mymap.fitBounds(bounds,padding);
-      });
-   };
 
    // define available basemaps (can view only one at a time)
    var basemaps = {
@@ -919,10 +899,30 @@ else {
       delete overlaymaps["iNaturalist Place"];
    };
 
-   // add a layer selector control and scale bar
-   L.control.layers(basemaps, overlaymaps).addTo(mymap);
-   L.control.scale().addTo(mymap);
-
+   var mymap;
+   // if centerlat, centerlng, or defaultzoom are specified, then use that user-specified value
+   // otherwise, set map extent based on coverage of observations
+   let prom = (centerlat===null && centerlng===null && defaultzoom===null) ? ffetch(inat_urlbase+'observations?return_bounds=true&per_page=0&'+winurlparams) : Promise.resolve(null);
+   prom.then((data) => {
+      return data?.total_bounds;
+   })
+   .then((bbox) => {
+      // create map, and set default center coordinates, zoom level, and layers
+      mymap = L.map('mapid', {
+         center: [centerlat||0,centerlng||0], // default to lat 0, long 0
+         zoom: defaultzoom??2, // iNat defaults to zoom level 2
+         layers: defaultlayers,
+         doubleClickZoom: false
+      });
+      if (bbox) {
+         var bounds = [[bbox.nelat,(bbox.swlng<bbox.nelng?bbox.nelng:bbox.nelng+360)],[bbox.swlat,bbox.swlng]];
+         var padding = {padding:[5,5]};
+         mymap.fitBounds(bounds,padding);
+      };
+      // add a layer selector control and scale bar
+      L.control.layers(basemaps, overlaymaps).addTo(mymap);
+      L.control.scale().addTo(mymap);
+   });
 };
 
 </script>
