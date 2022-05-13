@@ -63,7 +63,7 @@ function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattribute
 function fresults(xobj) {
    let results = xobj.results;
    let robj = results[Object.keys(results)[0]];
-   if (!robj || !robj[Object.keys(robj)[0]]) {
+   if (!robj || robj[Object.keys(robj)[0]] == null ) {
       faddelem('p',document.body,{innerHTML:'No results returned.'});
       return false;
    };
