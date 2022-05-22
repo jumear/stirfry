@@ -705,8 +705,14 @@ else {
                return data.USGS_Elevation_Point_Query_Service.Elevation_Query;
             });
          s += '<br />elevation: '+(((elevation?elevation.Elevation:-1000000)<=-1000000)?'[Unknown]':(fround(elevation.Elevation,1)+'ft, '+ fround(elevation.Elevation*0.3048,1) + 'm ('+elevation.Data_Source+')'));
-      }
-      else if (view==='ecolandunit') {
+      };
+      s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
+      s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
+      s += '<br />last updated: '+fdate(obs.updated_at);
+//      if (obs.description==null) {}
+//      else if (obs.description.length < 200) {s += '<br />'+obs.description }
+//      else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
+      if (view==='ecolandunit') {
          function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); }; 
          let mapExtent = mymap.getBounds();
          let pointXY = latlngtoxy(L.latLng(obs.geojson.coordinates[1],obs.geojson.coordinates[0]));
@@ -715,18 +721,19 @@ else {
             .then((data) => {
                return data.results[0].attributes;
             });
-         s += '<br />ELU Site: ' + (ecoludetails?.ELU_Site ?? 'N/A');
+         s += '<hr />'
+         s += 'Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A');
          s += '<br />ELU Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
          s += '<br />ELU Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
          s += '<br />ELU Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
          s += '<br />ELU Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
+         s += '<hr />'
+         s += 'Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A');
+         s += '<br />EF Biocolimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
+         s += '<br />EF Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
+         s += '<br />EF Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
+         s += '<br />EF Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
       };
-      s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
-      s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
-      s += '<br />last updated: '+fdate(obs.updated_at);
-//      if (obs.description==null) {}
-//      else if (obs.description.length < 200) {s += '<br />'+obs.description }
-//      else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
       if (count>1) {
          s += '<hr />'
          s += `This marker also denotes ${count-1} older observation${(count>2)?'s':''}.`
