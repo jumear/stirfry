@@ -663,7 +663,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. So observations outside the USA will not return an elevation. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include USGS Ecological Land Unit information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with the USGS imagery + topo basemap by default, and the info pop-ups will include USGS Ecological Land Unit information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
 }
 else {
@@ -853,7 +853,8 @@ else {
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
 
-   var defaultlayers = (['elevation','ecolandunit'].includes(view)) ? [l_usgs_topo] 
+   var defaultlayers = (view==='elevation') ? [l_usgs_topo]
+      : (view==='ecolandunit') ? [l_usgs_imgtopo]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
       : [l_stamen_tonerlite_mod_dark50];
    if (taxon_id!==null) {
