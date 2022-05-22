@@ -721,18 +721,24 @@ else {
             .then((data) => {
                return data.results[0].attributes;
             });
-         s += '<hr />'
-         s += 'Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A');
-         s += '<br />ELU Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
-         s += '<br />ELU Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
-         s += '<br />ELU Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
-         s += '<br />ELU Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
-         s += '<hr />'
-         s += 'Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A');
-         s += '<br />EF Biocolimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
-         s += '<br />EF Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
-         s += '<br />EF Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
-         s += '<br />EF Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
+         s += '<hr />Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A');
+         s += '<hr />Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A');
+/*
+         s += '<details>'
+         s += '<summary>Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A') + '</summary>';
+         s += '- Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
+         s += '</details>';
+         s += '<details>';
+         s += '<summary>Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A') + '</summary>';
+         s += '- Biocolimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
+         s += '</details>';
+*/
       };
       if (count>1) {
          s += '<hr />'
