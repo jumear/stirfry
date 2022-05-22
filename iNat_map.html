@@ -661,9 +661,10 @@ if (winurlparams=="") {
    faddelem('h1',div,null,null,'Map of iNaturalist Observations');
    faddelem('p',div,null,null,'This page displays a map of iNaturalist observations. Clicking on any observation marker opens a pop-up window which provides basic details of the observation');
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
-   faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).')
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. So observations outside the USA will not return an elevation. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.')
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.')
+   faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. So observations outside the USA will not return an elevation. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include USGS Ecological Land Unit information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -704,6 +705,21 @@ else {
                return data.USGS_Elevation_Point_Query_Service.Elevation_Query;
             });
          s += '<br />elevation: '+(((elevation?elevation.Elevation:-1000000)<=-1000000)?'[Unknown]':(fround(elevation.Elevation,1)+'ft, '+ fround(elevation.Elevation*0.3048,1) + 'm ('+elevation.Data_Source+')'));
+      }
+      else if (view==='ecolandunit') {
+         function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); }; 
+         let mapExtent = mymap.getBounds();
+         let pointXY = latlngtoxy(L.latLng(obs.geojson.coordinates[1],obs.geojson.coordinates[0]));
+         var ecoluurl = `https://rmgsc.cr.usgs.gov/arcgis/rest/services/globalelus/MapServer/identify?geometry={"x":${pointXY.x},"y":${pointXY.y}}&geometryType=esriGeometryPoint&sr=102100&layers=all:4&tolerance=3&mapExtent=${latlngtoxy(mapExtent.getNorthWest()).x},${latlngtoxy(mapExtent.getNorthWest()).y},${latlngtoxy(mapExtent.getSouthEast()).x},${latlngtoxy(mapExtent.getSouthEast()).y}&imageDisplay=659,649,96&returnGeometry=false&returnZ=false&returnM=false&returnUnformattedValues=false&f=pjson`;
+         var ecoludetails = await ffetch(ecoluurl)
+            .then((data) => {
+               return data.results[0].attributes;
+            });
+         s += '<br />ELU Site: ' + (ecoludetails?.ELU_Site ?? 'N/A');
+         s += '<br />ELU Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
+         s += '<br />ELU Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
+         s += '<br />ELU Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
+         s += '<br />ELU Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
       };
       s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
       s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
@@ -826,7 +842,7 @@ else {
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
 
-   var defaultlayers = (view==='elevation') ? [l_usgs_topo] 
+   var defaultlayers = (['elevation','ecolandunit'].includes(view)) ? [l_usgs_topo] 
       : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
       : [l_stamen_tonerlite_mod_dark50];
    if (taxon_id!==null) {
