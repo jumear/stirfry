@@ -49,6 +49,44 @@ L.tileLayer.styleFilter = function (url, options) {
    return new L.TileLayer.StyleFilter(url, options);
 };
 
+// this gets USGS ELU map images in the form of tiles
+L.TileLayer.EcoLandUnit = L.TileLayer.extend({
+   intialize: function (url, options) {
+      L.TileLayer.prototype.initialize.call(this, url, options);
+   },
+   getTileUrl: function (coords) {
+      let mMax = 20037508.3428;
+      var data = {
+         //r: Browser.retina ? '@2x' : '',
+         //s: this._getSubdomain(coords),
+         x: coords.x,
+         y: coords.y,
+         z: this._getZoomForUrl()
+      };
+      let mTile = 2*mMax/(Math.pow(2,data.z));
+      let bb = [
+         data.x*mTile-mMax,
+         -(data.y+1)*mTile+mMax,
+         (data.x+1)*mTile-mMax,
+         -data.y*mTile+mMax,
+      ];
+      data['p'] = `?bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}&bboxSR=102100&imageSR=102100&size=256,256&dpi=120&format=png32&transparent=true&layers=show:0&f=image`;
+      return this._url + data.p;
+      //return Util.template(this._url, Util.extend(data, this.options));
+   },
+   styleFilter: function () {
+      var filters = this.options.filter || '';
+      return filters;
+   },
+   _initContainer: function () {
+      var tile = L.TileLayer.prototype._initContainer.call(this);
+      this._container.style.filter = this.styleFilter();
+   },
+});
+L.tileLayer.ecoLandUnit = function (url, options) {
+   return new L.TileLayer.EcoLandUnit(url, options);
+};
+
 /*
 https://github.com/mapbox/corslite
 BSD 2-Clause License
@@ -663,7 +701,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. So observations outside the USA will not return an elevation. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with the USGS imagery + topo basemap by default, and the info pop-ups will include USGS Ecological Land Unit information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
 }
 else {
@@ -713,7 +751,7 @@ else {
 //      else if (obs.description.length < 200) {s += '<br />'+obs.description }
 //      else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
       if (view==='ecolandunit') {
-         function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); }; 
+         function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); };
          let mapExtent = mymap.getBounds();
          let pointXY = latlngtoxy(L.latLng(obs.geojson.coordinates[1],obs.geojson.coordinates[0]));
          var ecoluurl = `https://rmgsc.cr.usgs.gov/arcgis/rest/services/globalelus/MapServer/identify?geometry={"x":${pointXY.x},"y":${pointXY.y}}&geometryType=esriGeometryPoint&sr=102100&layers=all:4&tolerance=3&mapExtent=${latlngtoxy(mapExtent.getNorthWest()).x},${latlngtoxy(mapExtent.getNorthWest()).y},${latlngtoxy(mapExtent.getSouthEast()).x},${latlngtoxy(mapExtent.getSouthEast()).y}&imageDisplay=659,649,96&returnGeometry=false&returnZ=false&returnM=false&returnUnformattedValues=false&f=pjson`;
@@ -732,7 +770,7 @@ else {
          s += '</details>';
          s += '<hr /><details>';
          s += '<summary>Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A') + '</summary>';
-         s += '- Biocolimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
+         s += '- Bioclimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
          s += '<br /> - Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
          s += '<br /> - Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
          s += '<br /> - Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
@@ -849,12 +887,13 @@ else {
    var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
    var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
    var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
+   var l_usgs_ecolandunit = L.tileLayer.ecoLandUnit('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
 
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
 
    var defaultlayers = (view==='elevation') ? [l_usgs_topo]
-      : (view==='ecolandunit') ? [l_usgs_imgtopo]
+      : (view==='ecolandunit') ? [l_stamen_tonerlite_mod_dark_with_purple,l_usgs_ecolandunit,l_stamen_tonerhybrid]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
       : [l_stamen_tonerlite_mod_dark50];
    if (taxon_id!==null) {
@@ -900,6 +939,7 @@ else {
 
    // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
    var overlaymaps = {
+      "USGS Ecological Land Units": l_usgs_ecolandunit,
       "USGS Hydro": l_usgs_hydro,
       "Stamen Terrain Lines": l_stamen_terrainlines,
       "Stamen Toner Lines": l_stamen_tonerlines,
