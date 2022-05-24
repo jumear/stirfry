@@ -754,7 +754,7 @@ else {
          function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); };
          let mapExtent = mymap.getBounds();
          let pointXY = latlngtoxy(L.latLng(obs.geojson.coordinates[1],obs.geojson.coordinates[0]));
-         var ecoluurl = `https://rmgsc.cr.usgs.gov/arcgis/rest/services/globalelus/MapServer/identify?geometry={"x":${pointXY.x},"y":${pointXY.y}}&geometryType=esriGeometryPoint&sr=102100&layers=all:4&tolerance=3&mapExtent=${latlngtoxy(mapExtent.getNorthWest()).x},${latlngtoxy(mapExtent.getNorthWest()).y},${latlngtoxy(mapExtent.getSouthEast()).x},${latlngtoxy(mapExtent.getSouthEast()).y}&imageDisplay=659,649,96&returnGeometry=false&returnZ=false&returnM=false&returnUnformattedValues=false&f=pjson`;
+         var ecoluurl = `https://rmgsc.cr.usgs.gov/arcgis/rest/services/globalelus/MapServer/identify?geometry={"x":${pointXY.x},"y":${pointXY.y}}&geometryType=esriGeometryPoint&sr=102100&layers=all:4&tolerance=3&mapExtent=${latlngtoxy(mapExtent.getNorthWest()).x},${latlngtoxy(mapExtent.getNorthWest()).y},${latlngtoxy(mapExtent.getSouthEast()).x},${latlngtoxy(mapExtent.getSouthEast()).y}&imageDisplay=1,1,96&returnGeometry=false&returnZ=false&returnM=false&returnUnformattedValues=false&f=pjson`;
          var ecoludetails = await ffetch(ecoluurl)
             .then((data) => {
                return data.results[0].attributes;
@@ -775,6 +775,27 @@ else {
          s += '<br /> - Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
          s += '<br /> - Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
          s += '</details>';
+
+         var ecosysdetails;
+         let contSets = ['US','SA','AF'];
+         for (let cont of contSets) {
+            var ecosysurl = `https://rmgsc.cr.usgs.gov/arcgis/rest/services/cont${cont}/MapServer/identify?geometry={"x":${pointXY.x},"y":${pointXY.y}}&geometryType=esriGeometryPoint&sr=102100&layers=all:0,1,2,3,4&tolerance=3&mapExtent=${latlngtoxy(mapExtent.getNorthWest()).x},${latlngtoxy(mapExtent.getNorthWest()).y},${latlngtoxy(mapExtent.getSouthEast()).x},${latlngtoxy(mapExtent.getSouthEast()).y}&imageDisplay=1,1,96&returnGeometry=false&returnZ=false&returnM=false&returnUnformattedValues=false&f=pjson`;
+            ecosysdetails = await ffetch(ecosysurl)
+               .then((data) => {
+                  return ((data.results?.length||0)===0) ? null : data.results;
+               });
+            if (ecosysdetails) { break; };
+         };
+         
+         if (ecosysdetails) {
+         s += '<hr /><details>';
+            s += '<summary>Ecosystem: ' + (ecosysdetails[0]?.attributes?.code_desc ?? 'N/A') + '</summary>';
+            s += '- Bioclimate: ' + (ecosysdetails[1].attributes?.code_desc ?? 'N/A');
+            s += '<br /> - Land Form: ' + (ecosysdetails[2]?.attributes?.code_desc ?? 'N/A');
+            s += '<br /> - Land Lithology: ' + (ecosysdetails[3]?.attributes?.code_desc ?? 'N/A');
+            if (ecosysdetails.length>4) {s += '<br /> - Topographic Position: ' + (ecosysdetails[4]?.attributes?.code_desc ?? 'N/A'); };
+            s += '</details>';
+         };
       };
       if (count>1) {
          s += '<hr />'
