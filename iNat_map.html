@@ -49,21 +49,10 @@ L.tileLayer.styleFilter = function (url, options) {
    return new L.TileLayer.StyleFilter(url, options);
 };
 
-// Used for getting USGS map images as tiles
-function tileBounds(data) {
-   let mMax = 20037508.3428;
-   let mTile = 2*mMax/(Math.pow(2,data.z));
-   let bounds = [
-      data.x*mTile-mMax,
-      -(data.y+1)*mTile+mMax,
-      (data.x+1)*mTile-mMax,
-      -data.y*mTile+mMax,
-   ];
-   return bounds;
-};
-
-// this gets USGS ELU map images in the form of tiles
-L.TileLayer.EcoLandUnit = L.TileLayer.extend({
+// this provides a way to get some USGS map images as tiles, as an alternative to WMS
+// primary use case is when the WMS Server doesn't respond very quickly
+// but this can also be used for other reasons, such as custom styling of the tiles
+L.TileLayer.USGS = L.TileLayer.extend({
    intialize: function (url, options) {
       L.TileLayer.prototype.initialize.call(this, url, options);
    },
@@ -75,8 +64,15 @@ L.TileLayer.EcoLandUnit = L.TileLayer.extend({
          y: coords.y,
          z: this._getZoomForUrl()
       };
-      let bb = tileBounds(data);
-      data['p'] = `?bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}&bboxSR=102100&imageSR=102100&size=256,256&dpi=120&format=png32&transparent=true&layers=show:0&f=image`;
+      let mMax = 20037508.3428;
+      let mTile = 2*mMax/(Math.pow(2,data.z));
+      let bb = [
+         data.x*mTile-mMax,
+         -(data.y+1)*mTile+mMax,
+         (data.x+1)*mTile-mMax,
+         -data.y*mTile+mMax,
+      ];
+      data['p'] = `&f=image&bboxSR=102100&imageSR=102100&size=${this._tileSize.x},${this._tileSize.y}&bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}`;
       return this._url + data.p;
       //return Util.template(this._url, Util.extend(data, this.options));
    },
@@ -89,41 +85,9 @@ L.TileLayer.EcoLandUnit = L.TileLayer.extend({
       this._container.style.filter = this.styleFilter();
    },
 });
-L.tileLayer.ecoLandUnit = function (url, options) {
-   return new L.TileLayer.EcoLandUnit(url, options);
+L.tileLayer.usgs = function (url, options) {
+   return new L.TileLayer.USGS(url, options);
 };
-
-// this gets USGS 3D Elevation Program (3DEP) images in the form of tiles
-L.TileLayer.Elevation = L.TileLayer.extend({
-   intialize: function (url, options) {
-      L.TileLayer.prototype.initialize.call(this, url, options);
-   },
-   getTileUrl: function (coords) {
-      var data = {
-         //r: Browser.retina ? '@2x' : '',
-         //s: this._getSubdomain(coords),
-         x: coords.x,
-         y: coords.y,
-         z: this._getZoomForUrl()
-      };
-      let bb = tileBounds(data);
-      data['p'] = `?f=image&format=png32&renderingRule={"rasterFunction":${this.options.rasterFunction}}&bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}&imageSR=102100&bboxSR=102100&size=256,256`;
-      return this._url + data.p;
-      //return Util.template(this._url, Util.extend(data, this.options));
-   },
-   styleFilter: function () {
-      var filters = this.options.filter || '';
-      return filters;
-   },
-   _initContainer: function () {
-      var tile = L.TileLayer.prototype._initContainer.call(this);
-      this._container.style.filter = this.styleFilter();
-   },
-});
-L.tileLayer.elevation = function (url, options) {
-   return new L.TileLayer.Elevation(url, options);
-};
-
 
 /*
 https://github.com/mapbox/corslite
@@ -948,16 +912,26 @@ else {
    var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
 
    // USGS Ecological Land Units (Worldwide coverage)
-   var l_usgs_ecolandunit = L.tileLayer.ecoLandUnit('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
+   // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
+   //var l_usgs_ecolandunit = L.tileLayer.wms('https://rmgsc.cr.usgs.gov/arcgis/services/globalelus/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', format:'image/png32', transparent:true, layers:'4'});
+   var l_usgs_ecolandunit = L.tileLayer.usgs('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
 
-   // USGS Elevation (US, Mexico, Canada)    
-   // go here for a list of available rasterFunctions: https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/rasterFunctionInfos
-   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
+   // USGS Elevation (US, Mexico, Canada)
+   // (Note: The WMS responds ok. So we don't need to use the /exportImage route to get tiled images.)
+   // var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
+   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?';
    var s_usgs_3dep_attribution = '<a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer">USGS 3D Elevation Program</a>';
-   var l_usgs_3dep_hillshade = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
-   var l_usgs_3dep_aspect = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
-   var l_usgs_3dep_slope = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
-   //var l_usgs_3dep_contours = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Contour 25'}); //possible values: 'Contour 25', 'Contour Smoothed 25' 
+   var l_usgs_3dep_hillshade = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   var l_usgs_3dep_aspect = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   var l_usgs_3dep_slope = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+
+   // USGS other overlays (US only)
+   // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
+   var s_usgs_overlay_attribution = '<a href="https://carto.nationalmap.gov/">USGS the National Map</a>'
+   //var l_usgs_3dep_contours = L.tileLayer.wms('https://carto.nationalmap.gov/arcgis/services/contours/MapServer/WMSServer?',{minZoom:8, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35', format:'image/png32', transparent:true});
+   //var l_usgs_3dep_transport = L.tileLayer.wms('https://carto.nationalmap.gov/arcgis/services/transportation/MapServer/WMSServer?',{minZoom:4, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38', format:'image/png32', transparent:true});
+   var l_usgs_3dep_contours = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/contours/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:1,2,3,4,5,6,7,8,10,11,12,13,15,16,17,18,21,22,25,26',{minZoom:8, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
+   // var l_usgs_3dep_transport = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/transportation/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38',{minZoom:4, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
 
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
@@ -980,7 +954,6 @@ else {
       defaultlayers.push(g_inat_obs);
       defaultlayers.push(g_utfgdm_sel);
    };
-
 
    // define available basemaps (can view only one at a time)
    var basemaps = {
@@ -1014,7 +987,8 @@ else {
    var overlaymaps = {
       "USGS Ecological Land Units": l_usgs_ecolandunit,
       "USGS Hydro": l_usgs_hydro,
-//      "USGS Contours": l_usgs_3dep_contours,
+      "USGS Contours (US only)": l_usgs_3dep_contours,
+      //"USGS Trasnportation": l_usgs_3dep_transport,
       "Stamen Terrain Lines": l_stamen_terrainlines,
       "Stamen Toner Lines": l_stamen_tonerlines,
       "Stamen Toner Hybrid": l_stamen_tonerhybrid,
