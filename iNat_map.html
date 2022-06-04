@@ -49,13 +49,25 @@ L.tileLayer.styleFilter = function (url, options) {
    return new L.TileLayer.StyleFilter(url, options);
 };
 
+// Used for getting USGS map images as tiles
+function tileBounds(data) {
+   let mMax = 20037508.3428;
+   let mTile = 2*mMax/(Math.pow(2,data.z));
+   let bounds = [
+      data.x*mTile-mMax,
+      -(data.y+1)*mTile+mMax,
+      (data.x+1)*mTile-mMax,
+      -data.y*mTile+mMax,
+   ];
+   return bounds;
+};
+
 // this gets USGS ELU map images in the form of tiles
 L.TileLayer.EcoLandUnit = L.TileLayer.extend({
    intialize: function (url, options) {
       L.TileLayer.prototype.initialize.call(this, url, options);
    },
    getTileUrl: function (coords) {
-      let mMax = 20037508.3428;
       var data = {
          //r: Browser.retina ? '@2x' : '',
          //s: this._getSubdomain(coords),
@@ -63,13 +75,7 @@ L.TileLayer.EcoLandUnit = L.TileLayer.extend({
          y: coords.y,
          z: this._getZoomForUrl()
       };
-      let mTile = 2*mMax/(Math.pow(2,data.z));
-      let bb = [
-         data.x*mTile-mMax,
-         -(data.y+1)*mTile+mMax,
-         (data.x+1)*mTile-mMax,
-         -data.y*mTile+mMax,
-      ];
+      let bb = tileBounds(data);
       data['p'] = `?bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}&bboxSR=102100&imageSR=102100&size=256,256&dpi=120&format=png32&transparent=true&layers=show:0&f=image`;
       return this._url + data.p;
       //return Util.template(this._url, Util.extend(data, this.options));
@@ -86,6 +92,38 @@ L.TileLayer.EcoLandUnit = L.TileLayer.extend({
 L.tileLayer.ecoLandUnit = function (url, options) {
    return new L.TileLayer.EcoLandUnit(url, options);
 };
+
+// this gets USGS 3D Elevation Program (3DEP) images in the form of tiles
+L.TileLayer.Elevation = L.TileLayer.extend({
+   intialize: function (url, options) {
+      L.TileLayer.prototype.initialize.call(this, url, options);
+   },
+   getTileUrl: function (coords) {
+      var data = {
+         //r: Browser.retina ? '@2x' : '',
+         //s: this._getSubdomain(coords),
+         x: coords.x,
+         y: coords.y,
+         z: this._getZoomForUrl()
+      };
+      let bb = tileBounds(data);
+      data['p'] = `?f=image&format=png32&renderingRule={"rasterFunction":${this.options.rasterFunction}}&bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}&imageSR=102100&bboxSR=102100&size=256,256`;
+      return this._url + data.p;
+      //return Util.template(this._url, Util.extend(data, this.options));
+   },
+   styleFilter: function () {
+      var filters = this.options.filter || '';
+      return filters;
+   },
+   _initContainer: function () {
+      var tile = L.TileLayer.prototype._initContainer.call(this);
+      this._container.style.filter = this.styleFilter();
+   },
+});
+L.tileLayer.elevation = function (url, options) {
+   return new L.TileLayer.Elevation(url, options);
+};
+
 
 /*
 https://github.com/mapbox/corslite
@@ -900,7 +938,7 @@ else {
    var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {minZoom:0, maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
    var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{minZoom:0, maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
 
-   // USGS maps (US only)
+   // USGS maps (US primarily)
    var s_usgs_urlbase = 'https://basemap.nationalmap.gov/arcgis/rest/services/'
    //var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data; Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model'});
    var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>'});
@@ -908,7 +946,18 @@ else {
    var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
    var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
    var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
+
+   // USGS Ecological Land Units (Worldwide coverage)
    var l_usgs_ecolandunit = L.tileLayer.ecoLandUnit('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
+
+   // USGS Elevation (US, Mexico, Canada)    
+   // go here for a list of available rasterFunctions: https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/rasterFunctionInfos
+   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
+   var s_usgs_3dep_attribution = '<a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer">USGS 3D Elevation Program</a>';
+   var l_usgs_3dep_hillshade = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   var l_usgs_3dep_aspect = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   var l_usgs_3dep_slope = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+   //var l_usgs_3dep_contours = L.tileLayer.elevation(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, filter:'opacity(100%)', rasterFunction:'Contour 25'}); //possible values: 'Contour 25', 'Contour Smoothed 25' 
 
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
@@ -956,12 +1005,16 @@ else {
       "USGS Topo": l_usgs_topo,
       "USGS Imagery + Topo": l_usgs_imgtopo,
       "USGS Relief": l_usgs_relief,
+      "USGS Hillshade (US, CA, MX)": l_usgs_3dep_hillshade,
+      "USGS Aspect (US, CA, MX)": l_usgs_3dep_aspect,
+      "USGS Slope (US, CA, MX)": l_usgs_3dep_slope,
    };
 
    // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
    var overlaymaps = {
       "USGS Ecological Land Units": l_usgs_ecolandunit,
       "USGS Hydro": l_usgs_hydro,
+//      "USGS Contours": l_usgs_3dep_contours,
       "Stamen Terrain Lines": l_stamen_terrainlines,
       "Stamen Toner Lines": l_stamen_tonerlines,
       "Stamen Toner Hybrid": l_stamen_tonerhybrid,
