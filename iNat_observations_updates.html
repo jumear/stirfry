@@ -3,34 +3,62 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
 <meta name="description" content="iNaturalist Observations Updates" />
-<meta name="viewport" content="width=device-width, minimum-scale=0.6">
 <title>iNaturalist Observations Updates</title>
 <style>
-   html,body { font:14px Sans-Serif; }
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-brand-accent: #ddffdd;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-brand-accent: #003300;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
    #main { width:100%; }
-   table, thead, tbody, tr, td, th { margin:0; padding:4px; border-width:1px 0px;border-style:solid; border-color:lightgray; border-spacing:0; border-collapse:collapse; }
-   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:forestgreen; color:white; text-align:left; vertical-align:bottom; }
-   tr { background:whitesmoke; }
-   tr:nth-child(even) { background-color:white; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+   tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
-   a { text-decoration:none; color:royalblue; }
-   a:hover { background:lightgray; }
-   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:rgba(255,255,255,0.85); width:188px; height:52px; border-radius:14px; }
-   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid lightgray; border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
-   .button { background:whitesmoke; }
-   .button_inactive { background:white; color:lightgray; }
-   .button_inactive:hover { background:none; }
-   .bin_1 { text-decoration: underline wavy rgba(34,139,34,0.35); }
-   .bin_0 { text-decoration: underline wavy rgba(178,34,34,0.35); }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+   @media print { #nav { display:none; } } 
+   .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+   .button { background:var(--color-alt); }
+   .button_inactive { background:none; color:var(--color-border); }
+   .bin_true { text-decoration: underline wavy rgba(34,139,34,0.35); }
+   .bin_false { text-decoration: underline wavy rgba(178,34,34,0.35); }
    #divresults { padding-top:12px; }
-   select { padding:2px 0px; }
-   form { background:#ddffdd; padding:5px; }
+   select { margin-bottom:1.5px; border-color:color:var(--color-border); border-style:solid; border-width:1px; padding:2px 0px; background:var(--color-base); color:var(--color-text); }
+   input { margin-bottom:1.5px; border-color:color:var(--color-border); border-style:solid; border-width:1px; background:var(--color-base); color:var(--color-text); }
+   form { background:var(--color-brand-accent); padding:5px; }
    h3 { margin:2px 0px 8px 0px; }
-   .minwidth {  }
 </style>
 
 <!-- This example app is registered as #658 in iNaturalist:
@@ -239,7 +267,7 @@ async function fresults(xobj) {
             //{innerText:rec.id},
             //{innerText:rec.notification},
             {innerText:fdate(rec.created_at)},
-            {innerText:rec.viewed,classList:(rec.viewed)?'bin_1':'bin_0'},
+            {innerText:rec.viewed,classList:(rec.viewed)?'bin_true':'bin_false'},
             {innerHTML:furltoblank(('https://www.inaturalist.org/'+(isID?'identifications/':'comments/')+rec.notifier_id),rec.notifier_type)},
             //{innerHTML:furltoblank(('https://www.inaturalist.org/'+(isID?'identifications/':'comments/')+rec.notifier_id),rec.notifier_id)},
             {innerText:fdate(isID?rec.identification.created_at:rec.comment.created_at)},
@@ -314,13 +342,10 @@ async function fresults(xobj) {
 
       // buttons to go to prev or next page
       let nav = faddelem('div',divresults,{id:'nav'});
-      let buttons = [
-         (page_curr<=1)?{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}:{classList:'button',title:'first page',innerHTML:'&laquo',href:'javascript:fgotopage(1);'},
-         (page_prev===null)?{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}:{classList:'button',title:'previous page',innerHTML:'&#8249',href:'javascript:fgotopage('+page_prev+');'},
-         (page_next===null)?{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}:{classList:'button',title:'next page',innerHTML:'&#8250',href:'javascript:fgotopage('+page_next+');'},
-         (page_curr>=page_max)?{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}:{classList:'button',title:'last page',innerHTML:'&raquo',href:'javascript:fgotopage('+page_max+');'},
-      ];
-      faddelems('a',nav,buttons);
+      (page_curr<=1)?faddelem('span',nav,{classList:'button_inactive',title:'already on first page',innerHTML:'&laquo'}):faddelem('a',nav,{classList:'button',title:'first page',innerHTML:'&laquo',href:'javascript:fgotopage(1);'});
+      (page_prev===null)?faddelem('span',nav,{classList:'button_inactive',title:'no previous page',innerHTML:'&#8249'}):faddelem('a',nav,{classList:'button',title:'previous page',innerHTML:'&#8249',href:'javascript:fgotopage('+page_prev+');'});
+      (page_next===null)?faddelem('span',nav,{classList:'button_inactive',title:'no next page',innerHTML:'&#8250'}):faddelem('a',nav,{classList:'button',title:'next page',innerHTML:'&#8250',href:'javascript:fgotopage('+page_next+');'});
+      (page_curr>=page_max)?faddelem('span',nav,{classList:'button_inactive',title:'already on last page',innerHTML:'&raquo'}):faddelem('a',nav,{classList:'button',title:'last page',innerHTML:'&raquo',href:'javascript:fgotopage('+page_max+');'});
    }
    else { faddelem('p',divresults,{innerText:'No results returned.'}); };
    button_get_data.disabled=false; // enable this button now that data retrieval is complete
@@ -392,7 +417,7 @@ faddelem('p',divauth,{innerText:'This page requires authorization to access your
 faddelem('a',divauth,{innerText:'Authorize!',id:'start',href:'#',style:{fontWeight:900,fontSize:'20px'}});
 faddelem('p',divauth,{innerText:'When you click above, the page will ping iNaturalist to check your identity and get access to your restricted data. If successful, the page will display your notifications. If you are not already signed into iNaturalist, you will be temporarily redirected to a page at iNaturalist to sign in.'});
 faddelem('p',divauth,{innerHTML:'The first time you go through this process, iNaturalist will ask you to authorize "'+furltoblank('https://www.inaturalist.org/oauth/applications/658','Notifications Web Viewer')+'" to access your restricted data. You may revoke authorization later from the Applications section of your iNaturalist Account Settings, if you like.'});
-faddelem('p',divauth,{innerHTML:'This page gets data primarily from the '+apiref+' API endpoint (and also gets a few additional data points for each observation). This means that only notifications related to identifications and comments from the last 3 months can be returned. Older notifications and notifications related to other activity like faves and mentions will not be included in these results.'});
+faddelem('p',divauth,{innerHTML:'This page gets data primarily from the '+apiref+' API endpoint (and also gets a few additional data points for each observation). This means that only notifications related to identifications and comments from the last 3 months can be returned. Mentions on observations you are not following can be returned only if you explicitly set observations_by = following (others). Older notifications and notifications related to other activity like faves will not be included in these results.'});
 
 // parameters input section
 let pForm = faddelem('form',document.body);
