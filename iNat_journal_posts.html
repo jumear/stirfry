@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist Journal Posts" />
+<title>iNaturalist Journal Posts</title>
+<style>
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
+   #main { width:100%; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+   tr:nth-child(even) { background:var(--color-base); }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let p_user_id = winurlparams.get('login');
+if (p_user_id===null) { p_user_id = winurlparams.get('user_id'); };
+let p_project_id = winurlparams.get('project_id');
+let p_options = winurlparams.get('options') || [];
+
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function fround(num,p=0) {
+   let n = num*1;
+   return n.toFixed(p); 
+};
+// functions to sort data in a table
+function fsort(columnNo,asc=true,blanksatend=true) {
+   let tb = document.getElementById('tbody');
+   let ary = Array.from(tb.children);
+   ary.sort(function(a, b) {
+      let val_a = a.children[columnNo].innerText;
+      let val_b = b.children[columnNo].innerText;
+      if (val_a===''&&val_b==='') { return 0; }
+      else if (val_a!==''&&val_b==='') { return blanksatend?-1:1; }
+      else if (val_b!==''&&val_a==='') { return blanksatend?1:-1; }
+      else if (!isNaN(val_a)&&val_b==='NaN') { return asc?1:-1; }
+      else if (!isNaN(val_b)&&val_a==='NaN') { return asc?-1:1; }
+      else if (isNaN(val_a-val_b)) { return (asc?1:-1) * (val_a>val_b?1:val_a<val_b?-1:0); }
+      else { return asc?(val_a-val_b):(val_b-val_a); };      
+   });
+   ary.forEach(function(ele) {
+      tb.appendChild(ele);
+   });
+};
+function frenum(columnNo=0) {
+   let tb = document.getElementById('tbody');
+   for (let r = 0, row; row = tb.rows[r]; r++) { row.children[columnNo].innerText = r+1; };
+};
+
+async function fresults(fetchurlbase) {
+   // table and headers
+   let table = faddelem('table',document.body,{id:'main'});
+   let thead = faddelem('thead',table);
+   let hrow = faddelem('tr',thead);
+   let labels = [
+      {innerText:'#'},
+      {innerText:'ID'},
+      {innerText:'Title'},
+      {innerText:'Published Date'},
+      {innerText:'Created Date'},
+      {innerText:'Updated Date'},
+      {innerText:'User Icon'},
+      {innerText:'User Login'},
+      {innerText:'Source Type'},
+      {innerText:'Source ID'},
+      {innerText:'Source Name'},
+   ];
+   if (!p_options.includes('nobody')) { labels.push({innerText:'Body'}); };
+   faddelems('th',hrow,labels);
+
+   // table body
+   let tbody = faddelem('tbody',table,{id:'tbody'});
+
+   // there shouldn't be that many posts. i'll set an arbitrary page limit here just in case something goes wrong.
+   let recnum = 0;
+   let page = 0;
+   let per_page = 200;
+   let maxpage = 15; 
+
+   while (page>=0 && page<maxpage) {
+      page++;
+      let fetchURL = fetchurlbase+'&per_page='+per_page+'&page='+page;
+      await fetch(fetchURL)
+      .then((response) => {
+         if (!response.ok) {
+            throw new Error(response.status+' ('+response.statusText+') returned from '+response.url);
+            page = -999;
+         };
+         return response.json();
+      })
+      .then((results) => {
+         if (results.length>0) {
+            // add table rows
+            for (let rec of results) {
+               recnum++;
+               let brow = faddelem('tr',tbody);
+               let values = [
+                  {innerText:recnum},
+                  {innerHTML:furl('https://www.inaturalist.org/posts/'+rec.id,rec.id)},
+                  {innerText:rec.title},
+                  {innerText:fdate(rec.published_at)},
+                  {innerText:fdate(rec.created_at)},
+                  {innerText:fdate(rec.updated_at)},
+                  {innerHTML:'<img class="icon" src="'+rec.user.user_icon_url+'" />'},
+                  {innerHTML:furl('https://www.inaturalist.org/users/'+rec.user.login,rec.user.login)},
+                  {innerText:rec.parent_type},
+                  {innerText:rec.parent_id},
+                  {innerText:rec.parent.name??''},
+               ];
+               if (!p_options.includes('nobody')) { values.push({innerText:rec.body}); };
+               faddelems('td',brow,values);
+            };
+         };
+         if (results.length<per_page) { page = -1; };
+      })
+      .catch((err) => {
+         console.error(err.message);
+         faddelem('p',document.body,null,null,'There was a problem retrieving journal posts. Error '+err.message+'.')
+      });
+   };
+   
+   // there's no count returned. so this is just a workaround to get a proper count for now.
+   let reccount = document.getElementById('reccount');
+   reccount.innerText = fcomnum(recnum);
+
+/*   
+   //sort by admin level, parent place id, place name, place id
+   let coloffset = (p_options.includes('map'))?1:0;
+   fsort(4+coloffset);
+   fsort(3+coloffset);
+   fsort(5+coloffset);
+   fsort(8+coloffset);
+   frenum();
+*/
+};
+
+faddelem('h1',document.body,{innerText:'iNaturalist Journal Posts'});
+if (p_user_id===null&&p_project_id===null) {
+   let instructions = [
+      {innerHTML:'This page lists journal posts for a single user OR project. It may be useful when you have a made a lot of journal posts and want to see them all on one page.'},
+      {innerHTML:'To use this page, add a user_id / login OR project_id parameter and value to the URL. For example, if you want to get posts for user loarie, then you would open '+furl(famp(winurlexsearchstr+'?login=loarie'))+' in your browser. If you input both a user_id and a project_id, the page will ignore the project_id parameter. If you input an invalid user_id or project_id, the page will attempt to display the official iNaturalist site posts. Note that when you search for posts by user_id, you will get back only personal journal posts, not project journal posts.'},
+      {innerHTML:'You can add a special &options=nobody parameter to exclude the body of the posts from the results. Just for simplicity, the body text returned by this page will show all the markup syntax rather than formatted text.'},
+   ];
+   faddelems('p',document.body,instructions);
+}
+else {
+   let apibase = 'https://api.inaturalist.org/v1/posts';
+   let apiurlparams = [];
+   if (p_user_id) { apiurlparams.push('login='+p_user_id); };
+   if (p_project_id) { apiurlparams.push('project_id='+p_project_id); };
+   let apiurl = apibase+'?'+apiurlparams.join('&');
+   faddelem('p',document.body,{innerHTML:'base API request URL: '+furl(apiurl)+'<br />'
+      +'total journal posts: <span id="reccount">0</span>'});
+   fresults(apiurl); 
+};
+</script>
+</body>
+
+</html>
