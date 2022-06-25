@@ -88,25 +88,6 @@ function fround(num,p=0) {
    let n = num*1;
    return n.toFixed(p); 
 };
-// functions to sort data in a table
-function fsort(columnNo,asc=true,blanksatend=true) {
-   let tb = document.getElementById('tbody');
-   let ary = Array.from(tb.children);
-   ary.sort(function(a, b) {
-      let val_a = a.children[columnNo].innerText;
-      let val_b = b.children[columnNo].innerText;
-      if (val_a===''&&val_b==='') { return 0; }
-      else if (val_a!==''&&val_b==='') { return blanksatend?-1:1; }
-      else if (val_b!==''&&val_a==='') { return blanksatend?1:-1; }
-      else if (!isNaN(val_a)&&val_b==='NaN') { return asc?1:-1; }
-      else if (!isNaN(val_b)&&val_a==='NaN') { return asc?-1:1; }
-      else if (isNaN(val_a-val_b)) { return (asc?1:-1) * (val_a>val_b?1:val_a<val_b?-1:0); }
-      else { return asc?(val_a-val_b):(val_b-val_a); };      
-   });
-   ary.forEach(function(ele) {
-      tb.appendChild(ele);
-   });
-};
 function frenum(columnNo=0) {
    let tb = document.getElementById('tbody');
    for (let r = 0, row; row = tb.rows[r]; r++) { row.children[columnNo].innerText = r+1; };
@@ -126,10 +107,14 @@ async function fresults(fetchurlbase) {
       {innerText:'Updated Date'},
       {innerText:'User Icon'},
       {innerText:'User Login'},
-      {innerText:'Source Type'},
-      {innerText:'Source ID'},
-      {innerText:'Source Name'},
    ];
+   if (!p_options.includes('nosource')) {
+      labels = [...labels,
+         {innerText:'Source Type'},
+         {innerText:'Source ID'},
+         {innerText:'Source Name'},
+      ];
+   };
    if (!p_options.includes('nobody')) { labels.push({innerText:'Body'}); };
    faddelems('th',hrow,labels);
 
@@ -168,10 +153,14 @@ async function fresults(fetchurlbase) {
                   {innerText:fdate(rec.updated_at)},
                   {innerHTML:'<img class="icon" src="'+rec.user.user_icon_url+'" />'},
                   {innerHTML:furl('https://www.inaturalist.org/users/'+rec.user.login,rec.user.login)},
-                  {innerText:rec.parent_type},
-                  {innerText:rec.parent_id},
-                  {innerText:rec.parent.name??''},
                ];
+               if (!p_options.includes('nosource')) {
+                  values = [...values,
+                     {innerText:rec.parent_type},
+                     {innerText:rec.parent_id},
+                     {innerText:rec.parent.name??rec.parent.title??''},
+                  ];
+               };
                if (!p_options.includes('nobody')) { values.push({innerText:rec.body}); };
                faddelems('td',brow,values);
             };
@@ -184,19 +173,9 @@ async function fresults(fetchurlbase) {
       });
    };
    
-   // there's no count returned. so this is just a workaround to get a proper count for now.
+   // there's no total count returned from the API. so this is just a workaround to get a proper count for now.
    let reccount = document.getElementById('reccount');
    reccount.innerText = fcomnum(recnum);
-
-/*   
-   //sort by admin level, parent place id, place name, place id
-   let coloffset = (p_options.includes('map'))?1:0;
-   fsort(4+coloffset);
-   fsort(3+coloffset);
-   fsort(5+coloffset);
-   fsort(8+coloffset);
-   frenum();
-*/
 };
 
 faddelem('h1',document.body,{innerText:'iNaturalist Journal Posts'});
@@ -204,7 +183,7 @@ if (p_user_id===null&&p_project_id===null) {
    let instructions = [
       {innerHTML:'This page lists journal posts for a single user OR project. It may be useful when you have a made a lot of journal posts and want to see them all on one page.'},
       {innerHTML:'To use this page, add a user_id / login OR project_id parameter and value to the URL. For example, if you want to get posts for user loarie, then you would open '+furl(famp(winurlexsearchstr+'?login=loarie'))+' in your browser. If you input both a user_id and a project_id, the page will ignore the project_id parameter. If you input an invalid user_id or project_id, the page will attempt to display the official iNaturalist site posts. Note that when you search for posts by user_id, you will get back only personal journal posts, not project journal posts.'},
-      {innerHTML:'You can add a special &options=nobody parameter to exclude the body of the posts from the results. Just for simplicity, the body text returned by this page will show all the markup syntax rather than formatted text.'},
+      {innerHTML:'A special &options parameter allows you to exclude the source and body columns from the results. To exclude source columns, use &options=nosource. To exclude body, use &options=nobody. To exclude source and body, use &options=nobody,nosource. Just for simplicity, the body text returned by this page will show all the markup syntax rather than formatted text.'},
    ];
    faddelems('p',document.body,instructions);
 }
