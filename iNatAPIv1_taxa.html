@@ -41,6 +41,7 @@
    tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
+   .icon_big { height:250px; width:250px; border-radius:10%; object-fit: cover; object-position: center; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
    a { text-decoration:none; color:var(--color-text-link); }
@@ -193,7 +194,7 @@ function fresults(xobj) {
          {innerText:'Active'},
          {innerText:'Extinct'},
          {innerText:'Parent ID'},
-         {innerText:'Synonymous ID'},
+         {innerText:'Synonym ID'},
          {innerText:'Atlas ID'},
          {classList:'tar',innerText:'Unresolved Flags'},
          {classList:'tar',innerText:'Resolved Flags'},
@@ -211,7 +212,9 @@ function fresults(xobj) {
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
-            {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
+            (p_options.includes('bigger_image'))
+               ? {innerHTML:'<img class="icon_big" src="'+((rec.default_photo)?rec.default_photo.medium_url:'')+'" />'}
+               : {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
             {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
             {innerText:rec.preferred_common_name||''},
             {innerText:rec.rank||''},
@@ -255,7 +258,7 @@ if (winurlsearchstr==='') {
       {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
       {innerHTML:'Also note that &is_active=any is undocumented, but that is the parameter to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
       {innerHTML:'The parameter &order_by is also undocumented, but if it is not specified, the API will by default sort based on observation count, which provides inconsistent ordering (in cases where observation count is the same for multiple taxa). To ensure you see all taxa across multiple pages, it is recommended that you specify &order_by=id. (The export function on this page will do this by default.) Another possible value is &order_by=created_at, but that could result in inconsistent ordering, too.'},
-      {innerHTML:'You can also add &options=ancestry to the URL parameter list to include a column with taxon ancestry in the results.'},
+      {innerHTML:'You can also invoke a couple of extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. To invoke both options, use a comma-separated value list for the parameter (&options=ancestry,bigger_image).'},
    ];
    faddelems('p',document.body,instructions);
 }
