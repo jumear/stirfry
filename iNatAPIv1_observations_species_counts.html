@@ -41,6 +41,7 @@
    tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
+   .icon_big { height:250px; width:250px; border-radius:10%; object-fit: cover; object-position: center; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
    a { text-decoration:none; color:var(--color-text-link); }
@@ -141,7 +142,9 @@ function fresults(xobj) {
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.taxon.id,rec.taxon.id)},
-            {innerHTML:'<img class="icon" src="'+(rec.taxon.default_photo?rec.taxon.default_photo.square_url:'')+'" />'},
+            (p_options.includes('bigger_image'))
+               ? {innerHTML:'<img class="icon_big" src="'+(rec.taxon.default_photo?rec.taxon.default_photo.medium_url:'')+'" />'}
+               : {innerHTML:'<img class="icon" src="'+(rec.taxon.default_photo?rec.taxon.default_photo.square_url:'')+'" />'},
             {innerText:rec.taxon.name||''},
             {innerText:rec.taxon.preferred_common_name||''},
             {innerText:rec.taxon.rank||''},
@@ -173,7 +176,7 @@ if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob'))+' in your browser.'},
-      {innerHTML:'You can also add &options=ancestry to the URL parameter list to include a column with taxon ancestry in the results.'},
+      {innerHTML:'You can also invoke a couple of extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. To invoke both options, use a comma-separated value list for the parameter (&options=ancestry,bigger_image).'},
       {innerHTML:'Note that the counts returned by this page vs the '+furl('https://www.inaturalist.org/observations','Explore page')+' in iNaturalist may not tie exactly because the Explore page will always filter out spam observations. Also, if you filter for a subspecies taxon on this page, the taxon shown here will be the species level, but the count will reflect the subspecies count, and the link to the Explore page will take you to the species level.'},
    ];
    faddelems('p',document.body,instructions);

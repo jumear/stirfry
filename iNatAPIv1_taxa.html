@@ -41,7 +41,7 @@
    tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
    .icon { height:48px; width:48px; border-radius:50%; }
-   .bigger_image { height:250px; width:250px; border-radius:10%; object-fit: cover; object-position: center; }
+   .icon_big { height:250px; width:250px; border-radius:10%; object-fit: cover; object-position: center; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
    a { text-decoration:none; color:var(--color-text-link); }
@@ -213,7 +213,7 @@ function fresults(xobj) {
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/taxa/'+rec.id,rec.id)},
             (p_options.includes('bigger_image'))
-               ? {innerHTML:'<img class="bigger_image" src="'+((rec.default_photo)?rec.default_photo.medium_url:'')+'" />'}
+               ? {innerHTML:'<img class="icon_big" src="'+((rec.default_photo)?rec.default_photo.medium_url:'')+'" />'}
                : {innerHTML:'<img class="icon" src="'+((rec.default_photo)?rec.default_photo.square_url:'')+'" />'},
             {innerHTML:!rec.name?'':rec.wikipedia_url?furl(rec.wikipedia_url,rec.name):rec.name},
             {innerText:rec.preferred_common_name||''},
