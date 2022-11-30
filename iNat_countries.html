@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, minimum-scale=1.0" />
 <meta name="description" content="iNaturalist Countries" />
 <title>iNaturalist Countries</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
 <style>
    :root {
       background: var(--color-base);
@@ -47,6 +48,7 @@
    a:hover { background:var(--color-hover); }
    .button_more_less { margin-left:5px; color:var(--color-text-link); background:var(--color-base); border:2px solid var(--color-border); border-radius:3px; }
    .button_more_less:hover { background:var(--color-hover); }
+   .flag { font-family: 'Noto Color Emoji', sans-serif; }
 </style>
 </head>
 
@@ -103,6 +105,8 @@ function faddelem(etype,eparent=null,eattributes={}) {
    return eobj;
 };
 function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+const getFlagEmoji = countryCode=>String.fromCodePoint(...[...countryCode.toUpperCase()].map(x=>127397+x.charCodeAt()));
+
 
 function fgetname(ary,key) {
    let obj = ary.find(o=>o.id===key);
@@ -242,6 +246,7 @@ Promise.all(promiseary).then(data=>{
       {innerText:'#'},
       {innerText:'ID'},
       {innerText:'Alpha-2 Code'},
+      {innerText:'Flag'},
       {innerText:'Name'},
 //      {innerText:'display_name'},
 //      {innerText:'slug'},
@@ -281,6 +286,7 @@ Promise.all(promiseary).then(data=>{
          {innerText:i+1},
          {innerHTML:furl('https://www.inaturalist.org/places/'+rec.id,rec.id)},
          {innerHTML:(rec.code==null)?'':furl('https://www.iso.org/obp/ui/#iso:code:3166:'+rec.code,rec.code)},
+         {classList:'flag',innerText:rec.code?getFlagEmoji(rec.code):''},
          {innerHTML:furl('https://www.inaturalist.org/observations?place_id='+rec.id,rec.name)},
 //         {innerText:rec.display_name},
 //         {innerText:rec.slug},
