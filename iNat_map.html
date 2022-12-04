@@ -13,8 +13,8 @@
    a { text-decoration:none; }
 </style>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
 
 <script>
 
@@ -702,7 +702,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'This page displays a map of iNaturalist observations. Clicking on any observation marker opens a pop-up window which provides basic details of the observation');
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. So observations outside the USA will not return an elevation. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
 }
@@ -744,7 +744,15 @@ else {
             .then((data) => {
                return data.USGS_Elevation_Point_Query_Service.Elevation_Query;
             });
-         s += '<br />elevation: '+(((elevation?elevation.Elevation:-1000000)<=-1000000)?'[Unknown]':(fround(elevation.Elevation,1)+'ft, '+ fround(elevation.Elevation*0.3048,1) + 'm ('+elevation.Data_Source+')'));
+         if ((elevation?elevation.Elevation:-1000000)>-1000000) { s += '<br />elevation: '+ (fround(elevation.Elevation,1)+'ft, '+ fround(elevation.Elevation*0.3048,1) + 'm ('+elevation.Data_Source+')'); }
+         else {
+            var elevationurl_fallback = 'https://api.open-elevation.com/api/v1/lookup?locations='+obs.geojson.coordinates[1]+','+obs.geojson.coordinates[0];
+            var elevation_fallback = await ffetch(elevationurl_fallback)
+               .then((data) => {
+                  return data.results[0];
+               });
+            s += '<br />elevation: '+ (elevation_fallback?(elevation_fallback.elevation+'m'):'[Unknown]');
+         };
       };
       s += '<br />observed: '+((obs.time_observed_at==null) ? ((obs.observed_on==null) ? '[Unknown]': obs.observed_on) : fdate(obs.time_observed_at));
       s += '<br />created: '+((obs.created_at==null) ? obs.created_at_details.date : fdate(obs.created_at));
@@ -906,9 +914,11 @@ else {
    var s_usgs_urlbase = 'https://basemap.nationalmap.gov/arcgis/rest/services/'
    //var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data; Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model'});
    var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>'});
+   var l_stamen_terrain_fallback = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{minZoom:9, maxNativeZoom:16, attribution:s_stamen_copyright});
+   var g_usgs_topo = L.layerGroup([l_stamen_terrain_fallback, l_usgs_topo]);
    var l_usgs_img = L.tileLayer(s_usgs_urlbase+'USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryOnly/MapServer">USGS The National Map</a>: Orthoimagery'});
    var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
-   var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
+   //var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
    var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
 
    // USGS Ecological Land Units (Worldwide coverage)
@@ -933,10 +943,13 @@ else {
    var l_usgs_3dep_contours = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/contours/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:1,2,3,4,5,6,7,8,10,11,12,13,15,16,17,18,21,22,25,26',{minZoom:8, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
    // var l_usgs_3dep_transport = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/transportation/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38',{minZoom:4, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
 
+
+   var l_graticule = L.tileLayer.wms('https://gis.ngdc.noaa.gov/arcgis/services/web_mercator/graticule/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6', format:'image/png32', transparent:true});
+
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
 
-   var defaultlayers = (view==='elevation') ? [l_usgs_topo]
+   var defaultlayers = (view==='elevation') ? [g_usgs_topo]
       : (view==='ecolandunit') ? [l_stamen_tonerlite_mod_dark_with_purple,l_usgs_ecolandunit,l_stamen_tonerhybrid]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
       : [l_stamen_tonerlite_mod_dark50];
@@ -975,9 +988,9 @@ else {
       "OpenStreetMap France": l_osm_fr,
       "OpenStreetMap Humanitarian": l_osm_hot,
       "USGS Imagery": l_usgs_img,
-      "USGS Topo": l_usgs_topo,
+      "USGS Topo": g_usgs_topo,
       "USGS Imagery + Topo": l_usgs_imgtopo,
-      "USGS Relief": l_usgs_relief,
+//      "USGS Relief": l_usgs_relief,
       "USGS Hillshade (US, CA, MX)": l_usgs_3dep_hillshade,
       "USGS Aspect (US, CA, MX)": l_usgs_3dep_aspect,
       "USGS Slope (US, CA, MX)": l_usgs_3dep_slope,
@@ -1005,6 +1018,7 @@ else {
       "iNaturalist Observations Points": l_inat_points,
       "iNaturalist Observations":g_inat_obs,
       "iNaturalist Obs Active Interaction":g_utfgdm_sel,
+      "Graticule":l_graticule,
       "Debug Grid":l_debug,
    };
    if (taxon_id===null) {
