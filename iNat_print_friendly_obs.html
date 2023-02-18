@@ -637,8 +637,9 @@ function fqueryset(obsset,order) {
          var obsid = obs.id;
          var obsdiv = faddelem('div',document.body,'obsdiv',obsid);
          var obsthumb = faddelem('div',obsdiv,'obsthumb',null,((obs.photos&&obs.photos.length>0)?'<img src="'+obs.photos[0].url+'" />':null));
-         faddelem('h1',obsdiv,'obsid',null,'Observation #'+obs.id+' <span class="grade">('+flabel('Grade')+obs.quality_grade+')</span>');
+         faddelem('h1',obsdiv,'obsid',null,'Observation #'+obs.id+' <span class="grade">('+flabel('UUID')+obs.uuid+')</span>');
          faddelem('p',obsdiv,'url',null,flabel('iNaturalist URL')+furl(obs.uri||'https://www.inaturalist.org/observations/'+obs.id));
+         faddelem('p',obsdiv,'grade',null,flabel('Grade')+obs.quality_grade);
          foutlinks(obsdiv,obs.outlinks);
          faddelem('p',obsdiv,'observer',null,flabel('Observer')+fuser(obs.user));
          faddelem('p',obsdiv,'license',null,flabel('Observation License')+(obs.license_code||'[none] (all rights reserved)'));
