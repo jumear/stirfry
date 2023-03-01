@@ -702,7 +702,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'This page displays a map of iNaturalist observations. Clicking on any observation marker opens a pop-up window which provides basic details of the observation');
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://nationalmap.gov/epqs/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
 }
@@ -739,12 +739,12 @@ else {
       s += '<br />coordinates: '+fround(obs.geojson.coordinates[1],6)+', '+fround(obs.geojson.coordinates[0],6);
       s += (obs.positional_accuracy==null) ? '' : ' ('+fround(obs.positional_accuracy,1)+'m)';
       if (view==='elevation') {
-         var elevationurl = 'https://nationalmap.gov/epqs/pqs.php?y='+obs.geojson.coordinates[1]+'&x='+obs.geojson.coordinates[0]+'&output=json&units=Feet';
+         var elevationurl = 'https://epqs.nationalmap.gov/v1/json?y='+obs.geojson.coordinates[1]+'&x='+obs.geojson.coordinates[0]+'&output=json&units=Feet';
          var elevation = await ffetch(elevationurl)
             .then((data) => {
-               return data.USGS_Elevation_Point_Query_Service.Elevation_Query;
+               return data;
             });
-         if ((elevation?elevation.Elevation:-1000000)>-1000000) { s += '<br />elevation: '+ (fround(elevation.Elevation,1)+'ft, '+ fround(elevation.Elevation*0.3048,1) + 'm ('+elevation.Data_Source+')'); }
+         if ((elevation?elevation.value:-1000000)>-1000000) { s += '<br />elevation: '+ (fround(elevation.value,1)+'ft, '+ fround(elevation.value*0.3048,1) + 'm'); }
          else {
             var elevationurl_fallback = 'https://api.open-elevation.com/api/v1/lookup?locations='+obs.geojson.coordinates[1]+','+obs.geojson.coordinates[0];
             var elevation_fallback = await ffetch(elevationurl_fallback)
