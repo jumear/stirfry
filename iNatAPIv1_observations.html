@@ -226,8 +226,8 @@ function fresults(xobj) {
                {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:`bin_${(idextra===null||idextra.obs_taxon_is_community)}`},
             ];
             if (p_idextra_user_id) { 
-               values_id.push({innerText:idextra.idextrausertaxoncategory});
-               values_id.push({innerText:idextra.idextrausercategory});
+               values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausertaxoncategory});
+               values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausercategory});
             };
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
