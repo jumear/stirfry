@@ -89,6 +89,67 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    if (p_options && p_options.length>0) { params.append('options',p_options); };
    return urlbase+'?'+params;
 };
+function ffetch(url) {
+   return fetch(url)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+      return response.json();
+   })
+   .catch((err) => { console.error(err); });
+};
+function fexport(count=0) {
+   let ebutton = document.getElementById('export');
+   ebutton.innerHTML = 'exporting...';
+   // generally the API will return no more than the first 10000 records for a given set of parameters
+   // it turns out this endpoint will allow more, but that would require code to handle throttling, so it's left at 10000 for now
+   let maxcount = 10000;
+   if (count>maxcount) {
+      count=maxcount;
+      alert('Can export only a maximum of '+maxcount+' records due to API limits.')
+   };
+   // note that API recommended request limit is about 1 request/second or no more than 100 requests per minute.
+   // because this particular endpoint allows 500 records, that means we can do 20 requests before we hit a maximum of 10000 records.
+   // in other words, 20 requests can bring back all the records available, and we are below 100 requests per minute.
+   // so here, we'll just make all the requests in parallel rather than doing them in serial, since it's unlikely we'll encounter API request limits here.
+   let pary = [];
+   let maxper = 500;
+   for (i=0;i<Math.ceil(count/maxper);i++) { pary.push(ffetch(fpageurl(apibase,winurlparams,maxper,i+1))); };
+   Promise.all(pary)
+   .then(results=>{
+      let ary = [[
+         'id',
+         'name',
+         'common_name',
+         'rank',
+         'iconic_taxon',
+         'taxon_obs_count',
+         'taxon_ttl_obs_count',
+      ]];
+      for (let result of results) {
+         for (let data of result.results) {
+            let values = [
+               data.taxon.id||'',
+               data.taxon.name||'',
+               (!data.taxon.preferred_common_name)?'':(data.taxon.preferred_common_name.search(',')===-1)?data.taxon.preferred_common_name:'"'+data.preferred_common_name+'"',
+               data.taxon.rank||'',
+               data.taxon.iconic_taxon_name||'',
+               data.count||'',
+               data.taxon.observations_count||'',
+            ];
+            ary.push(values);
+         };
+      };
+      // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
+      let csv = 'data:text/csv;charset=utf-8,'+ ary.map(e => e.join(',')).join('\n');
+      let euri = encodeURI(csv);
+      let link = document.createElement('a');
+      link.href = euri;
+      link.download = 'inat_obs_species_counts.csv';
+      document.body.appendChild(link); // for FF
+      link.click();
+      ebutton.innerHTML = 'exported';
+   });
+};
 function fresults(xobj) {
    //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
    let results = xobj.results;
@@ -100,7 +161,8 @@ function fresults(xobj) {
       let page_prev = ((page_curr>1)?page_curr-1:null);
       let page_next = ((page_curr<page_max)?page_curr+1:null);
 
-      faddelem('p',document.body,{innerHTML:'total leaf taxa: '+fcomnum(total_results)+'<br />'
+      faddelem('p',document.body,{innerHTML:'total leaf taxa: '+fcomnum(total_results)+' '
+         +'[<span id="export"><a href="javascript:fexport('+total_results+');">export</a></span>]<br />'
          +'per page: '+fcomnum(per_page)+'<br />'
          +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
          });
