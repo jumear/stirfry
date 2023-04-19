@@ -188,7 +188,7 @@ function fresults(xobj) {
 let apibase = 'https://api.inaturalist.org/v1/users/';
 let apiurl = apibase+p_user_id;
 let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Users/get_users_id';
-let apirefname = 'iNaturalist User Observation Summary by Photo License';
+let apirefname = 'iNaturalist User Details';
 let apiref = furl(apirefurl,apirefname);
 
 let apirefstat = {};
@@ -198,7 +198,7 @@ apirefstat.species = apirefstat.base+'get_observations_species_counts';
 apirefstat.identifiers = apirefstat.base+'get_observations_identifiers';
 apirefstat.observers = apirefstat.base+'get_observations_observers';
 
-faddelem('h1',document.body,{innerText:apirefname});
+faddelem('h1',document.body,{innerText:document.title});
 
 if (!p_user_id) {
    let instructions = [
