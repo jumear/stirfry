@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist User Observation Summary by Photo License" />
+<title>iNaturalist User Observation Summary by Photo License</title>
+<style>
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
+   #main { width:100%; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; z-index:100; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+   tr:nth-child(even) { background:var(--color-base); }
+   .tar { text-align:right; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+</style>
+<script src='https://unpkg.com/@turf/turf@6.3.0/turf.min.js'></script>
+</head>
+
+<body>
+<script>
+
+//get parameters from the url
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let p_user_id = winurlparams.get('user_id') || winurlparams.get('user_login');
+winurlparams.delete('user_id');
+winurlparams.delete('user_login');
+winurlparams.delete('photo_license');
+winurlparams.delete('photos');
+winurlparams.delete('photos_licensed');
+winurlparams.delete('page');
+//winurlparams.append('page',1);
+winurlparams.delete('per_page');
+//winurlparams.append('per_page',0); // we don't actually need to return any detail records. we just need the total_records value returned in the response.
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+
+function fround(num,places) {
+   let n = num*1;
+   return n.toFixed(places); 
+};
+function ffetch(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+      .then((data) => { return data; })
+      .catch((err) => { console.error(err); });
+};
+function delay(time,value) {
+   return new Promise(function(resolve) { 
+       setTimeout(resolve.bind(null, value), time)
+       console.log('Pausing '+time+'ms...')
+   });
+};
+
+// recommended API request limits are 1 request per second. so this will wait 1 second between initiating each API request.
+async function fgetstats(users,licenses) {
+   for (user of users) {
+      let urluserobs = `https://api.inaturalist.org/v1/observations?per_page=0&${winurlparams}&user_id=${user.login}`;
+      for (license of licenses) {
+         // await delay(1000); // ignore this until this page is modified to return multiple users
+         let paramlicense = (license.code==='all')?'&photos=true':(license.code==='none')?'&photos=true&photo_licensed=false':('&photo_license='+license.code);
+         Promise.all([
+            Promise.resolve(user.login),
+            Promise.resolve(license.code),
+            ffetch(urluserobs+paramlicense),
+            Promise.resolve(paramlicense),
+         ])
+         .then(results=>{
+            //document.getElementById(results[0]+'_'+results[1]).innerText = (results[2]?fcomnum(results[2].total_results):0);
+            document.getElementById(results[0]+'_'+results[1]).innerHTML = furl(`https://www.inaturalist.org/observations?${winurlparams}&user_id=${results[0]}${paramlicense}`,(results[2]?fcomnum(results[2].total_results):0));
+         });
+      };
+   };
+};
+
+function fresults(xobj) {
+   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
+   let results = xobj.results;
+   if (results) {
+      let total_results = xobj.total_results;
+      faddelem('p',document.body,{innerHTML:'total records: '+fcomnum(total_results)});
+
+      // sort the list alphabetically by name
+      results.sort(function(a, b) { // sort by login
+         if(a.login < b.login) { return -1; }
+         if(a.login > b.login) { return 1; }
+         return 0;
+      });
+
+      let licenses = [
+         {code:'all',description:'Obs with Photos'},
+         {code:'none',description:'None Licensed'},
+         {code:'cc-by-nc-sa',description:'CC BY-NC-SA'},
+         {code:'cc-by-nc-nd',description:'CC BY-NC-ND'},
+         {code:'cc-by-sa',description:'CC BY-SA'},
+         {code:'cc-by-nc',description:'CC BY-NC'},
+         {code:'cc-by-nd',description:'CC BY-ND'},
+         {code:'cc-by',description:'CC BY'},
+         {code:'cc0',description:'CC0'},
+      ];
+
+      // table and headers
+      let table = faddelem('table',document.body,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let labels = [
+         {innerText:'#'},
+         {innerText:'ID'},
+         {innerText:'Login'},
+         {innerText:'Name'},
+         //{classList:'tar',innerText:'Obs Count'},
+      ];
+      for (license of licenses) { labels.push({classList:'tar',innerText:license.description}); };
+      faddelems('th',hrow,labels);
+
+      // table rows
+      let tbody = faddelem('tbody',table);
+      for (let i=0; i<results.length; i++) {
+         let brow = faddelem('tr',tbody);
+         let rec = results[i];
+         let values = [
+            {innerText:i+1},
+            {innerHTML:furl('https://www.inaturalist.org/people/'+rec.id,rec.id)},
+            {innerText:rec.login},
+            {innerText:rec.name||''},
+            //{classList:'tar',innerHTML:furl(`https://www.inaturalist.org/observations?${winurlparams}&user_id=${rec.login}`,fcomnum(rec.observations_count))},
+         ];
+         for (license of licenses) { values.push({classList:'tar',id:`${rec.login}_${license.code}`}); };
+         faddelems('td',brow,values);
+      };
+      fgetstats(results,licenses);
+   }
+   else { faddelem('p',document.body,{innerText:'No results returned.'}); };
+};
+
+let apibase = 'https://api.inaturalist.org/v1/users/';
+let apiurl = apibase+p_user_id;
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Users/get_users_id';
+let apirefname = 'iNaturalist User Observation Summary by Photo License';
+let apiref = furl(apirefurl,apirefname);
+
+let apirefstat = {};
+apirefstat.base = 'https://api.inaturalist.org/v1/docs/#!/Observations/';
+apirefstat.observations = apirefstat.base+'get_observations';
+apirefstat.species = apirefstat.base+'get_observations_species_counts';
+apirefstat.identifiers = apirefstat.base+'get_observations_identifiers';
+apirefstat.observers = apirefstat.base+'get_observations_observers';
+
+faddelem('h1',document.body,{innerText:apirefname});
+
+if (!p_user_id) {
+   let instructions = [
+      {innerHTML:'This page gets iNaturalist users via the '+apiref+' API endpoint, along with counts of observations with photos by photo license. You can click on any of the counts to see the underlying observations. You must input at least a user_id to get results, and you can also add additional filters for observations.'},
+      {innerHTML:'For example, to get a summary of animal observations for user pisum, open '+furl(winurlexsearchstr+'?user_id=pisum&taxon_id=1&verifiable=any')+' in your browser.'},
+   ];
+   faddelems('p',document.body,instructions);
+}
+else {
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'.'});
+   fetch(apiurl)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
+   });
+};
+</script>
+</body>
+
+</html>
