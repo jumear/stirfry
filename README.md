@@ -36,6 +36,7 @@
 |[iNat_taxon_counts_by_rank.html](https://jumear.github.io/stirfry/iNat_taxon_counts_by_rank)|https://forum.inaturalist.org/t/1-000-000th-taxa-record-added-to-inat-database/9308/6|
 |[iNat_taxon_est_means.html](https://jumear.github.io/stirfry/iNat_taxon_est_means)|https://forum.inaturalist.org/t/how-can-you-get-the-full-list-of-establishment-means-for-a-taxon/15435/22|
 |[iNat_top_observers_map.html](https://jumear.github.io/stirfry/iNat_top_observers_map)|https://forum.inaturalist.org/t/how-to-replicate-world-tour-figures/13109/12|
+|[iNat_user_obs_photo_license_summary.html](https://jumear.github.io/stirfry/iNat_user_obs_photo_license_summary)|https://forum.inaturalist.org/t/surprised-to-find-photos-i-placed-on-inat-in-the-new-audubon-mushroom-guide/40986/103|
 
 ## also check out
 https://observablehq.com/@robin-song?tab=notebooks&type=public (another collection of useful iNaturalist-related tools)
