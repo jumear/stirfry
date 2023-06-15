@@ -26,11 +26,14 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+new URLSearchParams(winurlsearchstr.substring(1));
 //let p_per_page = winurlparams.get('per_page') || 10;
 //let p_page = winurlparams.get('page') || 1;
-winurlparams.delete('per_page');
-winurlparams.set('per_page',0); // set to 0 since we need only total record counts, not details.
 winurlparams.delete('category');
+winurlparams.delete('per_page');
+let idurlparams = new URLSearchParams(winurlparams);
+winurlparams.set('per_page',0); // set to 0 since we need only total record counts, not details.
+idurlparams.set('per_page',100); // the max is 200, but i'm setting it to half that for better responsiveness.
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
@@ -67,6 +70,7 @@ let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
 let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Identifications/get_identifications';
 let apirefname = 'iNaturalist Identifications Search';
 let apiref = furl(apirefurl,apirefname);
+let urlid = 'iNatAPIv1_identifications.html';
 
 let pagetitle = document.title;
 faddelem('h1',document.body,{innerText:pagetitle});
@@ -111,10 +115,12 @@ for (let category of ary_category) {
       else { winurlparams.delete('category'); };
       let prom0 = Promise.resolve(description);
       let prom1 = fgetcount(apibase+'?'+winurlparams);
-      Promise.all([prom0,prom1]).then(results=>{
+      let prom2 = Promise.resolve(param_value);
+      Promise.all([prom0,prom1,prom2]).then(results=>{
          let cat = results[0];
          let count = results[1] || 0;
-         fsettdvalue(cat,'count',fcomnum(count));
+         let catparam = results[2];
+         fsettdvalue(cat,'count',furl(`${urlid}${idurlparams.size>0?'?'+idurlparams:''}${(catparam?(idurlparams.size>0?'&':'?')+'category='+catparam:'')}`,fcomnum(count)));
          data.push({category:cat,count:count});
 
          //if this is the last count to be returned, go on and calculate the "Other" category count, and then calculate percents for all categories
