@@ -89,7 +89,14 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    if (p_options && p_options.length>0) { params.append('options',p_options); };
    return urlbase+'?'+params;
 };
-function ffetch(url) {
+function delay(time,value) {
+   return new Promise(function(resolve) { 
+       setTimeout(resolve.bind(null, value), time)
+       console.log('Pausing '+time+'ms...')
+   });
+}
+async function ffetch(url,delayinms=0) {
+   await delay(delayinms);
    return fetch(url)
    .then((response) => {
       if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
@@ -100,20 +107,23 @@ function ffetch(url) {
 function fexport(count=0) {
    let ebutton = document.getElementById('export');
    ebutton.innerHTML = 'exporting...';
-   // generally the API will return no more than the first 10000 records for a given set of parameters
-   // it turns out this endpoint will allow more, but that would require code to handle throttling, so it's left at 10000 for now
-   let maxcount = 10000;
+   // generally the API will return no more than the first 10000 records for a given set of parameters, but it turns out this endpoint will allow more
+   // note that the API recommended request limit is about 1 request/second or no more than 100 requests per minute.
+   // it's unlikely that we'll violate this if we issue 20 or fewer requests together (@500 records per page = 10000 records).
+   // so if we have fewer than 10000 records (20 requests), we'll issue all the requests at one time.
+   // otherwise, we'll add a delay between requests
+   let maxcount_default = 10000;
+   let maxcount = p_options.includes('unlimitedexport') ? 500000 : maxcount_default; // currently, there are ~400000 recorded in the system. so we'll add a slightly higher max just to avoid getting caught in an infinite loop.
    if (count>maxcount) {
       count=maxcount;
-      alert('Can export only a maximum of '+maxcount+' records due to API limits.')
+      alert(`By default, this page exports only up to ${maxcount_default} records in order to avoid API request limits. To export more than ${maxcount_default} records, reload the page with an additional parameter &options=unlimitedexport in the URL. Expect a large export to take at least 1 second per page of results to be exported.`)
    };
-   // note that API recommended request limit is about 1 request/second or no more than 100 requests per minute.
-   // because this particular endpoint allows 500 records, that means we can do 20 requests before we hit a maximum of 10000 records.
-   // in other words, 20 requests can bring back all the records available, and we are below 100 requests per minute.
-   // so here, we'll just make all the requests in parallel rather than doing them in serial, since it's unlikely we'll encounter API request limits here.
    let pary = [];
    let maxper = 500;
-   for (i=0;i<Math.ceil(count/maxper);i++) { pary.push(ffetch(fpageurl(apibase,winurlparams,maxper,i+1))); };
+   for (i=0;i<Math.ceil(count/maxper);i++) {
+      let delayinms = (count/maxper > 20) ? i * 1000 : 0;
+      pary.push(ffetch(fpageurl(apibase,winurlparams,maxper,i+1),delayinms));
+   };
    Promise.all(pary)
    .then(results=>{
       let ary = [[
@@ -125,6 +135,8 @@ function fexport(count=0) {
          'taxon_obs_count',
          'taxon_ttl_obs_count',
       ]];
+      if (p_options.includes('ancestry')) { ary[0].splice(5,0,'ancestry'); };
+
       for (let result of results) {
          for (let data of result.results) {
             let values = [
@@ -136,6 +148,7 @@ function fexport(count=0) {
                data.count||'',
                data.taxon.observations_count||'',
             ];
+            if (p_options.includes('ancestry')) { values.splice(5,0,data.taxon.ancestor_ids.join('/')); };
             ary.push(values);
          };
       };
@@ -238,7 +251,7 @@ if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob'))+' in your browser.'},
-      {innerHTML:'You can also invoke a couple of extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. To invoke both options, use a comma-separated value list for the parameter (&options=ancestry,bigger_image).'},
+      {innerHTML:'You can also invoke a few extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. Adding &options=unlimitedexport will allow you export a lot of records. To invoke multiple options, use a comma-separated value list for the parameter (ex. &options=ancestry,bigger_image,unlimitedexport).'},
       {innerHTML:'Note that the counts returned by this page vs the '+furl('https://www.inaturalist.org/observations','Explore page')+' in iNaturalist may not tie exactly because the Explore page will always filter out spam observations. Also, if you filter for a subspecies taxon on this page, the taxon shown here will be the species level, but the count will reflect the subspecies count, and the link to the Explore page will take you to the species level.'},
    ];
    faddelems('p',document.body,instructions);
