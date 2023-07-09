@@ -67,6 +67,8 @@ let p_options = winurlparams.get('options') || [];
 winurlparams.delete('options');
 let p_idextra_user_id = winurlparams.get('idextra_user_id');
 winurlparams.delete('idextra_user_id');
+let p_photo_curl_filename_prefix = winurlparams.get('photo_curl_filename_prefix')?.split(',') || ['photo_id'];
+winurlparams.delete('photo_curl_filename_prefix');
 
 function fdate(str,dateonly=false) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
@@ -78,7 +80,7 @@ function fdate(str,dateonly=false) {
    };
    return str;
 };
-function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function furl(url,txt=url) { return `<a href="${url}">${txt}</a>`; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
 function faddelem(etype,eparent=null,eattributes={}) {
@@ -190,7 +192,8 @@ function fresults(xobj) {
          };
          labels = [...labels.slice(0,7),...labels_id,...labels.slice(7)];
       };
-      if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };   
+      if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };
+      if (p_options.includes('photocurl')) { labels.push({innerText:'Photo cURLs'}); };
       faddelems('th',hrow,labels);
  
       let tbody = faddelem('tbody',table);
@@ -231,16 +234,34 @@ function fresults(xobj) {
             };
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
-         if (p_options.includes('photourl')) { 
-            let photos = [];
-            if (rec.photos&&rec.photos.length>0) {
+         if (p_options.includes('photourl') || p_options.includes('photocurl')) { 
+            let photourls = [];
+            let photocurls = [];
+            if (rec.photos && rec.photos.length>0) {
                for (let p=0; p<rec.photos.length; p++) {
-                  let url = (p>0)?' ':'';
-                  url += (!rec.photos[p].url) ? 'null' : rec.photos[p].url.split('?')[0];
-                  photos.push(furl(url.replace('square','medium')));
+                  let url = (!rec.photos[p].url) ? 'null' : new URL(rec.photos[p].url.split('?')[0]);
+                  if (p_options.includes('photourl')) {
+                     let purl = url.toString().replace('square','medium');
+                     photourls.push(furl(purl));
+                  }; 
+                  if (p_options.includes('photocurl')) {
+                     let pathname = url.pathname.split('/');
+                     let filename = pathname[pathname.length-1];
+                     filename = filename.replace('square','original');
+                     let prefix = [];
+                     for (n=0; n<p_photo_curl_filename_prefix.length; n++) {
+                        if (p_photo_curl_filename_prefix[n]==='photo_id') { prefix.push(rec.photos[p].id); }
+                        else if (p_photo_curl_filename_prefix[n]==='obs_id') { prefix.push(rec.id); }
+                        else if (p_photo_curl_filename_prefix[n]==='obs_seq') { prefix.push(('00'+(p+1)).slice(-2)); };
+                     };
+                     if (p===0) { photocurls.push('curl'); } // base command
+                     let curl = `${url.toString().replace('square','original')} -o ${prefix.join('_')}_${filename}`;
+                     photocurls.push(curl); // command parameters
+                  };
                };
             };
-            values.push({innerHTML:photos.join(',')}); 
+            if (p_options.includes('photourl')) { values.push({innerHTML:photourls.join(', ')}); };
+            if (p_options.includes('photocurl')) { values.push({innerText:photocurls.join(' ')}); };
          };   
          faddelems('td',brow,values);
       };
@@ -266,9 +287,9 @@ if (winurlsearchstr==='') {
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
       {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
-      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Both options can be invoked like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl'))+'. '},
+      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl,photocurl'))+'. '},
       {innerHTML:'When &options=idextra is invoked, an optional idextra_user_id parameter can also be used to get additional information about the IDs by a specific user. For example: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra&idextra_user_id=bob'))+'. '},
-
+      {innerHTML:'When &options=photocurl is invoked, an optional photo_curl_filename_prefix parameter can also be set to one or more of 3 values -- photo_id, obs_id, and obs_seq. By default, the destination filename in the curl commands will be prefixed with only photo id, but you can override this behavior by specifying the a comma-separated list of the values that you wish to include, in the order that you wish for them to be added. For example, this will prefix the destination filenames with obs id, obs seq, and photo id: '+furl(famp(winurlexsearchstr+'?user_id=bob&options=photocurl&photo_curl_filename_prefix=obs_id,obs_seq,photo_id'))+'. '},
    ];
    faddelems('p',document.body,instructions);
 }
