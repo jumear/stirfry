@@ -46,7 +46,6 @@
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
 </style>
-<script src='https://unpkg.com/@turf/turf@6.3.0/turf.min.js'></script>
 </head>
 
 <body>
@@ -57,16 +56,15 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-let p_user_id = winurlparams.get('user_id') || winurlparams.get('user_login');
+let p_user_id = winurlparams.get('user_id')?.split(',') || winurlparams.get('user_login')?.split(',') || [];
+p_user_id = p_user_id.sort().filter((item,pos,ary)=>{ return !pos || item!=ary[pos-1]; }); // remove duplicate values;
 winurlparams.delete('user_id');
 winurlparams.delete('user_login');
 winurlparams.delete('photo_license');
 winurlparams.delete('photos');
 winurlparams.delete('photos_licensed');
 winurlparams.delete('page');
-//winurlparams.append('page',1);
 winurlparams.delete('per_page');
-//winurlparams.append('per_page',0); // we don't actually need to return any detail records. we just need the total_records value returned in the response.
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
@@ -104,41 +102,42 @@ function delay(time,value) {
    });
 };
 
-// recommended API request limits are 1 request per second. so this will wait 1 second between initiating each API request.
 async function fgetstats(users,licenses) {
+   // recommended API request limits are 1 request per second.
+   // so if we're going to be issuing a larger number of requests, then we'll want to wait a 1 second between requests.
+   let delayms = (users.length * (licenses.length + 1) > 20) ? 1000 : 0;
    for (user of users) {
-      let urluserobs = `https://api.inaturalist.org/v1/observations?per_page=0&${winurlparams}&user_id=${user.login}`;
-      for (license of licenses) {
-         // await delay(1000); // ignore this until this page is modified to return multiple users
-         let paramlicense = (license.code==='all')?'&photos=true':(license.code==='none')?'&photos=true&photo_licensed=false':('&photo_license='+license.code);
-         Promise.all([
-            Promise.resolve(user.login),
-            Promise.resolve(license.code),
-            ffetch(urluserobs+paramlicense),
-            Promise.resolve(paramlicense),
-         ])
-         .then(results=>{
-            //document.getElementById(results[0]+'_'+results[1]).innerText = (results[2]?fcomnum(results[2].total_results):0);
-            document.getElementById(results[0]+'_'+results[1]).innerHTML = furl(`https://www.inaturalist.org/observations?${winurlparams}&user_id=${results[0]}${paramlicense}`,(results[2]?fcomnum(results[2].total_results):0));
-         });
+      // get base user info (we're getting these one by one because the API doesn't accept multiple inputs)
+      let urluser = `https://api.inaturalist.org/v1/users/${user}`;
+      let user_results = await ffetch(urluser);
+      let user_rec = user_results?.results[0];
+      // if user exists, then set the user login link and get user observation counts
+      if (user_rec?.login) {
+         document.getElementById(user+'_user_id').innerHTML = furl(`https://www.inaturalist.org/users/${user_rec.id}`,user_rec.id);
+         document.getElementById(user+'_user_login').innerHTML = furl(`https://www.inaturalist.org/users/${user_rec.login}`,user_rec.login);
+         document.getElementById(user+'_user_name').innerHTML = user_rec.name||'';
+         let urluserobs = `https://api.inaturalist.org/v1/observations?per_page=0&${winurlparams}&user_id=${user}`;
+         for (license of licenses) {
+            await delay(delayms); // ignore this until this page is modified to return multiple users
+            let paramlicense = (license.code==='all')?'&photos=true':(license.code==='none')?'&photos=true&photo_licensed=false':('&photo_license='+license.code);
+            Promise.all([
+               Promise.resolve(user),
+               Promise.resolve(license.code),
+               ffetch(urluserobs+paramlicense),
+               Promise.resolve(paramlicense),
+            ])
+            .then(results=>{
+               document.getElementById(results[0]+'_'+results[1]).innerHTML = furl(`https://www.inaturalist.org/observations?${winurlparams}&user_id=${results[0]}${paramlicense}`,(results[2]?fcomnum(results[2].total_results):0));
+            });
+         };
       };
+      await delay(delayms);
    };
 };
 
-function fresults(xobj) {
-   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
-   let results = xobj.results;
+function fresults(results) {
    if (results) {
-      let total_results = xobj.total_results;
-      faddelem('p',document.body,{innerHTML:'total records: '+fcomnum(total_results)});
-
-      // sort the list alphabetically by name
-      results.sort(function(a, b) { // sort by login
-         if(a.login < b.login) { return -1; }
-         if(a.login > b.login) { return 1; }
-         return 0;
-      });
-
+      // faddelem('p',document.body,{innerHTML:'total records: '+fcomnum(results.length)});
       let licenses = [
          {code:'all',description:'Obs with Photos'},
          {code:'none',description:'None Licensed'},
@@ -172,12 +171,12 @@ function fresults(xobj) {
          let rec = results[i];
          let values = [
             {innerText:i+1},
-            {innerHTML:furl('https://www.inaturalist.org/people/'+rec.id,rec.id)},
-            {innerText:rec.login},
-            {innerText:rec.name||''},
-            //{classList:'tar',innerHTML:furl(`https://www.inaturalist.org/observations?${winurlparams}&user_id=${rec.login}`,fcomnum(rec.observations_count))},
+            {innerText:rec,id:`${rec}_user_id`},
+            {innerText:rec,id:`${rec}_user_login`},
+            {id:`${rec}_user_name`},
+            //{id:`${rec}_user_obs_count`},
          ];
-         for (license of licenses) { values.push({classList:'tar',id:`${rec.login}_${license.code}`}); };
+         for (license of licenses) { values.push({classList:'tar',id:`${rec}_${license.code}`}); };
          faddelems('td',brow,values);
       };
       fgetstats(results,licenses);
@@ -185,41 +184,17 @@ function fresults(xobj) {
    else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
 
-let apibase = 'https://api.inaturalist.org/v1/users/';
-let apiurl = apibase+p_user_id;
-let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Users/get_users_id';
-let apirefname = 'iNaturalist User Details';
-let apiref = furl(apirefurl,apirefname);
-
-let apirefstat = {};
-apirefstat.base = 'https://api.inaturalist.org/v1/docs/#!/Observations/';
-apirefstat.observations = apirefstat.base+'get_observations';
-apirefstat.species = apirefstat.base+'get_observations_species_counts';
-apirefstat.identifiers = apirefstat.base+'get_observations_identifiers';
-apirefstat.observers = apirefstat.base+'get_observations_observers';
-
 faddelem('h1',document.body,{innerText:document.title});
 
-if (!p_user_id) {
+if (p_user_id.length===0) {
    let instructions = [
-      {innerHTML:'This page gets iNaturalist users via the '+apiref+' API endpoint, along with counts of observations with photos by photo license. You can click on any of the counts to see the underlying observations. You must input at least a user_id to get results, and you can also add additional filters for observations.'},
-      {innerHTML:'For example, to get a summary of animal observations for user pisum, open '+furl(winurlexsearchstr+'?user_id=pisum&taxon_id=1&verifiable=any')+' in your browser.'},
+      {innerHTML:'This page gets iNaturalist users, along with counts of observations with photos by photo license for each user. You can click on any of the counts to see the underlying observations. You must input at least a user_id to get results -- separate multiple user_id values with commas -- and you can also add additional filters for observations.'},
+      {innerHTML:'For example, to get a summary of animal observations for users kueda and loarie, open '+furl(winurlexsearchstr+'?user_id=kueda,loarie&taxon_id=1&verifiable=any')+' in your browser.'},
+      {innerHTML:'Note that because iNat puts limits on API requests, this page will intentionally slow down the rate at which it gets data if you query for more than a couple of users at a time.'},
    ];
    faddelems('p',document.body,instructions);
 }
-else {
-   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'.'});
-   fetch(apiurl)
-   .then((response) => {
-      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
-      return response.json();
-   })
-   .then((data) => { fresults(data); })
-   .catch((err) => {
-      console.error(err.message);
-      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
-   });
-};
+else { fresults(p_user_id); };
 </script>
 </body>
 
