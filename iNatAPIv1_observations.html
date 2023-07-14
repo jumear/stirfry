@@ -103,7 +103,7 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    (url_page===null) ? params.append('page',page) : params.set('page',page);
    if (p_options && p_options.length>0) { params.append('options',p_options); };
    if (p_idextra_user_id && p_idextra_user_id.length>0) { params.append('idextra_user_id',p_idextra_user_id.join(',')); };
-   if (p_photo_curl_filename_prefix && p_photo_curl_filename_prefix.length>0) { params.append('photo_curl_filename_prefix',p_photo_curl_filename_prefix.join(',')); };
+   if (p_photo_curl_filename_prefix && p_photo_curl_filename_prefix.length>0 && !(p_photo_curl_filename_prefix.length==1 && p_photo_curl_filename_prefix[0]==='photo_id')) { params.append('photo_curl_filename_prefix',p_photo_curl_filename_prefix.join(',')); };
    return urlbase+'?'+params;
 };
 function fpushifnew(ary,value) {
