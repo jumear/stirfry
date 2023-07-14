@@ -65,7 +65,7 @@ let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 //let p_page = winurlparams.get('page') || 1;
 let p_options = winurlparams.get('options') || [];
 winurlparams.delete('options');
-let p_idextra_user_id = winurlparams.get('idextra_user_id');
+let p_idextra_user_id = winurlparams.get('idextra_user_id')?.split(',') || [];;
 winurlparams.delete('idextra_user_id');
 let p_photo_curl_filename_prefix = winurlparams.get('photo_curl_filename_prefix')?.split(',') || ['photo_id'];
 winurlparams.delete('photo_curl_filename_prefix');
@@ -102,7 +102,8 @@ function fpageurl(urlbase,urlparams,per_page,page) {
    (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
    (url_page===null) ? params.append('page',page) : params.set('page',page);
    if (p_options && p_options.length>0) { params.append('options',p_options); };
-   if (p_idextra_user_id && p_idextra_user_id.length>0) { params.append('idextra_user_id',p_idextra_user_id); };
+   if (p_idextra_user_id && p_idextra_user_id.length>0) { params.append('idextra_user_id',p_idextra_user_id.join(',')); };
+   if (p_photo_curl_filename_prefix && p_photo_curl_filename_prefix.length>0) { params.append('photo_curl_filename_prefix',p_photo_curl_filename_prefix.join(',')); };
    return urlbase+'?'+params;
 };
 function fpushifnew(ary,value) {
@@ -115,8 +116,14 @@ function fidextra(obs) {
    if (!ids || !taxon) { return null; }
    let taxa = {obs:[],ancestor:[],descendant:[],other:[]};
    let idextracategory = '';
-   let idextrausercategory = 'N/A';
-   let idextrausertaxoncategory = 'N/A';
+   let idextrausercategory = [];
+   let idextrausertaxoncategory = [];
+   if (p_idextra_user_id && p_idextra_user_id.length > 0) {
+      for (u=0; u<p_idextra_user_id.length; u++) {
+         idextrausercategory.push('N/A');
+         idextrausertaxoncategory.push('N/A');
+      };
+   };
    let countall = 0;
    let countobs = 0;
    for (let i of ids) {
@@ -131,10 +138,14 @@ function fidextra(obs) {
          else if ( i.taxon.ancestry && i.taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { idextracategory='descendant'; }
          else { idextracategory='other'; };
          fpushifnew(taxa[idextracategory],id);
-         if (p_idextra_user_id && ( p_idextra_user_id==i.user.id || p_idextra_user_id==i.user.login)) {
-            idextrausertaxoncategory = idextracategory;
-            idextrausercategory = i.category;
-         }; 
+         if (p_idextra_user_id && p_idextra_user_id.length > 0) {
+            for (w=0; w<p_idextra_user_id.length; w++) {
+               if ( p_idextra_user_id[w]==i.user.id || p_idextra_user_id[w]==i.user.login ) {
+                  idextrausertaxoncategory[w] = idextracategory;
+                  idextrausercategory[w] = i.category;
+               };
+            };
+         };
       };
    };
    return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa,idextrausertaxoncategory,idextrausercategory};
@@ -186,9 +197,11 @@ function fresults(xobj) {
             {classList:'tar',innerText:'ID Taxa @ Other'},
             {innerText:'Obs Taxon = Community Taxon'},
          ];
-         if (p_idextra_user_id) {
-            labels_id.push({innerText:'User ' +p_idextra_user_id+ ' ID taxon category'});
-            labels_id.push({innerText:'User ' +p_idextra_user_id+ ' ID category'});
+         if (p_idextra_user_id && p_idextra_user_id.length>0) {
+            for (u=0; u<p_idextra_user_id.length; u++) {
+               labels_id.push({innerText:'User ' +p_idextra_user_id[u]+ ' ID taxon category'});
+               labels_id.push({innerText:'User ' +p_idextra_user_id[u]+ ' ID category'});
+            };
          };
          labels = [...labels.slice(0,7),...labels_id,...labels.slice(7)];
       };
@@ -228,9 +241,11 @@ function fresults(xobj) {
                {classList:'tar',innerText:(idextra===null)?'N/A':idextra.taxa.other.length},
                {innerText:(idextra===null)?'N/A':idextra.obs_taxon_is_community,classList:`bin_${(idextra===null||idextra.obs_taxon_is_community)}`},
             ];
-            if (p_idextra_user_id) { 
-               values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausertaxoncategory});
-               values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausercategory});
+            if (p_idextra_user_id && p_idextra_user_id.length>0) {
+               for (u=0; u<p_idextra_user_id.length; u++) {
+                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausertaxoncategory[u]});
+                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausercategory[u]});
+               };
             };
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
@@ -294,7 +309,7 @@ if (winurlsearchstr==='') {
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
       {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
       {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl,photocurl'))+'. '},
-      {innerHTML:'When &options=idextra is invoked, an optional idextra_user_id parameter can also be used to get additional information about the IDs by a specific user. For example: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra&idextra_user_id=bob'))+'. '},
+      {innerHTML:'When &options=idextra is invoked, an optional idextra_user_id parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))+'. '},
       {innerHTML:'When &options=photocurl is invoked, an optional photo_curl_filename_prefix parameter can also be set to one or more of 9 values -- photo_id, photo_license, obs_id, obs_seq, obs_date, taxon_id, taxon_name, user_id, user_login. By default, the destination filename in the curl commands will be prefixed with only photo id, but you can override this behavior by specifying the a comma-separated list of the values that you wish to include, in the order that you wish for them to be added. For example, this will prefix the destination filenames with obs id, obs seq, and photo id: '+furl(famp(winurlexsearchstr+'?user_id=bob&options=photocurl&photo_curl_filename_prefix=obs_id,obs_seq,photo_id'))+'. '},
    ];
    faddelems('p',document.body,instructions);
