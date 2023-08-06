@@ -103,6 +103,21 @@ function fgetidfromobs(rec) {
    let idobj = obs.identifications.find(o=>o.id===id);
    return idobj;
 };
+function fgetidvsidsfromobs(rec) {
+   let id = rec.id;
+   let obs = rec.observation;
+   let obsids = obs.identifications;
+   let idvsall = {seq_all:0,seq_curr:0,count_all:0,count_curr:0};
+   for (let o=0; o<obsids.length; o++) {
+      idvsall.count_all+=1;
+      if (obsids[o].current===true) {idvsall.count_curr+=1};
+      if (obsids[o].id===id) {
+         idvsall.seq_all = idvsall.count_all;
+         if (obsids[o].current===true) {idvsall.seq_curr=idvsall.count_curr};
+      };
+   };
+   return idvsall;
+};
 function fcomparetaxa(obs_taxon,id_taxon) {
    return !obs_taxon?''
      :obs_taxon.id===id_taxon.id?'identical'
@@ -163,6 +178,7 @@ function fresults(xobj) {
          {innerText:'ID via Taxon Change'},
          {innerText:'Prev Obs Taxon Name'},
          {innerText:'ID vs Prev Obs Taxon'},
+         {innerText:'Seq Within Curr IDs'},
          {innerText:'ID Notes'},
       ];
       faddelems('th',hrow,labels);
@@ -172,6 +188,7 @@ function fresults(xobj) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
          let iddetail = fgetidfromobs(rec);
+         let idinobsids = fgetidvsidsfromobs(rec);
          let values = [
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.observation.id,rec.observation.id)},
@@ -206,6 +223,7 @@ function fresults(xobj) {
             {innerText:(iddetail.taxon_change)?true:false,classList:`bin_${(iddetail.taxon_change?true:false)}`},
             {innerHTML:iddetail.previous_observation_taxon?furl('https://www.inaturalist.org/taxa/'+iddetail.previous_observation_taxon.id,iddetail.previous_observation_taxon.name):''},
             {innerText:fcomparetaxa(iddetail.previous_observation_taxon,rec.taxon)},
+            {innerText:`${idinobsids.seq_curr} / ${idinobsids.count_curr}`},
             {innerText:iddetail.body},
          ];
          faddelems('td',brow,values);
