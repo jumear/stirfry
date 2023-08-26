@@ -27,6 +27,24 @@ L.GridLayer.DebugCoords = L.GridLayer.extend({
 L.gridLayer.debugCoords = function(opts) {
    return new L.GridLayer.DebugCoords(opts);
 };
+
+// this allows a style filter to be applied to a basemap tile layer
+L.TileLayer.StyleFilter = L.TileLayer.extend({
+   intialize: function (url, options) {
+      L.TileLayer.prototype.initialize.call(this, url, options);
+   },
+   styleFilter: function () {
+      var filters = this.options.filter || '';
+      return filters;
+   },
+   _initContainer: function () {
+      var tile = L.TileLayer.prototype._initContainer.call(this);
+      this._container.style.filter = this.styleFilter();
+   },
+});
+L.tileLayer.styleFilter = function (url, options) {
+   return new L.TileLayer.StyleFilter(url, options);
+};
 </script>
 </head>
 
@@ -144,13 +162,13 @@ async function fcreatemap(topobs) {
 
       // other iNaturalist Observation Layers
       let inat_points = {url:inat_urlbase+'points/{z}/{x}/{y}.png',description:'iNaturalist Observations (Points)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_points_zoom_x_y_png">iNaturalist observation data</a>'};
-      let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
+      //let inat_circles = {url:inat_urlbase+'colored_heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Density Circles)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_colored_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
       let inat_heat = {url:inat_urlbase+'heatmap/{z}/{x}/{y}.png',description:'iNaturalist Observations (Heatmap)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_heatmap_zoom_x_y_png">iNaturalist observation data</a>'};
       let inat_grid = {url:inat_urlbase+'grid/{z}/{x}/{y}.png',description:'iNaturalist Observations (Grid)',attribution:'<a href="https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png">iNaturalist observation data</a>'};
       //let gbif_density_point_py = {url:'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?srs=EPSG:3857&style=purpleYellow.point&publishingOrg=28eb1a3f-1c15-4a95-931a-4af90ecb574d',description:'iNaturalist Observations in GBIF',attribution:'<a href="https://www.gbif.org/developer/maps">GBIF occurrence data</a>'};
 
       var l_inat_points = L.tileLayer(inat_points.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_points.attribution});
-      var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_circles.attribution});
+      //var l_inat_circles = L.tileLayer(inat_circles.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_circles.attribution});
       var l_inat_heat = L.tileLayer(inat_heat.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_heat.attribution});
       var l_inat_grid = L.tileLayer(inat_grid.url+'?'+winurlparams+'&user_id='+users,{maxZoom:20, attribution:inat_grid.attribution});
       //var l_gbif = L.tileLayer(gbif_density_point_py.url,{maxZoom:20, attribution:gbif_density_point_py.attribution});
@@ -162,30 +180,52 @@ async function fcreatemap(topobs) {
       //var l_inat_taxonplace = L.tileLayer(inat_urlbase+'taxon_places/'+taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_places_taxon_id_zoom_x_y_png">iNaturalist taxon place checklist data</a>'});
       //var l_inat_taxonrange = L.tileLayer(inat_urlbase+'taxon_ranges/'+taxon_id+'/{z}/{x}/{y}.png',{maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_ranges_taxon_id_zoom_x_y_png">iNaturalist taxon range data</a>'});
 
-      // Stamen layers
-      var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
-      var s_stamen_urlbase = 'https://stamen-tiles-{s}.a.ssl.fastly.net/';
-      var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
-      var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
-      var l_stamen_terrainbg = L.tileLayer(s_stamen_urlbase+'terrain-background/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
-      var l_stamen_terrainlines = L.tileLayer(s_stamen_urlbase+'terrain-lines/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
-      var l_stamen_terrainlabels = L.tileLayer(s_stamen_urlbase+'terrain-labels/{z}/{x}/{y}.jpg',{maxNativeZoom:16, attribution:s_stamen_copyright});
-      var l_stamen_toner = L.tileLayer(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
-      var l_stamen_tonerlite = L.tileLayer(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
-      var l_stamen_tonerbg = L.tileLayer(s_stamen_urlbase+'toner-background/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
-      var l_stamen_tonerhybrid = L.tileLayer(s_stamen_urlbase+'toner-hybrid/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
-      var l_stamen_tonerlines = L.tileLayer(s_stamen_urlbase+'toner-lines/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
-      var l_stamen_tonerlabels = L.tileLayer(s_stamen_urlbase+'toner-labels/{z}/{x}/{y}.png',{maxZoom:20, attribution:s_stamen_copyright});
+      // Stamen Watercolor (now housed at Smithsonian)
+      let s_watercolor = {url:'https://watercolormaps.collection.cooperhewitt.org/tile/watercolor/{z}/{x}/{y}.jpg', attribution:'Map <a href="https://watercolormaps.collection.cooperhewitt.org">tiles</a> by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'};
+      var l_stamen_watercolor = L.tileLayer(s_watercolor.url,{minZoom:0, maxZoom:20, attribution:s_watercolor.attribution});
+      var l_stamen_watercolor_mod_muted = L.tileLayer.styleFilter(s_watercolor.url,{minZoom:0, maxZoom:20, attribution:s_watercolor.attribution, filter:'grayscale(85%)'});
+      var l_stamen_watercolor_mod_gray = L.tileLayer.styleFilter(s_watercolor.url,{minZoom:0, maxZoom:20, attribution:s_watercolor.attribution, filter:'grayscale(100%)'});
+      var l_stamen_watercolor_mod_darkgray = L.tileLayer.styleFilter(s_watercolor.url,{minZoom:0, maxZoom:20, attribution:s_watercolor.attribution, filter:'grayscale(100%) brightness(50%)'});
 
       // OpenStreetMaps & OpenTopoMap
-      var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
-      var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
-      var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+      let s_osm_std = {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles from <a href="https://osm.org/">OpenStreetMap</a>'};
+      var l_osm_std = L.tileLayer(s_osm_std.url, {minZoom:0, maxNativeZoom:19, maxZoom:20, attribution:s_osm_std.attribution});
+      var l_osm_de = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'});
+      var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
+      var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {minZoom:0, maxNativeZoom:19, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
+      let s_otm = {url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'};
+      var l_otm = L.tileLayer(s_otm.url,{minZoom:0, maxNativeZoom:17, maxZoom:20, attribution:s_otm.attribution});
+      // mods
+      var l_otm_mod_muted = L.tileLayer.styleFilter(s_otm.url,{minZoom:0, maxNativeZoom:17, maxZoom:20, attribution:s_otm.attribution, filter:'grayscale(60%)'});
+      var l_osm_std_mod_lightgray = L.tileLayer.styleFilter(s_osm_std.url, {minZoom:0, maxZoom:20, attribution:s_osm_std.attribution, filter:'grayscale(100%)'});
+      var l_osm_std_mod_medgray = L.tileLayer.styleFilter(s_osm_std.url, {minZoom:0, maxZoom:20, attribution:s_osm_std.attribution, filter:'grayscale(100%) brightness(50%) contrast(150%)'});
+      var l_osm_std_mod_medgray2 = L.tileLayer.styleFilter(s_osm_std.url, {minZoom:0, maxZoom:20, attribution:s_osm_std.attribution, filter:'grayscale(100%) brightness(50%) contrast(150%) invert(100%) contrast(125%)'});
+      var l_osm_std_mod_darkgray = L.tileLayer.styleFilter(s_osm_std.url, {minZoom:0, maxZoom:20, attribution:s_osm_std.attribution, filter:'grayscale(100%) invert(100%)'});
+      var l_osm_std_mod_darkest = L.tileLayer.styleFilter(s_osm_std.url, {minZoom:0, maxZoom:20, attribution:s_osm_std.attribution, filter:'grayscale(100%) invert(100%) brightness(80%) contrast(125%)'});
+
+      // EOX -- http://maps.eox.at/
+      // capabilities (including attribution) -- https://tiles.maps.eox.at/wmts/1.0.0/WMTSCapabilities.xml
+      function f_eox_url(tileset,format) { return `https://tiles.maps.eox.at/wmts/1.0.0/${tileset}/default/g/{z}/{y}/{x}.${format}`; }; 
+      // basemaps
+      var l_eox_osm = L.tileLayer(f_eox_url('osm_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">OpenStreetMap</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+      var l_eox_blackmarble = L.tileLayer(f_eox_url('blackmarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Black Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
+      var l_eox_bluemarble = L.tileLayer(f_eox_url('bluemarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Blue Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
+      var l_eox_terrain = L.tileLayer(f_eox_url('terrain_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+      var l_eox_terrain_light = L.tileLayer(f_eox_url('terrain-light_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain Light</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+      var l_eox_sentinel2_2020 = L.tileLayer(f_eox_url('s2cloudless-2020_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2020) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+      var l_eox_sentinel2_2019 = L.tileLayer(f_eox_url('s2cloudless-2019_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+      var l_eox_sentinel2_2018 = L.tileLayer(f_eox_url('s2cloudless-2018_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+      // overlays
+      var l_eox_hydrography = L.tileLayer(f_eox_url('hydrography_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Hydrography overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+      var l_eox_coastline = L.tileLayer(f_eox_url('coastline_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Coastline overlay</a> { Rendering &copy; <a href="https://eox.at">EOX</a> }'}); 
+      var l_eox_streets = L.tileLayer(f_eox_url('streets_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Streets overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+      var l_eox_overlay = L.tileLayer(f_eox_url('overlay_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+      var l_eox_overlay_bright = L.tileLayer(f_eox_url('overlay_bright_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Overlay bright</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
 
       //debug layer
       var l_debug = L.gridLayer.debugCoords();
 
-      var defaultlayers = [l_stamen_terrain,l_inat_place];
+      var defaultlayers = [l_otm_mod_muted,l_inat_place];
       //if (taxon_id!==null) {
       //   if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
       //   if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
@@ -204,29 +244,40 @@ async function fcreatemap(topobs) {
       // define available basemaps (can view only one at a time)
       var basemaps = {
          "Stamen Watercolor": l_stamen_watercolor,
-         "Stamen Terrain": l_stamen_terrain,
-         "Stamen Terrain Background": l_stamen_terrainbg,
-         "Stamen Toner": l_stamen_toner,
-         "Stamen Toner Background": l_stamen_tonerbg,
-         "Stamen Toner Lite": l_stamen_tonerlite,
+         "Stamen Watercolor Mod (Muted)": l_stamen_watercolor_mod_muted,
+         "Stamen Watercolor Mod (Gray)": l_stamen_watercolor_mod_gray,
+         "Stamen Watercolor Mod (Dark Gray)": l_stamen_watercolor_mod_darkgray,
          "OpenTopoMap": l_otm,
+         "OpenTopoMap Mod (Muted)": l_otm_mod_muted,
+         "OpenStreetMap Standard": l_osm_std,
+         "OpenStreetMap Std Mod (Light Gray)": l_osm_std_mod_lightgray,
+         "OpenStreetMap Std Mod (Gray 1)": l_osm_std_mod_medgray,
+         "OpenStreetMap Std Mod (Gray 2)": l_osm_std_mod_medgray2,
+         "OpenStreetMap Std Mod (Dark Gray)": l_osm_std_mod_darkgray,
+         "OpenStreetMap Std Mod (Near Black)": l_osm_std_mod_darkest,
+         "OpenStreetMap Deutschland": l_osm_de,
          "OpenStreetMap France": l_osm_fr,
          "OpenStreetMap Humanitarian": l_osm_hot,
+         "EOX OSM": l_eox_osm,
+         "EOX Black Marble": l_eox_blackmarble,
+         "EOX Blue Marble": l_eox_bluemarble,
+         "EOX Sentinel-2 2020": l_eox_sentinel2_2020,
+         "EOX Sentinel-2 2019": l_eox_sentinel2_2019,
+         "EOX Sentinel-2 2018": l_eox_sentinel2_2018,
+         "EOX Terrain": l_eox_terrain,
+         "EOX Terrain (Light)": l_eox_terrain_light,
       };
 
       // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
       var overlaymaps = {
-         "Stamen Terrain Lines": l_stamen_terrainlines,
-         "Stamen Toner Lines": l_stamen_tonerlines,
-         "Stamen Toner Hybrid": l_stamen_tonerhybrid,
-         "Stamen Terrain Labels": l_stamen_terrainlabels,
-         "Stamen Toner Labels": l_stamen_tonerlabels,
+         "EOX Overlay": l_eox_overlay,
+         "EOX Overlay (Bright)": l_eox_overlay_bright,
       //   "iNaturalist Taxon Range": l_inat_taxonrange,
       //   "iNaturalist Taxon Places": l_inat_taxonplace,
          "iNaturalist Place": l_inat_place,
       //   "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
          "iNaturalist Observations Heatmap": l_inat_heat,
-         "iNaturalist Observations Circles": l_inat_circles,
+      //   "iNaturalist Observations Circles": l_inat_circles,
          "iNaturalist Observations Grid": l_inat_grid,
          "iNaturalist Observations Points": l_inat_points,
          "Debug Grid":l_debug,
