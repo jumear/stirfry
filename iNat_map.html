@@ -881,45 +881,81 @@ else {
    var l_inat_taxonrange = L.tileLayer(inat_urlbase+'taxon_ranges/'+taxon_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_ranges_taxon_id_zoom_x_y_png">iNaturalist taxon range data</a>'});
 
    // Stamen layers
+   // these are deprecated as Stamen tiles are now maintained by Stadia
    var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
    var s_stamen_urlbase = 'https://stamen-tiles-{s}.a.ssl.fastly.net/';
-   var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{minZoom:0, maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
-   var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, attribution:s_stamen_copyright});
-   var l_stamen_terrainbg = L.tileLayer(s_stamen_urlbase+'terrain-background/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, attribution:s_stamen_copyright});
-   var l_stamen_terrainlines = L.tileLayer(s_stamen_urlbase+'terrain-lines/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, attribution:s_stamen_copyright});
-   var l_stamen_terrainlabels = L.tileLayer(s_stamen_urlbase+'terrain-labels/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, attribution:s_stamen_copyright});
+   //var l_stamen_watercolor = L.tileLayer(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{minZoom:0, maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'});
+   var l_stamen_terrain = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:s_stamen_copyright});
+   var l_stamen_terrainbg = L.tileLayer(s_stamen_urlbase+'terrain-background/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:s_stamen_copyright});
+   var l_stamen_terrainlines = L.tileLayer(s_stamen_urlbase+'terrain-lines/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:s_stamen_copyright});
+   var l_stamen_terrainlabels = L.tileLayer(s_stamen_urlbase+'terrain-labels/{z}/{x}/{y}.jpg',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_toner = L.tileLayer(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerlite = L.tileLayer(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerbg = L.tileLayer(s_stamen_urlbase+'toner-background/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerhybrid = L.tileLayer(s_stamen_urlbase+'toner-hybrid/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerlines = L.tileLayer(s_stamen_urlbase+'toner-lines/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
    var l_stamen_tonerlabels = L.tileLayer(s_stamen_urlbase+'toner-labels/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright});
-
    // Stamen layer mods
-   var l_stamen_toner_mod_dark25 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(25%)'});
-   var l_stamen_toner_mod_dark70 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(70%)'});
-   var l_stamen_toner_mod_green_on_black = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(40%) sepia(40%) hue-rotate(60deg) saturate(400%) contrast(200%)'});
-   var l_stamen_toner_mod_black_on_blue = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(60%) sepia(100%) hue-rotate(180deg) saturate(150%)'});
-   var l_stamen_tonerlite_mod_dark50 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) contrast(125%)'});
-   var l_stamen_tonerlite_mod_dark_with_purple = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(70%) sepia(100%) hue-rotate(205deg) saturate(160%)'});
-   var l_stamen_tonerlite_mod_olive = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) sepia(100%) hue-rotate(15deg) saturate(160%)'});
-   var l_stamen_watercolor_mod_gray = L.tileLayer.styleFilter(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{minZoom:0, maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.', filter:'grayscale(85%)'});
+   //var l_stamen_toner_mod_dark25 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(25%)'});
+   //var l_stamen_toner_mod_dark70 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(70%)'});
+   //var l_stamen_toner_mod_green_on_black = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(40%) sepia(40%) hue-rotate(60deg) saturate(400%) contrast(200%)'});
+   //var l_stamen_toner_mod_black_on_blue = L.tileLayer.styleFilter(s_stamen_urlbase+'toner/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(60%) sepia(100%) hue-rotate(180deg) saturate(150%)'});
+   //var l_stamen_tonerlite_mod_dark50 = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) contrast(125%)'});
+   //var l_stamen_tonerlite_mod_dark_with_purple = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'invert(100%) brightness(70%) sepia(100%) hue-rotate(205deg) saturate(160%)'});
+   //var l_stamen_tonerlite_mod_olive = L.tileLayer.styleFilter(s_stamen_urlbase+'toner-lite/{z}/{x}/{y}.png',{minZoom:0, maxZoom:20, attribution:s_stamen_copyright, filter:'brightness(50%) sepia(100%) hue-rotate(15deg) saturate(160%)'});
+   //var l_stamen_watercolor_mod_gray = L.tileLayer.styleFilter(s_stamen_urlbase+'watercolor/{z}/{x}/{y}.jpg',{minZoom:0, maxZoom:20, attribution:'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.', filter:'grayscale(85%)'});
+
+   // Stamen Watercolor (now housed at Smithsonian)
+   let s_watercolor_copyright = 'Map <a href="https://watercolormaps.collection.cooperhewitt.org">tiles</a> by <a href="http://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'
+   let s_watercolor_url = 'https://watercolormaps.collection.cooperhewitt.org/tile/watercolor/{z}/{x}/{y}.jpg'
+   var l_stamen_watercolor = L.tileLayer(s_watercolor_url,{minZoom:0, maxZoom:20, attribution:s_watercolor_copyright});
+   var l_stamen_watercolor_mod_muted = L.tileLayer.styleFilter(s_watercolor_url,{minZoom:0, maxZoom:20, attribution:s_watercolor_copyright, filter:'grayscale(85%)'});
+   var l_stamen_watercolor_mod_gray = L.tileLayer.styleFilter(s_watercolor_url,{minZoom:0, maxZoom:20, attribution:s_watercolor_copyright, filter:'grayscale(100%)'});
+   var l_stamen_watercolor_mod_darkgray = L.tileLayer.styleFilter(s_watercolor_url,{minZoom:0, maxZoom:20, attribution:s_watercolor_copyright, filter:'grayscale(100%) brightness(50%)'});
 
    // OpenStreetMaps & OpenTopoMap
+   var l_osm_std = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {minZoom:0, maxNativeZoom:19, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles from <a href="https://osm.org/">OpenStreetMap</a>'});
+   var l_osm_de = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'});
    var l_osm_fr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="https://openstreetmap.fr">OSM France</a>'});
-   var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {minZoom:0, maxZoom:19, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
-   var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{minZoom:0, maxNativeZoom:17, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+   var l_osm_hot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {minZoom:0, maxNativeZoom:19, maxZoom:20, attribution:'donn&eacute;es &copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - Tiles courtesy of <a href="https://hot.openstreetmap.org/">Humanitarian OpenStreetMap Team</a>'});
+   var l_otm = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{minZoom:0, maxNativeZoom:17, maxZoom:20, attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'});
+   // mods
+   var l_osm_de_mod_lightgray = L.tileLayer.styleFilter('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>', filter:'grayscale(100%)'});
+   var l_osm_de_mod_medgray = L.tileLayer.styleFilter('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>', filter:'grayscale(100%) brightness(50%) contrast(150%)'});
+   var l_osm_de_mod_medgray2 = L.tileLayer.styleFilter('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>', filter:'grayscale(100%) brightness(50%) contrast(150%) invert(100%) contrast(125%)'});
+   var l_osm_de_mod_darkgray = L.tileLayer.styleFilter('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>', filter:'grayscale(100%) invert(100%)'});
+   var l_osm_de_mod_darkest = L.tileLayer.styleFilter('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {minZoom:0, maxZoom:20, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL - tiles <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>', filter:'grayscale(100%) invert(100%) brightness(80%) contrast(125%)'});
+
+   // EOX -- http://maps.eox.at/
+   // capabilities (including attribution) -- https://tiles.maps.eox.at/wmts/1.0.0/WMTSCapabilities.xml
+   function f_eox_url(tileset,format) { return `https://tiles.maps.eox.at/wmts/1.0.0/${tileset}/default/g/{z}/{y}/{x}.${format}`; }; 
+   // basemaps
+   // var l_eox_osm = L.tileLayer(f_eox_url('osm_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">OpenStreetMap</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+   var l_eox_blackmarble = L.tileLayer(f_eox_url('blackmarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Black Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
+   var l_eox_bluemarble = L.tileLayer(f_eox_url('bluemarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Blue Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
+   var l_eox_terrain = L.tileLayer(f_eox_url('terrain_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+   var l_eox_terrain_light = L.tileLayer(f_eox_url('terrain-light_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain Light</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+   var l_eox_sentinel2_2020 = L.tileLayer(f_eox_url('s2cloudless-2020_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2020) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   var l_eox_sentinel2_2019 = L.tileLayer(f_eox_url('s2cloudless-2019_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   var l_eox_sentinel2_2018 = L.tileLayer(f_eox_url('s2cloudless-2018_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   // overlays
+   var l_eox_hydrography = L.tileLayer(f_eox_url('hydrography_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Hydrography overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+   var l_eox_coastline = L.tileLayer(f_eox_url('coastline_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Coastline overlay</a> { Rendering &copy; <a href="https://eox.at">EOX</a> }'}); 
+   var l_eox_streets = L.tileLayer(f_eox_url('streets_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Streets overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+   var l_eox_overlay = L.tileLayer(f_eox_url('overlay_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
+   var l_eox_overlay_bright = L.tileLayer(f_eox_url('overlay_bright_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Overlay bright</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
 
    // USGS maps (US primarily)
    var s_usgs_urlbase = 'https://basemap.nationalmap.gov/arcgis/rest/services/'
    //var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data; Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model'});
    var l_usgs_topo = L.tileLayer(s_usgs_urlbase+'USGSTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSTopo/MapServer">USGS The National Map</a>'});
-   var l_stamen_terrain_fallback = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{minZoom:9, maxNativeZoom:16, attribution:s_stamen_copyright});
-   var g_usgs_topo = L.layerGroup([l_stamen_terrain_fallback, l_usgs_topo]);
-   var l_usgs_img = L.tileLayer(s_usgs_urlbase+'USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryOnly/MapServer">USGS The National Map</a>: Orthoimagery'});
-   var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
-   //var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
-   var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
+   // var l_stamen_terrain_fallback = L.tileLayer(s_stamen_urlbase+'terrain/{z}/{x}/{y}.jpg',{minZoom:9, maxNativeZoom:16, attribution:s_stamen_copyright});
+   var l_eox_terrain_light_fallback = L.tileLayer(f_eox_url('terrain-light_3857','jpg'),{minZoom:9, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain Light</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+   var g_usgs_topo = L.layerGroup([l_eox_terrain_light_fallback, l_usgs_topo]);
+   var l_usgs_img = L.tileLayer(s_usgs_urlbase+'USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryOnly/MapServer">USGS The National Map</a>: Orthoimagery'});
+   var l_usgs_imgtopo = L.tileLayer(s_usgs_urlbase+'USGSImageryTopo/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSImageryTopo/MapServer">USGS The National Map</a>: Orthoimagery and US Topo'});
+   //var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
+   var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
 
    // USGS Ecological Land Units (Worldwide coverage)
    // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
@@ -943,16 +979,15 @@ else {
    var l_usgs_3dep_contours = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/contours/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:1,2,3,4,5,6,7,8,10,11,12,13,15,16,17,18,21,22,25,26',{minZoom:8, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
    // var l_usgs_3dep_transport = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/transportation/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38',{minZoom:4, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
 
-
    var l_graticule = L.tileLayer.wms('https://gis.ngdc.noaa.gov/arcgis/services/web_mercator/graticule/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6', format:'image/png32', transparent:true});
 
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
 
    var defaultlayers = (view==='elevation') ? [g_usgs_topo]
-      : (view==='ecolandunit') ? [l_stamen_tonerlite_mod_dark_with_purple,l_usgs_ecolandunit,l_stamen_tonerhybrid]
-      : (view==='heatmap') ? [l_stamen_watercolor_mod_gray,l_stamen_tonerhybrid]
-      : [l_stamen_tonerlite_mod_dark50];
+      : (view==='ecolandunit') ? [l_eox_terrain,l_usgs_ecolandunit,l_eox_overlay]
+      : (view==='heatmap') ? [l_stamen_watercolor_mod_muted,l_eox_overlay]
+      : [l_osm_std];
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
       if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
@@ -971,26 +1006,43 @@ else {
    // define available basemaps (can view only one at a time)
    var basemaps = {
       "Stamen Watercolor": l_stamen_watercolor,
-      "Stamen Terrain": l_stamen_terrain,
-      "Stamen Terrain Background": l_stamen_terrainbg,
-      "Stamen Toner": l_stamen_toner,
-      "Stamen Toner Background": l_stamen_tonerbg,
-      "Stamen Toner Lite": l_stamen_tonerlite,
-      "Stamen Watercolor Mod (Grayish)": l_stamen_watercolor_mod_gray,
-      "Stamen Toner Mod (Med Dark)": l_stamen_toner_mod_dark70,
-      "Stamen Toner Mod (Dark)": l_stamen_toner_mod_dark25,
-      "Stamen Toner Mod (Green on Black)": l_stamen_toner_mod_green_on_black,
-      "Stamen Toner Mod (Black on Blue)": l_stamen_toner_mod_black_on_blue,
-      "Stamen Toner Lite Mod (Med Dark)": l_stamen_tonerlite_mod_dark50,
-      "Stamen Toner Lite Mod (Dark with Purple)": l_stamen_tonerlite_mod_dark_with_purple,
-      "Stamen Toner Lite Mod (Olive)": l_stamen_tonerlite_mod_olive,
+      "Stamen Watercolor Mod (Muted)": l_stamen_watercolor_mod_muted,
+      "Stamen Watercolor Mod (Gray)": l_stamen_watercolor_mod_gray,
+      "Stamen Watercolor Mod (Dark Gray)": l_stamen_watercolor_mod_darkgray,
+      //"Stamen Terrain": l_stamen_terrain,
+      //"Stamen Terrain Background": l_stamen_terrainbg,
+      //"Stamen Toner": l_stamen_toner,
+      //"Stamen Toner Background": l_stamen_tonerbg,
+      //"Stamen Toner Lite": l_stamen_tonerlite,
+      //"Stamen Toner Mod (Med Dark)": l_stamen_toner_mod_dark70,
+      //"Stamen Toner Mod (Dark)": l_stamen_toner_mod_dark25,
+      //"Stamen Toner Mod (Green on Black)": l_stamen_toner_mod_green_on_black,
+      //"Stamen Toner Mod (Black on Blue)": l_stamen_toner_mod_black_on_blue,
+      //"Stamen Toner Lite Mod (Med Dark)": l_stamen_tonerlite_mod_dark50,
+      //"Stamen Toner Lite Mod (Dark with Purple)": l_stamen_tonerlite_mod_dark_with_purple,
+      //"Stamen Toner Lite Mod (Olive)": l_stamen_tonerlite_mod_olive,
       "OpenTopoMap": l_otm,
+      "OpenStreetMap Standard": l_osm_std,
+      "OpenStreetMap Deutschland": l_osm_de,
+      "OpenStreetMap DE Mod (Light Gray)": l_osm_de_mod_lightgray,
+      "OpenStreetMap DE Mod (Gray 1)": l_osm_de_mod_medgray,
+      "OpenStreetMap DE Mod (Gray 2)": l_osm_de_mod_medgray2,
+      "OpenStreetMap DE Mod (Dark Gray)": l_osm_de_mod_darkgray,
+      "OpenStreetMap DE Mod (Near Black)": l_osm_de_mod_darkest,
       "OpenStreetMap France": l_osm_fr,
       "OpenStreetMap Humanitarian": l_osm_hot,
+      //"EOX OSM": l_eox_osm,
+      "EOX Black Marble": l_eox_blackmarble,
+      "EOX Blue Marble": l_eox_bluemarble,
+      "EOX Sentinel-2 2020": l_eox_sentinel2_2020,
+      "EOX Sentinel-2 2019": l_eox_sentinel2_2019,
+      "EOX Sentinel-2 2018": l_eox_sentinel2_2018,
+      "EOX Terrain": l_eox_terrain,
+      "EOX Terrain (Light)": l_eox_terrain_light,
       "USGS Imagery": l_usgs_img,
       "USGS Topo": g_usgs_topo,
       "USGS Imagery + Topo": l_usgs_imgtopo,
-//      "USGS Relief": l_usgs_relief,
+      //"USGS Relief": l_usgs_relief,
       "USGS Hillshade (US, CA, MX)": l_usgs_3dep_hillshade,
       "USGS Aspect (US, CA, MX)": l_usgs_3dep_aspect,
       "USGS Slope (US, CA, MX)": l_usgs_3dep_slope,
@@ -1000,20 +1052,25 @@ else {
    var overlaymaps = {
       "USGS Ecological Land Units": l_usgs_ecolandunit,
       "USGS Hydro": l_usgs_hydro,
+      "EOX Hydrography": l_eox_hydrography,
       "USGS Contours (US only)": l_usgs_3dep_contours,
       //"USGS Trasnportation": l_usgs_3dep_transport,
-      "Stamen Terrain Lines": l_stamen_terrainlines,
-      "Stamen Toner Lines": l_stamen_tonerlines,
-      "Stamen Toner Hybrid": l_stamen_tonerhybrid,
-      "Stamen Terrain Labels": l_stamen_terrainlabels,
-      "Stamen Toner Labels": l_stamen_tonerlabels,
+      //"Stamen Terrain Lines": l_stamen_terrainlines,
+      //"Stamen Toner Lines": l_stamen_tonerlines,
+      //"Stamen Toner Hybrid": l_stamen_tonerhybrid,
+      //"Stamen Terrain Labels": l_stamen_terrainlabels,
+      //"Stamen Toner Labels": l_stamen_tonerlabels,
+      "EOX Streets": l_eox_streets,
+      "EOX Coastline": l_eox_coastline,
+      "EOX Overlay": l_eox_overlay,
+      "EOX Overlay (Bright)": l_eox_overlay_bright,
       "iNaturalist Taxon Range": l_inat_taxonrange,
       "iNaturalist Taxon Places": l_inat_taxonplace,
       "iNaturalist Place": l_inat_place,
-//      "iNaturalist Observations Density in GBIF (no filters)": l_gbif,
+      //"iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
       "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
-//      "iNaturalist Observations Circles": l_inat_circles,
+      //"iNaturalist Observations Circles": l_inat_circles,
       "iNaturalist Observations Grid": l_inat_grid,
       "iNaturalist Observations Points": l_inat_points,
       "iNaturalist Observations":g_inat_obs,
