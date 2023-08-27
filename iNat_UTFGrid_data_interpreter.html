@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist UTFGrid Data Interpreter" />
+<title>iNaturalist UTFGrid Data Interpreter</title>
+<style>
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+      --filter-invert-value: 0%;
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+         --filter-invert-value: 100%;
+      }
+   }
+   #main { width:100%; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+   tr:nth-child(even) { background:var(--color-base); }
+   .tar { text-align:right; }
+   .car { text-align:center; }
+   .icon { height:48px; width:48px; border-radius:50%; }
+   .photo { height:64px; width:64px; }
+   img { margin:0; padding:0; border:0; }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+
+   #mapdiv { background:var(--color-alt); position:absolute; top:0px; left:0px; }
+   #maptile { filter:grayscale(100%) invert(var(--filter-invert-value)); position:absolute; top:0; left:0; height:100%; width:100%; }
+   #mapgrid td { padding:0; margin:0; border:1px dotted var(--color-text); color:var(--color-text); text-align:center; vertical-align:middle; background:var(--color-brand); }
+   .mapsel { display:none; position:absolute; top:-1px; left:-1px; border:2px solid var(--color-brand); }
+
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+let p_x = winurlparams.get('x');
+let p_y = winurlparams.get('y');
+let p_z = winurlparams.get('z');
+winurlparams.delete('x');
+winurlparams.delete('y');
+winurlparams.delete('z');
+//let p_per_page = winurlparams.get('per_page') || 10;
+//let p_page = winurlparams.get('page') || 1;
+
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fround(num,places) {
+   let n = num*1;
+   return n.toFixed(places); 
+};
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+
+function faddinfotr(parent,label,value) {
+   let infotr = faddelem('tr',parent);
+   faddelems('td',infotr,[label,value]);
+};
+function futfgridlink(xyzobj) { return (xyzobj)?furl(`${winurlexsearchstr}?z=${xyzobj.z}&x=${xyzobj.x}&y=${xyzobj.y}&${winurlparams}`,`z:${xyzobj.z}, x:${xyzobj.x}, y:${xyzobj.y}`):'-'; };
+function furlparams(url,params={}) {
+   for (param of Object.entries(params)) { url = url.replace(`{${param[0]}}`,param[1]); }; 
+   return url;
+};
+
+function fresults(xobj) {
+   //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
+   let utfgrid = xobj;
+   if (utfgrid) {
+      //although a standard UTFgrid is 64x64, iNat's "grid" style tile implementation is actually a 32x32 grid.
+      //theoretically, a 2x2 set of cells from the UTFgrid should correspond to a single cell from the "grid" style tile grid; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
+      //so we need to take the bottom-right cell from each 2x2 set of UTFgrid cells and use that to effectively represent the corresponding "grid" style tile cell.
+      let gridsize = {px:256, zoom:3, base:64, basetoeff:2};
+      gridsize.eff = gridsize.base/gridsize.basetoeff;
+      gridsize.effpx = gridsize.px/gridsize.eff;
+      gridsize.effzstep = Math.log2(gridsize.eff);
+
+      // faddelem('h2',document.body,{innerText:'Visualization'});
+      let basemap_osm_std = {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://osm.org/">OpenStreetMap</a>'};
+      let basemap_osm_de = {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'};
+      //let basemap_otm = {url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'};
+      let infodivwidthpx = 350;
+      let vizdiv = faddelem('div',document.body,{id:'vizdiv',style:{height:gridsize.px*gridsize.zoom+'px',width:gridsize.px*gridsize.zoom+infodivwidthpx+'px',position:'relative'}});
+      let mapdiv = faddelem('div',vizdiv,{id:'mapdiv',style:{height:gridsize.px*gridsize.zoom+'px',width:gridsize.px*gridsize.zoom+'px'}});
+      let maptile = faddelem('img',mapdiv,{id:'maptile',src:furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})});
+      let mapsel = {
+         x: faddelem('div',mapdiv,{classList:'mapsel',id:'mapselx',style:{height:gridsize.px*gridsize.zoom-1+'px',width:gridsize.effpx*gridsize.zoom-1+'px'}}),
+         y: faddelem('div',mapdiv,{classList:'mapsel',id:'mapsely',style:{width:gridsize.px*gridsize.zoom-1+'px',height:gridsize.effpx*gridsize.zoom-1+'px'}})
+      };
+      let mapgrid = faddelem('table',mapdiv,{id:'mapgrid',style:{height:'100%',width:'100%',position:'absolute',top:0,left:0,padding:0,margin:0,borderCollapse:'collapse'}});
+      for (let gy=0; gy<gridsize.eff; gy++) {
+         let mgrow = faddelem('tr',mapgrid,{style:{padding:0,margin:0,background:'none'}});
+         for (let gx=0; gx<gridsize.eff; gx++) {
+            faddelem('td',mgrow,{innerText:'',x:gx,y:gy,style:{height:gridsize.effpx*gridsize.zoom-1+'px',width:gridsize.effpx*gridsize.zoom-1+'px',fontSize:gridsize.effpx*gridsize.zoom-10+'px'}});
+         };
+      };
+      let infodiv = faddelem('div',vizdiv,{id:'infodiv',style:{height:'100%',width:infodivwidthpx+'px',position:'absolute',top:0,left:gridsize.px*gridsize.zoom+'px',marginLeft:gridsize.effpx*gridsize.zoom/2+'px'}});
+
+      let maxZoom = 20;
+      let arrayCount = Object.values(utfgrid.data).map(d => d.cellCount);
+      utfgrid.cellCountTotal = arrayCount.reduce((a,b) => a+b,0);
+      utfgrid.cellCountMax = Math.max(...arrayCount);
+    
+      faddelem('h2',infodiv,{innerText:'Grid Info'});
+      let infotablegrid = faddelem('table',infodiv,{id:'infotablegrid'});
+      let infotbodygrid = faddelem('tbody',infotablegrid,{id:'infotbodygrid'});
+      faddinfotr(infotbodygrid,{innerText:'Z Index (Zoom Level)'},{innerText:p_z});
+      faddinfotr(infotbodygrid,{innerText:'X Index'},{innerText:p_x});
+      faddinfotr(infotbodygrid,{innerText:'Y Index'},{innerText:p_y});
+      faddinfotr(infotbodygrid,{innerText:'Total Observations'},{innerText:fcomnum(utfgrid.cellCountTotal)});
+      faddinfotr(infotbodygrid,{innerText:'Max Obs Per Cell'},{innerText:fcomnum(utfgrid.cellCountMax)});
+      let zoomoututfgrid = ((Number(p_z)-1) < 0 ) ? null : {z:Number(p_z)-1, x:Math.floor(Number(p_x)/2), y:Math.floor(Number(p_y)/2)};
+      faddinfotr(infotbodygrid,{innerText:'Parent (Z-1) UTFGrid'},{innerHTML:futfgridlink(zoomoututfgrid)});
+
+      faddelem('h2',infodiv,{innerText:'Cell Info'});
+      let infotablecell = faddelem('table',infodiv,{id:'infotablecell'});
+      let infotbodycell = faddelem('tbody',infotablecell,{id:'infotbodycell',innerHTML:'< Select a grid cell to view its details.'});
+
+      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Tile</a> ${(Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
+
+      faddelem('h2',document.body,{style:{marginTop:'30px'},innerText:'Details for All Cells in Grid'});
+      let table = faddelem('table',document.body,{id:'main'});
+      let thead = faddelem('thead',table);
+      let hrow = faddelem('tr',thead);
+      let labels = [
+         {innerText:'X Index'},
+         {innerText:'Y Index'},
+         {innerText:'UTF-8 Char'},
+         {innerText:'UTF-8 Code'},
+         {classList:'tar',innerText:'Obs Count'},
+         {classList:'tar',innerText:'% of Max in Grid'},
+         {classList:'tar',innerText:'% of Total in Grid'},
+         //{innerText:'N Lat'},
+         //{innerText:'E Lng'},
+         //{innerText:'S Lat'},
+         //{innerText:'W Lng'},
+         {classList:'car',innerText:`Equiv (Z+${gridsize.effzstep}) UTFGrid`},
+         {classList:'car',innerText:'Z+1 UTFGrid'},
+         {innerText:'Center Lat'},
+         {innerText:'Center Lng'},
+         {innerText:'Latest Obs ID'},
+      ];
+      faddelems('th',hrow,labels);
+      let tbody = faddelem('tbody',table);
+
+      for (let cy=0; cy<gridsize.eff; cy++) {
+         for (let cx=0; cx<gridsize.eff; cx++) {
+            let cell = {
+               eff: {x:cx, y:cy},
+               base: {x:cx*gridsize.basetoeff+1, y:cy*gridsize.basetoeff+1}
+            };
+            //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
+            cell.char = utfgrid.grid[cell.base.y].substring(cell.base.x,cell.base.x+1);
+            cell.charCode = utfgrid.grid[cell.base.y].charCodeAt(cell.base.x);
+            let i = cell.charCode-((cell.charCode>=93)?34:(cell.charCode>=35)?33:32);
+            cell.data = utfgrid.data[utfgrid.keys[i]];
+
+            let equivutfgrid = ((Number(p_z)+gridsize.effzstep) > maxZoom) ? null : {
+               z:Number(p_z)+gridsize.effzstep,
+               x:Number(p_x)*Math.pow(2,gridsize.effzstep)+cell.eff.x,
+               y:Number(p_y)*Math.pow(2,gridsize.effzstep)+cell.eff.y,
+            };
+            let zoominutfgrid = ((Number(p_z)+1) > maxZoom) ? null : {
+               z:Number(p_z)+1,
+               x:Number(p_x)*2+Math.round(cell.eff.x/gridsize.eff),
+               y:Number(p_y)*2+Math.round(cell.eff.y/gridsize.eff),
+            };
+
+            let brow = faddelem('tr',tbody);
+            let values = [
+               {innerText:cell.eff.x},
+               {innerText:cell.eff.y},
+               {innerText:cell.char},
+               {innerText:cell.charCode},
+               {classList:'tar',innerText:(cell.data)?fcomnum(cell.data?.cellCount):'-'},
+               {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountMax*100,7):'-'},
+               {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountTotal*100,9):'-'},
+               {classList:'car',innerHTML:futfgridlink(equivutfgrid)},
+               {classList:'car',innerHTML:futfgridlink(zoominutfgrid)},
+               {innerText:cell.data?.latitude??''},
+               {innerText:cell.data?.longitude??''},
+               {innerHTML:(cell.data)?furl(`https://www.inaturalist.org/observations/${cell.data.id}`,cell.data.id):''},
+            ];
+            faddelems('td',brow,values);
+
+            let mgcell = mapgrid.childNodes[cell.eff.y].childNodes[cell.eff.x];
+            mgcell.innerText = cell.char;
+            let mgcellcolor = `hsla(120,100%,50%,${cell.data?cell.data.cellCount/utfgrid.cellCountMax:0})`;
+            mgcell.style.background = mgcellcolor;
+            mgcell.addEventListener('mouseover', function() {
+               this.style.background = 'yellow';
+            });
+            mgcell.addEventListener('mouseout', function() {
+              this.style.background = mgcellcolor;
+            });
+            mgcell.addEventListener('click', function() {
+               infotbodycell.innerHTML = '';
+               for (let c=0; c<hrow.childNodes.length; c++) {
+                  faddinfotr(infotbodycell,{innerHTML:hrow.childNodes[c].innerHTML},{innerHTML:tbody.childNodes[this.y*gridsize.eff+this.x].childNodes[c].innerHTML});
+               };
+               mapsel.x.style.display='block';
+               mapsel.y.style.display='block';
+               mapsel.x.style.left=cell.eff.x*gridsize.effpx*gridsize.zoom-1+'px';
+               mapsel.y.style.top=cell.eff.y*gridsize.effpx*gridsize.zoom-1+'px';
+            });
+         };
+      };
+   }
+   else { faddelem('p',document.body,{innerText:'No results returned.'}); };
+};
+
+let apibase = 'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.grid.json';
+let apiurl = `${furlparams(apibase,{z:p_z,x:p_x,y:p_y})}${((winurlparams!='')?('?'+winurlparams):'')}`
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json';
+let apirefname = 'iNaturalist "Grid"-style UTFGrid';
+let apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:'iNaturalist UTFGrid Data Interpreter'});
+
+if (winurlsearchstr==='') {
+   let instructions = [
+      {innerHTML:`This page interprets the response from the ${apiref} API endpoint into a user-friendly format helps to visualize the underlying data in a corresponding <a href='https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png'>"Grid"-style Observation Map Tile</a>. To use this page, you must specify x, y, and z parameters in the URL. You may also add other query parameters to filter for specific observations. See ${furl(apirefurl)} for available parameters.`},
+      {innerHTML:`Suppose the address of this page is ${furl(winurlexsearchstr)} and you want to interpret the data from the level 0 (whole world) UTFGrid (Z=0, X=0, Y=0), filtered for only bird observations (taxon_id=3). Then you would open ${furl(famp(winurlexsearchstr+'?z=0&x=0&y=0&taxon_id=3'))} in your browser.`},
+      {innerHTML:`A general primer for XYZ Map Tiles is available here: ${furl('https://forum.inaturalist.org/t/in-pursuit-of-mappiness-part-1/21864#what-are-map-tiles-3')}. It's worth noting that UTFGrids are technically 64x64 grids, but the "Grid"-style map tiles in iNaturalist are visually represented as 32x32 grids. So this page interprets the UTFGrid data in corresponding a 32x32 grid.`},
+      {innerHTML:`The main use case for interpreting UTFGrid data in this way is to make custom visualizations of lots of observations, without having to download massive numbers of individual observations. The numbers from a given UTFGrid won't always tie exactly between parent and child UTFGrids, but the data will still be good enough for most general visualization purposes.`},
+   ];
+   faddelems('p',document.body,instructions);
+}
+else {
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
+   fetch(apiurl)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
+   });
+};
+
+</script>
+</body>
+
+</html>
