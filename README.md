@@ -14,6 +14,7 @@
 |[iNatAPIv1_taxa.html](https://jumear.github.io/stirfry/iNatAPIv1_taxa)|https://forum.inaturalist.org/t/is-there-a-tool-code-snippet-that-allows-downloading-of-taxonomy-data-from-the-site/14268/6|
 |[iNat_Chrome_audio_control_example.html](https://jumear.github.io/stirfry/iNat_Chrome_audio_control_example)|https://forum.inaturalist.org/t/vestigial-menu-on-sounds-in-chrome/8621/5|
 |[iNat_PKCE_flow_example.html](https://jumear.github.io/stirfry/iNat_PKCE_flow_example)|https://forum.inaturalist.org/t/batch-add-users-to-collection-project-filters/8086/4|
+|[iNat_UTFGrid_data_interpreter.html](https://jumear.github.io/stirfry/iNat_UTFGrid_data_interpreter)|https://forum.inaturalist.org/t/inatguessr-can-you-guess-the-location-from-the-observations/44518/50|
 |[iNat_UTFgrid_based_custom_density_map.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_custom_density_map)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/12|
 |[iNat_UTFgrid_based_density_comparison_map.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_density_comparison_map)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/22|
 |[iNat_UTFgrid_based_density_map_for_Leaflet.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_density_map_for_Leaflet)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/12|
