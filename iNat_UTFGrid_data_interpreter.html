@@ -117,9 +117,9 @@ function fresults(xobj) {
    //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
    let utfgrid = xobj;
    if (utfgrid) {
-      //although a standard UTFgrid is 64x64, iNat's "grid" style tile implementation is actually a 32x32 grid.
-      //theoretically, a 2x2 set of cells from the UTFgrid should correspond to a single cell from the "grid" style tile grid; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
-      //so we need to take the bottom-right cell from each 2x2 set of UTFgrid cells and use that to effectively represent the corresponding "grid" style tile cell.
+      //although a standard UTFgrid is 64x64, iNat's "grid"-style map tile implementation actually visualizes data in a 32x32 grid.
+      //theoretically, a 2x2 block of cells from the 64x64 UTFgrid should exactly correspond to a single cell from the 32x32 "grid"-style tile grid; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
+      //so we need to take the bottom-right cell from each 2x2 block of UTFgrid cells and use that cell specifically to effectively represent the corresponding "grid"-style map tile cell.
       let gridsize = {px:256, vizzoom:3, base:64, basetoeff:2};
       gridsize.eff = gridsize.base/gridsize.basetoeff;
       gridsize.effpx = gridsize.px/gridsize.eff;
@@ -127,7 +127,8 @@ function fresults(xobj) {
       gridsize.vizpx = gridsize.px*gridsize.vizzoom;
       gridsize.vizcellpx = gridsize.effpx*gridsize.vizzoom-1;
 
-      // faddelem('h2',document.body,{innerText:'Visualization'});
+      //faddelem('h2',document.body,{innerText:'Visualization'});
+      //we'll prefer the Standard OSM tiles in most cases, but because it is only served to zoom level 19, we'll fall back to OSM Deutschland at level 20
       let basemap_osm_std = {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://osm.org/">OpenStreetMap</a>'};
       let basemap_osm_de = {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'};
       //let basemap_otm = {url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'};
@@ -237,12 +238,8 @@ function fresults(xobj) {
             mgcell.innerText = cell.char;
             let mgcellcolor = `hsla(120,100%,50%,${cell.data?cell.data.cellCount/utfgrid.cellCountMax:0})`;
             mgcell.style.background = mgcellcolor;
-            mgcell.addEventListener('mouseover', function() {
-               this.style.background = 'yellow';
-            });
-            mgcell.addEventListener('mouseout', function() {
-              this.style.background = mgcellcolor;
-            });
+            mgcell.addEventListener('mouseover', function() { this.style.background = 'yellow'; });
+            mgcell.addEventListener('mouseout', function() { this.style.background = mgcellcolor; });
             mgcell.addEventListener('click', function() {
                infotbodycell.innerHTML = '';
                for (let c=0; c<hrow.childNodes.length; c++) {
@@ -272,8 +269,8 @@ if ([p_z,p_x,p_y].includes(null)) {
       {innerHTML:`This page translates the response from the ${apiref} API endpoint into a human-friendly format to help visualize the underlying data in a corresponding <a href='https://api.inaturalist.org/v1/docs/#!/Observation_Tiles/get_grid_zoom_x_y_png'>"Grid"-style Observation Map Tile</a>.`},
       {innerHTML:`To use this page, you must specify x, y, and z parameters in the URL. You may also add other query parameters to filter for specific observations. (See ${furl(apirefurl)} for available parameters.)`},
       {innerHTML:`For example, suppose you want to interpret the data from the level 0 (whole world) UTFGrid (Z=0, X=0, Y=0), filtered for only bird observations (taxon_id=3). Then you would open ${furl(famp(winurlexsearchstr+'?z=0&x=0&y=0&taxon_id=3'))} in your browser.`},
-      {innerHTML:`A general primer for XYZ map tiles is available here: ${furl('https://forum.inaturalist.org/t/in-pursuit-of-mappiness-part-1/21864#what-are-map-tiles-3')}. It's worth noting that UTFGrids are technically 64x64 grids, but the "Grid"-style map tiles in iNaturalist visualize data as 32x32 grids. So this page maps the 64x64 UTFGrid data to the corresponding 32x32 grid.`},
-      {innerHTML:`The main use case for interpreting UTFGrid data in this way is to make custom map visualizations of lots of iNatualist observations, without having to download massive sets of individual observations. The numbers from a given UTFGrid won't always tie exactly between parent and child UTFGrids, but the data will still be good enough for most general visualization purposes.`},
+      {innerHTML:`Usually, UTFGrids are meant only to provide a way for users to interact with online maps. However, iNaturalist includes observation count in its UTFGrid data, and one of the available the map tile styles visualizes data in a grid layout. So the UTFGrids associated with the "Grid"-style map tiles can be particularly useful for more than just user interaction. The main use case for interpreting the data from these UTFGrids is to make custom map visualizations involving lots of iNatualist observations, without having to download massive sets of individual observations. It should be noted that the numbers from a given UTFGrid won't always tie exactly with observation counts reported by the system, nor between parent and child UTFGrids, but the UTFGrid data will still be good enough for most general visualization purposes.`},
+      {innerHTML:`A general primer for XYZ map tiles is available here: ${furl('https://forum.inaturalist.org/t/in-pursuit-of-mappiness-part-1/21864#what-are-map-tiles-3')}. A good reference for UTFGrids is here: ${furl('https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md')}. It's worth noting that UTFGrids are technically 64x64 grids, but the "Grid"-style map tiles in iNaturalist visualize data in 32x32 grids. So this page maps the data from the bottom-right cell from each 2x2 block of cells in the 64x64 UTFGrid to the corresponding 32x32 grid.`},
    ];
    faddelems('p',document.body,instructions);
 }
