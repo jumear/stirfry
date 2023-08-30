@@ -20,6 +20,7 @@
       --color-border: lightgray;
       --color-hover: lightgray;
       --color-base-translucent: rgba(255,255,255,0.85);
+      --color-invisible: rgba(255,255,255,0);
       --filter-invert-value: 0%;
    }
    @media (prefers-color-scheme: dark) {
@@ -50,11 +51,18 @@
    a:hover { background:var(--color-hover); }
 
    #mapdiv { background:var(--color-alt); position:relative; }
-   #maptile { filter:grayscale(100%) invert(var(--filter-invert-value)); position:absolute; top:0; left:0; height:100%; width:100%; }
+   #maptilebase { filter:grayscale(100%) invert(var(--filter-invert-value)); position:absolute; top:0; left:0; height:100%; width:100%; }
+   #maptileover { visibility:hidden; position:absolute; top:0; left:0; height:100%; width:100%; }
    #mapgrid { height:100%; width:100%; position:absolute; top:0; left:0; padding:0; margin:0; border-collapse:collapse; }
-   #mapgrid td { padding:0; margin:0; border:1px dotted var(--color-text); color:var(--color-text); text-align:center; vertical-align:middle; background:var(--color-brand); }
+   #mapgrid td { padding:0; margin:0; border-width:1px; border-style:dotted; text-align:center; vertical-align:middle; }
+   .mgcharon td { color:var(--color-text); }
+   .mgcharoff td { color:var(--color-invisible); }
+   .mglineson td { border-color:var(--color-text); }
+   .mglinesoff td { border-color:var(--color-invisible); }
    .mapsel { display:none; position:absolute; top:-1px; left:-1px; border:2px solid var(--color-brand); }
    #infodiv { height:100%; width:calc(100% / 2); position:absolute; top:0; left:100%; }
+   #infodiv h2 { margin-top:5px; margin-bottom:10px; }
+   #infodiv table { margin-top:0px; margin-bottom:20px; }
 </style>
 </head>
 
@@ -107,6 +115,12 @@ function faddinfotr(parent,label,value) {
    let infotr = faddelem('tr',parent);
    faddelems('td',infotr,[label,value]);
 };
+function faddoptioncheckbox(parent,label,name,value=true) {
+   let infotr = faddelem('tr',parent);
+   faddelems('td',infotr,[{},{}]);
+   faddelem('label',infotr.childNodes[0],{htmlFor:name,innerText:label});
+   return faddelem('input',infotr.childNodes[1],{type:'checkbox',id:name,name:name,checked:value});   
+};
 function futfgridlink(xyzobj) { return (xyzobj)?furl(`${winurlexsearchstr}?z=${xyzobj.z}&x=${xyzobj.x}&y=${xyzobj.y}&${winurlparams}`,`z:${xyzobj.z}, x:${xyzobj.x}, y:${xyzobj.y}`):'-'; };
 function furlparams(url,params={}) {
    for (param of Object.entries(params)) { url = url.replace(`{${param[0]}}`,param[1]); }; 
@@ -133,12 +147,13 @@ function fresults(xobj) {
       let basemap_osm_de = {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'};
       //let basemap_otm = {url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'};
       let mapdiv = faddelem('div',document.body,{id:'mapdiv',style:{height:gridsize.vizpx+'px',width:gridsize.vizpx+'px'}});
-      let maptile = faddelem('img',mapdiv,{id:'maptile',src:furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})});
+      let maptilebase = faddelem('img',mapdiv,{id:'maptilebase',src:furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})});
+      let maptileover = faddelem('img',mapdiv,{id:'maptileover',src:furlparams(`https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.png${((winurlparams!='')?('?'+winurlparams):'')}`,{z:p_z,x:p_x,y:p_y})});
       let mapsel = {
          x: faddelem('div',mapdiv,{classList:'mapsel',id:'mapselx',style:{height:'calc(100% - 1px)',width:gridsize.vizcellpx+'px'}}),
          y: faddelem('div',mapdiv,{classList:'mapsel',id:'mapsely',style:{width:'calc(100% - 1px)',height:gridsize.vizcellpx+'px'}})
       };
-      let mapgrid = faddelem('table',mapdiv,{id:'mapgrid'});
+      let mapgrid = faddelem('table',mapdiv,{classList:'mglineson mgcharon',id:'mapgrid'});
       for (let gy=0; gy<gridsize.eff; gy++) {
          let mgrow = faddelem('tr',mapgrid,{style:{padding:0,margin:0,background:'none'}});
          for (let gx=0; gx<gridsize.eff; gx++) {
@@ -152,6 +167,26 @@ function fresults(xobj) {
       utfgrid.cellCountTotal = arrayCount.reduce((a,b) => a+b,0);
       utfgrid.cellCountMax = Math.max(...arrayCount);
     
+      faddelem('h2',infodiv,{innerText:'Options'});
+      let optionstable = faddelem('table',infodiv,{id:'optionstable'});
+      let optionstbody = faddelem('tbody',optionstable,{id:'optionstbody'});
+      let options = {
+         showchar: faddoptioncheckbox(optionstbody,'Show UTF-8 Char','showchar'),
+         showlines: faddoptioncheckbox(optionstbody,'Show Grid Lines','showgrid'),
+         showoverlay: faddoptioncheckbox(optionstbody,'Show iNat Obs Grid','showoverlay',false),
+         showbasemap: faddoptioncheckbox(optionstbody,'Show Basemap','showbasemap'),
+      };
+      options.showchar.addEventListener('change', function() {
+         mapgrid.classList.add((this.checked)?'mgcharon':'mgcharoff');
+         mapgrid.classList.remove(!(this.checked)?'mgcharon':'mgcharoff');
+      });
+      options.showlines.addEventListener('change', function() {
+         mapgrid.classList.add((this.checked)?'mglineson':'mglinesoff');
+         mapgrid.classList.remove(!(this.checked)?'mglineson':'mglinesoff');
+      });
+      options.showbasemap.addEventListener('change', function() { maptilebase.style.visibility=(this.checked)?'visible':'hidden'; });
+      options.showoverlay.addEventListener('change', function() { maptileover.style.visibility=(this.checked)?'visible':'hidden'; });
+
       faddelem('h2',infodiv,{innerText:'Grid Info'});
       let infotablegrid = faddelem('table',infodiv,{id:'infotablegrid'});
       let infotbodygrid = faddelem('tbody',infotablegrid,{id:'infotbodygrid'});
@@ -167,7 +202,7 @@ function fresults(xobj) {
       let infotablecell = faddelem('table',infodiv,{id:'infotablecell'});
       let infotbodycell = faddelem('tbody',infotablecell,{id:'infotbodycell',innerHTML:'< Select a grid cell to view its details.'});
 
-      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Tile</a> ${(Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
+      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Basemap</a> ${(Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
 
       faddelem('h2',document.body,{style:{marginTop:gridsize.vizcellpx*1.25+'px'},innerText:'Details for All Cells in Grid'});
       let table = faddelem('table',document.body,{id:'main'});
