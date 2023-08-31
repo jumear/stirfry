@@ -72,9 +72,9 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-let p_x = winurlparams.get('x');
-let p_y = winurlparams.get('y');
-let p_z = winurlparams.get('z');
+let p_x = Number(winurlparams.get('x'));
+let p_y = Number(winurlparams.get('y'));
+let p_z = Number(winurlparams.get('z'));
 winurlparams.delete('x');
 winurlparams.delete('y');
 winurlparams.delete('z');
@@ -126,6 +126,21 @@ function furlparams(url,params={}) {
    for (param of Object.entries(params)) { url = url.replace(`{${param[0]}}`,param[1]); }; 
    return url;
 };
+function flngfromgrid(x,z) { return (x/Math.pow(2,z)*360-180); };
+function flatfromgrid(y,z) {
+  let n = Math.PI-2*Math.PI*y/Math.pow(2,z);
+  return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
+};
+function fexplorelink(x,y,z){
+   let addtl_params = new URLSearchParams(winurlparams);
+   addtl_params.set('nelat',flatfromgrid(y,z));
+   addtl_params.set('nelng',flngfromgrid(x+1,z));
+   addtl_params.set('swlat',flatfromgrid(y+1,z));
+   addtl_params.set('swlng',flngfromgrid(x,z));
+   if(addtl_params.get('place_id')===null) {addtl_params.set('place_id','any')};
+   if(addtl_params.get('verifiable')===null) {addtl_params.set('verifiable','any')};
+   return `https://www.inaturalist.org/observations?${addtl_params}`;
+};
 
 function fresults(xobj) {
    //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
@@ -147,7 +162,7 @@ function fresults(xobj) {
       let basemap_osm_de = {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png', attribution:'&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>/ODbL from <a href="https://openstreetmap.de/">OpenStreetMap Deutschland</a>'};
       //let basemap_otm = {url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attribution:'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'};
       let mapdiv = faddelem('div',document.body,{id:'mapdiv',style:{height:gridsize.vizpx+'px',width:gridsize.vizpx+'px'}});
-      let maptilebase = faddelem('img',mapdiv,{id:'maptilebase',src:furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})});
+      let maptilebase = faddelem('img',mapdiv,{id:'maptilebase',src:furlparams((p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})});
       let maptileover = faddelem('img',mapdiv,{id:'maptileover',src:furlparams(`https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.png${((winurlparams!='')?('?'+winurlparams):'')}`,{z:p_z,x:p_x,y:p_y})});
       let mapsel = {
          x: faddelem('div',mapdiv,{classList:'mapsel',id:'mapselx',style:{height:'calc(100% - 1px)',width:gridsize.vizcellpx+'px'}}),
@@ -193,16 +208,16 @@ function fresults(xobj) {
       faddinfotr(infotbodygrid,{innerText:'Z Index (Zoom Level)'},{innerText:p_z});
       faddinfotr(infotbodygrid,{innerText:'X Index'},{innerText:p_x});
       faddinfotr(infotbodygrid,{innerText:'Y Index'},{innerText:p_y});
-      faddinfotr(infotbodygrid,{innerText:'Total Observations'},{innerText:fcomnum(utfgrid.cellCountTotal)});
+      faddinfotr(infotbodygrid,{innerText:'Total Observations'},{innerHTML:furl(fexplorelink(p_x,p_y,p_z),fcomnum(utfgrid.cellCountTotal))});
       faddinfotr(infotbodygrid,{innerText:'Max Obs Per Cell'},{innerText:fcomnum(utfgrid.cellCountMax)});
-      let zoomoututfgrid = ((Number(p_z)-1) < 0 ) ? null : {z:Number(p_z)-1, x:Math.floor(Number(p_x)/2), y:Math.floor(Number(p_y)/2)};
+      let zoomoututfgrid = (p_z-1 < 0 ) ? null : {z:p_z-1, x:Math.floor(Number(p_x)/2), y:Math.floor(p_y/2)};
       faddinfotr(infotbodygrid,{innerText:'Parent (Z-1) UTFGrid'},{innerHTML:futfgridlink(zoomoututfgrid)});
 
       faddelem('h2',infodiv,{innerText:'Cell Info'});
       let infotablecell = faddelem('table',infodiv,{id:'infotablecell'});
       let infotbodycell = faddelem('tbody',infotablecell,{id:'infotbodycell',innerHTML:'< Select a grid cell to view its details.'});
 
-      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Basemap</a> ${(Number(p_z)<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
+      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Basemap</a> ${(p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
 
       faddelem('h2',document.body,{style:{marginTop:gridsize.vizcellpx*1.25+'px'},innerText:'Details for All Cells in Grid'});
       let table = faddelem('table',document.body,{id:'main'});
@@ -224,6 +239,8 @@ function fresults(xobj) {
          {classList:'car',innerText:'Z+1 UTFGrid'},
          {innerText:'Center Lat'},
          {innerText:'Center Lng'},
+         //{innerText:'Center Lat (calc)'},
+         //{innerText:'Center Lng (Calc)'},
          {innerText:'Latest Obs ID'},
       ];
       faddelems('th',hrow,labels);
@@ -241,15 +258,15 @@ function fresults(xobj) {
             let i = cell.charCode-((cell.charCode>=93)?34:(cell.charCode>=35)?33:32);
             cell.data = utfgrid.data[utfgrid.keys[i]];
 
-            let equivutfgrid = ((Number(p_z)+gridsize.effzstep) > maxZoom) ? null : {
-               z:Number(p_z)+gridsize.effzstep,
-               x:Number(p_x)*Math.pow(2,gridsize.effzstep)+cell.eff.x,
-               y:Number(p_y)*Math.pow(2,gridsize.effzstep)+cell.eff.y,
+            let equivutfgrid = ((p_z+gridsize.effzstep) > maxZoom) ? null : {
+               z:p_z+gridsize.effzstep,
+               x:p_x*Math.pow(2,gridsize.effzstep)+cell.eff.x,
+               y:p_y*Math.pow(2,gridsize.effzstep)+cell.eff.y,
             };
-            let zoominutfgrid = ((Number(p_z)+1) > maxZoom) ? null : {
-               z:Number(p_z)+1,
-               x:Number(p_x)*2+Math.round(cell.eff.x/gridsize.eff),
-               y:Number(p_y)*2+Math.round(cell.eff.y/gridsize.eff),
+            let zoominutfgrid = ((p_z+1) > maxZoom) ? null : {
+               z:p_z+1,
+               x:p_x*2+Math.round(cell.eff.x/gridsize.eff),
+               y:p_y*2+Math.round(cell.eff.y/gridsize.eff),
             };
 
             let brow = faddelem('tr',tbody);
@@ -258,13 +275,15 @@ function fresults(xobj) {
                {innerText:cell.eff.y},
                {innerText:cell.char},
                {innerText:cell.charCode},
-               {classList:'tar',innerText:(cell.data)?fcomnum(cell.data?.cellCount):'-'},
+               {classList:'tar',innerHTML:furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-'))},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountMax*100,7):'-'},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountTotal*100,9):'-'},
                {classList:'car',innerHTML:futfgridlink(equivutfgrid)},
                {classList:'car',innerHTML:futfgridlink(zoominutfgrid)},
                {innerText:cell.data?.latitude??''},
                {innerText:cell.data?.longitude??''},
+               //{innerText:flatfromgrid(p_y*Math.pow(2,gridsize.effzstep)+cell.eff.y+0.5,p_z+gridsize.effzstep)},
+               //{innerText:flngfromgrid(p_x*Math.pow(2,gridsize.effzstep)+cell.eff.x+0.5,p_z+gridsize.effzstep)},
                {innerHTML:(cell.data)?furl(`https://www.inaturalist.org/observations/${cell.data.id}`,cell.data.id):''},
             ];
             faddelems('td',brow,values);
