@@ -72,9 +72,12 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-let p_x = Number(winurlparams.get('x'));
-let p_y = Number(winurlparams.get('y'));
-let p_z = Number(winurlparams.get('z'));
+let p_x = winurlparams.get('x');
+let p_y = winurlparams.get('y');
+let p_z = winurlparams.get('z');
+if (p_x) { p_x = Number(p_x) };
+if (p_y) { p_y = Number(p_y) };
+if (p_z) { p_z = Number(p_z) };
 winurlparams.delete('x');
 winurlparams.delete('y');
 winurlparams.delete('z');
@@ -137,8 +140,8 @@ function fexplorelink(x,y,z){
    addtl_params.set('nelng',flngfromgrid(x+1,z));
    addtl_params.set('swlat',flatfromgrid(y+1,z));
    addtl_params.set('swlng',flngfromgrid(x,z));
-   if(addtl_params.get('place_id')===null) {addtl_params.set('place_id','any')};
-   if(addtl_params.get('verifiable')===null) {addtl_params.set('verifiable','any')};
+   if (addtl_params.get('place_id')===null) {addtl_params.set('place_id','any')};
+   if (addtl_params.get('verifiable')===null) {addtl_params.set('verifiable','any')};
    return `https://www.inaturalist.org/observations?${addtl_params}`;
 };
 
