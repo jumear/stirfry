@@ -278,7 +278,7 @@ function fresults(xobj) {
                {innerText:cell.eff.y},
                {innerText:cell.char},
                {innerText:cell.charCode},
-               {classList:'tar',innerHTML:furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-'))},
+               {classList:'tar',innerHTML:(equivutfgrid)?furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-')):((cell.data)?fcomnum(cell.data?.cellCount):'-')},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountMax*100,7):'-'},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountTotal*100,9):'-'},
                {classList:'car',innerHTML:futfgridlink(equivutfgrid)},
