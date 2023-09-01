@@ -124,7 +124,7 @@ function faddoptioncheckbox(parent,label,name,value=true) {
    faddelem('label',infotr.childNodes[0],{htmlFor:name,innerText:label});
    return faddelem('input',infotr.childNodes[1],{type:'checkbox',id:name,name:name,checked:value});   
 };
-function futfgridlink(xyzobj) { return (xyzobj)?furl(`${winurlexsearchstr}?z=${xyzobj.z}&x=${xyzobj.x}&y=${xyzobj.y}&${winurlparams}`,`z:${xyzobj.z}, x:${xyzobj.x}, y:${xyzobj.y}`):'-'; };
+function futfgridlink(xyzobj) { return (xyzobj && !xyzobj.exceedsMaxZoom)?furl(`${winurlexsearchstr}?z=${xyzobj.z}&x=${xyzobj.x}&y=${xyzobj.y}&${winurlparams}`,`z:${xyzobj.z}, x:${xyzobj.x}, y:${xyzobj.y}`):'-'; };
 function furlparams(url,params={}) {
    for (param of Object.entries(params)) { url = url.replace(`{${param[0]}}`,param[1]); }; 
    return url;
@@ -261,10 +261,11 @@ function fresults(xobj) {
             let i = cell.charCode-((cell.charCode>=93)?34:(cell.charCode>=35)?33:32);
             cell.data = utfgrid.data[utfgrid.keys[i]];
 
-            let equivutfgrid = ((p_z+gridsize.effzstep) > maxZoom) ? null : {
+            let equivutfgrid = {
                z:p_z+gridsize.effzstep,
                x:p_x*Math.pow(2,gridsize.effzstep)+cell.eff.x,
                y:p_y*Math.pow(2,gridsize.effzstep)+cell.eff.y,
+               exceedsMaxZoom:((p_z+gridsize.effzstep) > maxZoom)?true:false,
             };
             let zoominutfgrid = ((p_z+1) > maxZoom) ? null : {
                z:p_z+1,
@@ -278,7 +279,7 @@ function fresults(xobj) {
                {innerText:cell.eff.y},
                {innerText:cell.char},
                {innerText:cell.charCode},
-               {classList:'tar',innerHTML:(equivutfgrid)?furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-')):((cell.data)?fcomnum(cell.data?.cellCount):'-')},
+               {classList:'tar',innerHTML:furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-'))},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountMax*100,7):'-'},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountTotal*100,9):'-'},
                {classList:'car',innerHTML:futfgridlink(equivutfgrid)},
