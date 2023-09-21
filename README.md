@@ -22,7 +22,7 @@
 |[iNat_countries.html](https://jumear.github.io/stirfry/iNat_countries)|https://forum.inaturalist.org/t/overview-statistics-of-all-countries/13973/4|
 |[iNat_id_counts_by_iconic_taxa.html](https://jumear.github.io/stirfry/iNat_id_counts_by_iconic_taxa)|https://forum.inaturalist.org/t/identifriday-is-the-happiest-day-of-the-week/26908/20|
 |[iNat_id_summary_by_category.html](https://jumear.github.io/stirfry/iNat_id_summary_by_category)|https://forum.inaturalist.org/t/many-ids-have-id-category-null/19061/4|
-|[iNat_identifier_stats.html](https://jumear.github.io/stirfry/iNat_identifier_stats.)|https://forum.inaturalist.org/t/amount-of-unknown-records-is-decreasing/8594/515|
+|[iNat_identifier_stats.html](https://jumear.github.io/stirfry/iNat_identifier_stats)|https://forum.inaturalist.org/t/amount-of-unknown-records-is-decreasing/8594/515|
 |[iNat_journal_posts.html](https://jumear.github.io/stirfry/iNat_journal_posts)|https://forum.inaturalist.org/t/can-i-search-for-a-journal-post-of-mine/33065/13|
 |[iNat_map.html](https://jumear.github.io/stirfry/iNat_map)|https://forum.inaturalist.org/t/an-optimized-workflow-to-determine-the-altitude-of-an-observation/17465/6|
 |[iNat_map_obs_interact_area_viz.html](https://jumear.github.io/stirfry/iNat_map_obs_interact_area_viz)|https://forum.inaturalist.org/t/difficult-to-select-observations-on-mini-map/17018/22|
