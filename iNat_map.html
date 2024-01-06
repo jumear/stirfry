@@ -633,6 +633,113 @@ L.utfGridCanvas = function (url, options) {
 	return new L.UTFGridCanvas(url, options);
 };
 
+// iNaturalist UTFGrid Compare
+function freplacexyz(url,x,y,z) {
+   url = url.replace('{x}',x);
+   url = url.replace('{y}',y);
+   url = url.replace('{z}',z);
+   return url;
+};
+function fgetutfgrid(url) {
+   return fetch(url)
+      .then((response) => {
+         if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
+         return response.json();
+      })
+//      .then((data) => { return data; })
+      .catch((err) => { console.error(err); });
+};
+L.GridLayer.UTFGridCompare = L.GridLayer.extend({
+   createTile: function (coords, done) {
+
+      var tile = document.createElement('canvas');
+      var tileSize = this.getTileSize();
+      tile.width = tileSize.x;
+      tile.height = tileSize.y;
+      var cellsPerTile = {x:64,y:64};
+      var cellSize = {x:tileSize.x/cellsPerTile.x,y:tileSize.y/cellsPerTile.y};
+      var ctx = tile.getContext('2d');
+
+      // default marker setups
+      var dmarker = {type:'relative',offset:{x:0,y:0},size:0.75,opacity:0.5};
+      var marker = null;
+      if (this.options.marker) {
+         marker = this.options.marker;
+         marker.type = marker.type || dmarker.type;
+         marker.size = marker.size || dmarker.size;
+         marker.offset = marker.offset || dmarker.offset;
+         marker.opacity = marker.opacity || dmarker.opacity;
+      }
+      else { marker = dmarker };
+      var offset = marker.offset;
+
+      // get UTFgrid
+      var urlbase = this.options.url;
+      var url = new URL(urlbase);
+      var urlsp0 = new URLSearchParams(url.searchParams);
+      urlsp0.delete('verifiable');
+      urlsp0.set('verifiable',true);
+      urlsp0.delete('quality_grade');
+      urlbase = urlbase.replace(url.search,'');
+      var urlsp1 = new URLSearchParams(url.searchParams);
+      urlsp1.delete('verifiable');
+      urlsp1.set('verifiable',true);
+      urlsp1.delete('quality_grade');
+      urlsp1.set('quality_grade','research');
+      url0 = urlbase+'?'+urlsp0;
+      url1 = urlbase+'?'+urlsp1;
+      var prom0 = fgetutfgrid(freplacexyz(url0,coords.x,coords.y,coords.z));
+      var prom1 = fgetutfgrid(freplacexyz(url1,coords.x,coords.y,coords.z));
+      Promise.all([prom0,prom1]).then(function(utfgrid) {
+         //draw markers on the tile canvas
+         //note that this code was originally written to assume a 64x64 UTFgrid.
+         //although the UTFgrid is still 64x64, the associated "grid tile" is actually only 32x32.
+         //theoretically, a 2x2 set of cells from the UTFgrid should correspond to a single cell from the "grid tile"; however, that is not actually the case (see https://forum.inaturalist.org/t/open-test-of-map-tile-improvements/7833/88).
+         //so this code attempts to mimic a 32x32 "grid tile" by using the bottom-right cell from each 2x2 set of UTFgrid cells. 
+         //for (cx=0;cx<cellsPerTile.x;cx++) {
+         for (cx=0;cx<cellsPerTile.x/2;cx++) {
+            //for (cy=0;cy<cellsPerTile.y;cy++) {
+            for (cy=0;cy<cellsPerTile.y/2;cy++) {
+               //var cell = {x:cx,y:cy};
+               var cell = {x:cx*2+1,y:cy*2+1};
+               //for details about decoding the UTFgrid, see https://github.com/mapbox/utfgrid-spec/blob/master/1.2/utfgrid.md
+               var d = [];
+               for (u=0;u<utfgrid.length;u++) {
+                  var i = utfgrid[u].grid[cell.y].charCodeAt(cell.x);
+                  i = i-((i>=93)?34:(i>=35)?33:32);
+                  d.push(utfgrid[u].data[utfgrid[u].keys[i]]);
+               };
+               for (j=0;j<d.length;j++) { d[j] = d[j] ? d[j].cellCount||0 : 0; } // set d = cellCount (set to 0 if undefined)
+               var markerColor = 0; // default to black
+               ctx.beginPath();
+               var circleRadius = cellSize.x*marker.size;
+               ctx.arc(cell.x*cellSize.x+offset.x,cell.y*cellSize.y+offset.y,circleRadius,0,2*Math.PI,false);
+               if ( d[0]<=0 ) { markerColor = 'rgba(128,128,128,0.00)'; } // no color
+               // else if ( d[1]<=0 ) { markerColor = `rgba(0,0,255,${marker.opacity})`; } // blue
+               else {
+                  var f = d[1]/d[0];
+                  f = (f<=0)?1:(f>=1)?0:1-f;
+                  markerColor = `hsla(${(f*240)},100%,50%,${marker.opacity})`; // high (1.0) is red, low (0.0) is blue
+                  ctx.fillStyle = markerColor;
+                  ctx.fill();
+               };
+               ctx.strokeStyle = markerColor;
+               ctx.stroke();
+            };
+         };
+      });  
+
+      // asynchronous call
+      setTimeout(function() {
+         done(null, tile);
+      }, 1000);
+      return tile;
+   }
+});
+L.gridLayer.utfGridCompare = function (options) {
+   return new L.GridLayer.UTFGridCompare(options);
+};
+
 
 </script>
 </head>
@@ -704,7 +811,8 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, if get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=rgratio", then the map will show comparison of Research Grade to Verifiable observations (ratio, where red=1.0 and blue=0.0) on a gray basemap. As an example, to see the ratio for verifiable plant observations, then you would navigate to '+furl(winurlexsearchstr+'?view=rgratio&verifiable=true&taxon_id=47126')+' in your web browser.');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -873,6 +981,11 @@ else {
 
    var g_utfgdm_sel = L.layerGroup([u_inat_grid,u_inat_points,v_inat_grid,v_inat_points]);
 
+   // iNat UTFGrid Comparison Layer
+   // note that iNat provides 4 UTFGrid endpoints. the grid and heatmap endpoints are interchangeable and the ones to use for this application.
+   let utfgridapi = {url:'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json">iNaturalist</a>'};
+   var l_utfgrid_compare = L.gridLayer.utfGridCompare({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75,opacity:0.5}})
+
    // Other iNaturalist Layers
    var l_inat_place = L.tileLayer(inat_urlbase+'places/'+place_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
 
@@ -989,6 +1102,7 @@ else {
    var defaultlayers = (view==='elevation') ? [g_usgs_topo]
       : (view==='ecolandunit') ? [l_eox_terrain,l_usgs_ecolandunit,l_eox_overlay]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_muted,l_eox_overlay]
+      : (view==='rgratio') ? [l_osm_std_mod_medgray2]
       : [l_osm_std];
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
@@ -1000,6 +1114,9 @@ else {
    if (view==='heatmap') {
       defaultlayers.push(l_inat_heat);
    }
+   else if (view==='rgratio') {
+      defaultlayers.push(l_utfgrid_compare);
+   } 
    else {
       defaultlayers.push(g_inat_obs);
       defaultlayers.push(g_utfgdm_sel);
@@ -1070,6 +1187,7 @@ else {
       "iNaturalist Taxon Range": l_inat_taxonrange,
       "iNaturalist Taxon Places": l_inat_taxonplace,
       "iNaturalist Place": l_inat_place,
+      "iNaturalist RG / Verifiable (Red=1.0, Blue=0.0)": l_utfgrid_compare,
       //"iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
       "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
