@@ -676,16 +676,10 @@ L.GridLayer.UTFGridCompare = L.GridLayer.extend({
       // get UTFgrid
       var urlbase = this.options.url;
       var url = new URL(urlbase);
-      var urlsp0 = new URLSearchParams(url.searchParams);
-      urlsp0.delete('verifiable');
-      urlsp0.set('verifiable',true);
-      urlsp0.delete('quality_grade');
       urlbase = urlbase.replace(url.search,'');
+      var urlsp0 = new URLSearchParams(url.searchParams);
       var urlsp1 = new URLSearchParams(url.searchParams);
-      urlsp1.delete('verifiable');
-      urlsp1.set('verifiable',true);
-      urlsp1.delete('quality_grade');
-      urlsp1.set('quality_grade','research');
+      for (p of this.options.excludeparam.split(',')) { urlsp0.delete(p); }
       url0 = urlbase+'?'+urlsp0;
       url1 = urlbase+'?'+urlsp1;
       var prom0 = fgetutfgrid(freplacexyz(url0,coords.x,coords.y,coords.z));
@@ -762,6 +756,7 @@ var showtaxonplace = winurlparams.get('showtaxonplace') || 'false';
 var showtaxonrange = winurlparams.get('showtaxonrange') || 'false';
 var showplace = winurlparams.get('showplace') || 'false';
 var view = winurlparams.get('view') || 'default';
+var compexclparam = winurlparams.get('compare_exclude_param');
 
 winurlparams.delete('centerlat');
 winurlparams.delete('centerlng');
@@ -770,6 +765,7 @@ winurlparams.delete('showtaxonplace');
 winurlparams.delete('showtaxonrange');
 winurlparams.delete('showplace');
 winurlparams.delete('view');
+winurlparams.delete('compare_exclude_param');
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
@@ -811,8 +807,8 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, then you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=rgratio", then the map will show comparison of Research Grade to Verifiable observations (ratio, where red=1.0 and blue=0.0) on a gray basemap. As an example, to see the ratio for verifiable plant observations, then you would navigate to '+furl(winurlexsearchstr+'?view=rgratio&verifiable=true&taxon_id=47126')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -984,7 +980,7 @@ else {
    // iNat UTFGrid Comparison Layer
    // note that iNat provides 4 UTFGrid endpoints. the grid and heatmap endpoints are interchangeable and the ones to use for this application.
    let utfgridapi = {url:'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json">iNaturalist</a>'};
-   var l_utfgrid_compare = L.gridLayer.utfGridCompare({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75,opacity:0.5}})
+   var l_utfgrid_compare = L.gridLayer.utfGridCompare({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75,opacity:0.5},excludeparam:compexclparam})
 
    // Other iNaturalist Layers
    var l_inat_place = L.tileLayer(inat_urlbase+'places/'+place_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
@@ -1102,7 +1098,7 @@ else {
    var defaultlayers = (view==='elevation') ? [g_usgs_topo]
       : (view==='ecolandunit') ? [l_eox_terrain,l_usgs_ecolandunit,l_eox_overlay]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_muted,l_eox_overlay]
-      : (view==='rgratio') ? [l_osm_std_mod_medgray2]
+      : (view==='subsetratio') ? [l_osm_std_mod_medgray2]
       : [l_osm_std];
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
@@ -1114,7 +1110,7 @@ else {
    if (view==='heatmap') {
       defaultlayers.push(l_inat_heat);
    }
-   else if (view==='rgratio') {
+   else if (view==='subsetratio' && compexclparam) {
       defaultlayers.push(l_utfgrid_compare);
    } 
    else {
@@ -1187,7 +1183,7 @@ else {
       "iNaturalist Taxon Range": l_inat_taxonrange,
       "iNaturalist Taxon Places": l_inat_taxonplace,
       "iNaturalist Place": l_inat_place,
-      "iNaturalist RG / Verifiable (Red=1.0, Blue=0.0)": l_utfgrid_compare,
+      "iNaturalist Subset Ratio (Red=1.0, Blue=0.0)": l_utfgrid_compare,
       //"iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
       "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
@@ -1199,6 +1195,9 @@ else {
       "Graticule":l_graticule,
       "Debug Grid":l_debug,
    };
+   if (compexclparam==null) {
+      delete overlaymaps["iNaturalist Subset Ratio (Red=1.0, Blue=0.0)"];
+   }
    if (taxon_id===null) {
       delete overlaymaps["iNaturalist Taxon Range"];
       delete overlaymaps["iNaturalist Taxon Places"];
