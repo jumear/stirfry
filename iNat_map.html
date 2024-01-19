@@ -762,7 +762,7 @@ winurlparams.delete('view');
 winurlparams.delete('compare_exclude_param');
 
 let compareurlparams = new URLSearchParams(winurlparams);
-for (p of compexclparam.split(',')) { compareurlparams.delete(p); };
+if (compexclparam) { for (p of compexclparam.split(',')) { compareurlparams.delete(p); }; };
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
