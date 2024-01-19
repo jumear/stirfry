@@ -673,15 +673,9 @@ L.GridLayer.UTFGridCompare = L.GridLayer.extend({
       else { marker = dmarker };
       var offset = marker.offset;
 
-      // get UTFgrid
-      var urlbase = this.options.url;
-      var url = new URL(urlbase);
-      urlbase = urlbase.replace(url.search,'');
-      var urlsp0 = new URLSearchParams(url.searchParams);
-      var urlsp1 = new URLSearchParams(url.searchParams);
-      for (p of this.options.excludeparam.split(',')) { urlsp0.delete(p); }
-      url0 = urlbase+'?'+urlsp0;
-      url1 = urlbase+'?'+urlsp1;
+      // get UTFgrids
+      url0 = this.options.urlcompare;
+      url1 = this.options.url;
       var prom0 = fgetutfgrid(freplacexyz(url0,coords.x,coords.y,coords.z));
       var prom1 = fgetutfgrid(freplacexyz(url1,coords.x,coords.y,coords.z));
       Promise.all([prom0,prom1]).then(function(utfgrid) {
@@ -766,6 +760,9 @@ winurlparams.delete('showtaxonrange');
 winurlparams.delete('showplace');
 winurlparams.delete('view');
 winurlparams.delete('compare_exclude_param');
+
+let compareurlparams = new URLSearchParams(winurlparams);
+for (p of compexclparam.split(',')) { compareurlparams.delete(p); };
 
 function fdate(str) {
    str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
@@ -919,13 +916,15 @@ else {
          .setContent(s).openOn(mymap);
    };
 
-   var u_inat_points = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, {
+   var u_inat_options = {
       resolution: 4,
       pointerCursor: true,
       mouseInterval: 66,  // Delay for mousemove events
-      minZoom:10,
+      minZoom:0,
       maxZoom:20, 
-   });
+   };
+
+   var u_inat_points = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, { ...u_inat_options, minZoom:10 });
    u_inat_points.on("click", function(e) { // "mouseover" and "mouseout" events not used here
       if (e.data) {
          Promise.all([
@@ -936,13 +935,18 @@ else {
       };
    });
 
-   var u_inat_grid = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, {
-      resolution: 4,
-      pointerCursor: true,
-      mouseInterval: 66,  // Delay for mousemove events
-      minZoom:2,
-      maxZoom:9,
+   var u_inat_points_all = L.utfGrid(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, u_inat_options);
+   u_inat_points_all.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+      if (e.data) {
+         Promise.all([
+            ffetch(inat_urlbase+'observations/'+e.data.id),
+            Promise.resolve(e.data.cellCount)
+         ])
+         .then ((data) => { fpopup(data[0].results[0],data[1]); });
+      };
    });
+
+   var u_inat_grid = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, { ...u_inat_options, minZoom:2, maxZoom:9 });
    u_inat_grid.on("click", function(e) { // "mouseover" and "mouseout" events not used here
       if (e.data) {
          Promise.all([
@@ -953,34 +957,54 @@ else {
       };
    });
 
-   var v_inat_points = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, {
-      idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
-      buildIndex: true,  // requires above field to be set properly
-      fillColor: 'black',
-      shadowBlur: 0,  // Number of pixels for blur effect
-      shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
-      debug: false,  // if true, show tile borders and tile keys
-      minZoom:10,
-      maxZoom:20, 
+   var u_inat_grid_all = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, u_inat_options);
+   u_inat_grid_all.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+      if (e.data) {
+         Promise.all([
+            ffetch(inat_urlbase+'observations/'+e.data.id),
+            Promise.resolve(e.data.cellCount)
+         ])
+         .then ((data) => { fpopup(data[0].results[0],data[1]); });
+      };
    });
 
-   var v_inat_grid = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, {
+   var u_inat_grid_superset = L.utfGrid(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+compareurlparams, u_inat_options);
+   u_inat_grid_superset.on("click", function(e) { // "mouseover" and "mouseout" events not used here
+      if (e.data) {
+         Promise.all([
+            ffetch(inat_urlbase+'observations/'+e.data.id),
+            Promise.resolve(e.data.cellCount)
+         ])
+         .then ((data) => { fpopup(data[0].results[0],data[1]); });
+      };
+   });
+
+   var v_inat_options = {
       idField: 'id',  // Expects UTFgrid to have a property 'ID' that indicates the feature ID
       buildIndex: true,  // requires above field to be set properly
       fillColor: 'black',
       shadowBlur: 0,  // Number of pixels for blur effect
       shadowColor: null,  // Color for shadow, if present.  Defaults to fillColor.
       debug: false,  // if true, show tile borders and tile keys
-      minZoom:2,
-      maxZoom:9,
-   });
+      minZoom:0,
+      maxZoom:20, 
+   };
+
+   var v_inat_points = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, { ...v_inat_options, minZoom:10, });
+   var v_inat_points_all = L.utfGridCanvas(inat_urlbase+'points/{z}/{x}/{y}.grid.json?'+winurlparams, v_inat_options);
+   var v_inat_grid = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, { ...v_inat_options, minZoom:2, maxZoom:9 });
+   var v_inat_grid_all = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+winurlparams, v_inat_options);
+   var v_inat_grid_superset = L.utfGridCanvas(inat_urlbase+'grid/{z}/{x}/{y}.grid.json?'+compareurlparams, v_inat_options);
 
    var g_utfgdm_sel = L.layerGroup([u_inat_grid,u_inat_points,v_inat_grid,v_inat_points]);
+   var g_utfgdm_sel_points = L.layerGroup([u_inat_points_all,v_inat_points_all]);
+   var g_utfgdm_sel_grid = L.layerGroup([u_inat_grid_all,v_inat_grid_all]);
+   var g_utfgdm_sel_superset = L.layerGroup([u_inat_grid_superset,v_inat_grid_superset]);
 
    // iNat UTFGrid Comparison Layer
    // note that iNat provides 4 UTFGrid endpoints. the grid and heatmap endpoints are interchangeable and the ones to use for this application.
    let utfgridapi = {url:'https://api.inaturalist.org/v1/grid/{z}/{x}/{y}.grid.json',attr:'<a href="https://api.inaturalist.org/v1/docs/#!/UTFGrid/get_grid_zoom_x_y_grid_json">iNaturalist</a>'};
-   var l_utfgrid_compare = L.gridLayer.utfGridCompare({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75,opacity:0.5},excludeparam:compexclparam})
+   var l_utfgrid_compare = L.gridLayer.utfGridCompare({url:utfgridapi.url+'?'+winurlparams,attribution:utfgridapi.attr,marker:{size:0.75,opacity:0.5},urlcompare:utfgridapi.url+'?'+compareurlparams})
 
    // Other iNaturalist Layers
    var l_inat_place = L.tileLayer(inat_urlbase+'places/'+place_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_places_place_id_zoom_x_y_png">iNaturalist place polygon</a>'});
@@ -1112,6 +1136,7 @@ else {
    }
    else if (view==='subsetratio' && compexclparam) {
       defaultlayers.push(l_utfgrid_compare);
+      defaultlayers.push(g_utfgdm_sel_grid);
    } 
    else {
       defaultlayers.push(g_inat_obs);
@@ -1180,10 +1205,10 @@ else {
       "EOX Coastline": l_eox_coastline,
       "EOX Overlay": l_eox_overlay,
       "EOX Overlay (Bright)": l_eox_overlay_bright,
-      "iNaturalist Taxon Range": l_inat_taxonrange,
-      "iNaturalist Taxon Places": l_inat_taxonplace,
-      "iNaturalist Place": l_inat_place,
-      "iNaturalist Subset Ratio (Red=1.0, Blue=0.0)": l_utfgrid_compare,
+      ...((taxon_id==null) ? {} : {"iNaturalist Taxon Range": l_inat_taxonrange}),
+      ...((taxon_id==null) ? {} : {"iNaturalist Taxon Places": l_inat_taxonplace}),
+      ...((place_id==null) ? {} : {"iNaturalist Place": l_inat_place}),
+      ...((compexclparam==null) ? {} : {"iNaturalist Subset Ratio (Red=1.0, Blue=0.0)": l_utfgrid_compare}),
       //"iNaturalist Observations Density in GBIF (no filters)": l_gbif,
       "iNaturalist Observations Heatmap": l_inat_heat,
       "iNaturalist Observations Heatmap Mod (Transparent)": l_inat_heat_mod_transparent,
@@ -1191,19 +1216,12 @@ else {
       "iNaturalist Observations Grid": l_inat_grid,
       "iNaturalist Observations Points": l_inat_points,
       "iNaturalist Observations":g_inat_obs,
-      "iNaturalist Obs Active Interaction":g_utfgdm_sel,
+      "iNaturalist Observation Info":g_utfgdm_sel,
+      "iNaturalist Observation Info for Grid":g_utfgdm_sel_grid,
+      ...((compexclparam==null) ? {} : {"iNaturalist Observation Info for Superset Grid": g_utfgdm_sel_superset}),
+      "iNaturalist Observation Info for Points":g_utfgdm_sel_points,
       "Graticule":l_graticule,
       "Debug Grid":l_debug,
-   };
-   if (compexclparam==null) {
-      delete overlaymaps["iNaturalist Subset Ratio (Red=1.0, Blue=0.0)"];
-   }
-   if (taxon_id===null) {
-      delete overlaymaps["iNaturalist Taxon Range"];
-      delete overlaymaps["iNaturalist Taxon Places"];
-   };
-   if (place_id===null) {
-      delete overlaymaps["iNaturalist Place"];
    };
 
    var mymap;
