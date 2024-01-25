@@ -40,8 +40,8 @@
 |[iNat_top_observers_map.html](https://jumear.github.io/stirfry/iNat_top_observers_map)|https://forum.inaturalist.org/t/how-to-replicate-world-tour-figures/13109/12|
 |[iNat_user_obs_photo_license_summary.html](https://jumear.github.io/stirfry/iNat_user_obs_photo_license_summary)|https://forum.inaturalist.org/t/surprised-to-find-photos-i-placed-on-inat-in-the-new-audubon-mushroom-guide/40986/103|
 
-## other collections of iNaturalist-related things:
+## more code:
 |link|description|
 |:---|:---|
 |https://github.com/jumear/stirpy|Jupyter Notebooks (Python)|
-|https://observablehq.com/@robin-song?tab=notebooks&type=public|Observable Workbooks (Javascript)|
+|https://observablehq.com/@robin-song?tab=notebooks&type=public|Observable Notebooks (Javascript)|
