@@ -1,5 +1,5 @@
 # stirfry
-🥘 miscellaneous quick creations (for iNaturalist users)
+🥘 miscellaneous web-based tools for iNaturalist power users
 
 |file|inspiration|
 |:---|:---|
