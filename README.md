@@ -44,4 +44,4 @@
 |link|description|
 |:---|:---|
 |https://github.com/jumear/stirpy|Jupyter Notebooks (Python)|
-|https://observablehq.com/@robin-song?tab=notebooks&type=public|Observable Notebooks (Javascript)|
+|https://observablehq.com/@robin-song|Observable Notebooks (Javascript)|
