@@ -805,7 +805,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showplace can be set to true to display specific layers by default.');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -870,21 +870,19 @@ else {
             .then((data) => {
                return data.results[0].attributes;
             });
-         //s += '<hr />Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A');
-         //s += '<hr />Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A');
          s += '<hr /><details>'
-         s += '<summary>Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A') + '</summary>';
-         s += '- Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
-         s += '<br /> - Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
-         s += '<br /> - Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
-         s += '<br /> - Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
+         s += '<summary>Ecological Land Unit: ' + (ecoludetails ? (ecoludetails['Raster.ELU'] ?? 'N/A') : 'N/A') + '</summary>';
+         s += '- Bioclimate: ' + (ecoludetails ? (ecoludetails['Raster.ELU_Bio_De'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails ? (ecoludetails['Raster.ELU_GLC_De'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails ? (ecoludetails['Raster.ELU_LF_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails ? (ecoludetails['Raster.ELU_Lit_De'] ?? 'N/A') : 'N/A');
          s += '</details>';
          s += '<hr /><details>';
-         s += '<summary>Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A') + '</summary>';
-         s += '- Bioclimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
-         s += '<br /> - Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
-         s += '<br /> - Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
-         s += '<br /> - Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
+         s += '<summary>Ecological Facet: ' + (ecoludetails ? (ecoludetails['Raster.EF'] ?? 'N/A') : 'N/A') + '</summary>';
+         s += '- Bioclimate: ' + (ecoludetails ? (ecoludetails['Raster.EF_Bio_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails ? (ecoludetails['Raster.EF_GLC_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails ? (ecoludetails['Raster.EF_LF_Desc'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails ? (ecoludetails['Raster.EF_Lit_Des'] ?? 'N/A') : 'N/A');
          s += '</details>';
 
          var ecosysdetails;
@@ -900,11 +898,11 @@ else {
          
          if (ecosysdetails) {
          s += '<hr /><details>';
-            s += '<summary>Ecosystem: ' + (ecosysdetails[0]?.attributes?.code_desc ?? 'N/A') + '</summary>';
-            s += '- Bioclimate: ' + (ecosysdetails[1].attributes?.code_desc ?? 'N/A');
-            s += '<br /> - Land Form: ' + (ecosysdetails[2]?.attributes?.code_desc ?? 'N/A');
-            s += '<br /> - Land Lithology: ' + (ecosysdetails[3]?.attributes?.code_desc ?? 'N/A');
-            if (ecosysdetails.length>4) {s += '<br /> - Topographic Position: ' + (ecosysdetails[4]?.attributes?.code_desc ?? 'N/A'); };
+            s += '<summary>Ecosystem: ' + (ecosysdetails[0]?.attributes ? (ecosysdetails[0]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A') + '</summary>';
+            s += '- Bioclimate: ' + (ecosysdetails[1].attributes ? (ecosysdetails[1].attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            s += '<br /> - Land Form: ' + (ecosysdetails[2]?.attributes ? (ecosysdetails[2]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            s += '<br /> - Land Lithology: ' + (ecosysdetails[3]?.attributes ? (ecosysdetails[3]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            if (ecosysdetails.length>4) {s += '<br /> - Topographic Position: ' + (ecosysdetails[4]?.attributes ? (ecosysdetails[4]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A'); };
             s += '</details>';
          };
       };
