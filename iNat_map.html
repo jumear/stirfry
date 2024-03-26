@@ -870,21 +870,19 @@ else {
             .then((data) => {
                return data.results[0].attributes;
             });
-         //s += '<hr />Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A');
-         //s += '<hr />Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A');
          s += '<hr /><details>'
-         s += '<summary>Ecological Land Unit: ' + (ecoludetails?.ELU ?? 'N/A') + '</summary>';
-         s += '- Bioclimate: ' + (ecoludetails?.ELU_Bio_De ?? 'N/A');
-         s += '<br /> - Land Cover: ' + (ecoludetails?.ELU_GLC_De ?? 'N/A');
-         s += '<br /> - Land Form: ' + (ecoludetails?.ELU_LF_Des ?? 'N/A');
-         s += '<br /> - Land Lithology: ' + (ecoludetails?.ELU_Lit_De ?? 'N/A');
+         s += '<summary>Ecological Land Unit: ' + (ecoludetails ? (ecoludetails['Raster.ELU'] ?? 'N/A') : 'N/A') + '</summary>';
+         s += '- Bioclimate: ' + (ecoludetails ? (ecoludetails['Raster.ELU_Bio_De'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails ? (ecoludetails['Raster.ELU_GLC_De'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails ? (ecoludetails['Raster.ELU_LF_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails ? (ecoludetails['Raster.ELU_Lit_De'] ?? 'N/A') : 'N/A');
          s += '</details>';
          s += '<hr /><details>';
-         s += '<summary>Ecological Facet: ' + (ecoludetails?.EF ?? 'N/A') + '</summary>';
-         s += '- Bioclimate: ' + (ecoludetails?.EF_Bio_Des ?? 'N/A');
-         s += '<br /> - Land Cover: ' + (ecoludetails?.EF_GLC_Des ?? 'N/A');
-         s += '<br /> - Land Form: ' + (ecoludetails?.EF_LF_Desc ?? 'N/A');
-         s += '<br /> - Land Lithology: ' + (ecoludetails?.EF_Lit_Des ?? 'N/A');
+         s += '<summary>Ecological Facet: ' + (ecoludetails ? (ecoludetails['Raster.EF'] ?? 'N/A') : 'N/A') + '</summary>';
+         s += '- Bioclimate: ' + (ecoludetails ? (ecoludetails['Raster.EF_Bio_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Cover: ' + (ecoludetails ? (ecoludetails['Raster.EF_GLC_Des'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Form: ' + (ecoludetails ? (ecoludetails['Raster.EF_LF_Desc'] ?? 'N/A') : 'N/A');
+         s += '<br /> - Land Lithology: ' + (ecoludetails ? (ecoludetails['Raster.EF_Lit_Des'] ?? 'N/A') : 'N/A');
          s += '</details>';
 
          var ecosysdetails;
@@ -900,11 +898,11 @@ else {
          
          if (ecosysdetails) {
          s += '<hr /><details>';
-            s += '<summary>Ecosystem: ' + (ecosysdetails[0]?.attributes?.code_desc ?? 'N/A') + '</summary>';
-            s += '- Bioclimate: ' + (ecosysdetails[1].attributes?.code_desc ?? 'N/A');
-            s += '<br /> - Land Form: ' + (ecosysdetails[2]?.attributes?.code_desc ?? 'N/A');
-            s += '<br /> - Land Lithology: ' + (ecosysdetails[3]?.attributes?.code_desc ?? 'N/A');
-            if (ecosysdetails.length>4) {s += '<br /> - Topographic Position: ' + (ecosysdetails[4]?.attributes?.code_desc ?? 'N/A'); };
+            s += '<summary>Ecosystem: ' + (ecosysdetails[0]?.attributes ? (ecosysdetails[0]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A') + '</summary>';
+            s += '- Bioclimate: ' + (ecosysdetails[1].attributes ? (ecosysdetails[1].attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            s += '<br /> - Land Form: ' + (ecosysdetails[2]?.attributes ? (ecosysdetails[2]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            s += '<br /> - Land Lithology: ' + (ecosysdetails[3]?.attributes ? (ecosysdetails[3]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A');
+            if (ecosysdetails.length>4) {s += '<br /> - Topographic Position: ' + (ecosysdetails[4]?.attributes ? (ecosysdetails[4]?.attributes['Raster.code_desc'] ?? 'N/A') : 'N/A'); };
             s += '</details>';
          };
       };
