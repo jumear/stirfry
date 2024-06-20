@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist API Get Observations Taxonomy" />
+<title>iNaturalist API Get Observations Taxonomy</title>
+<style>
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
+   #main { width:100%; }
+   table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+   th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+   tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+   tr:nth-child(even) { background:var(--color-base); }
+   .tar { text-align:right; }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
+   #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+   @media print { #nav { display:none; } } 
+   .nowrap { white-space: nowrap; }
+</style>
+</head>
+
+<body>
+<script>
+let winurlstr = window.location.href;
+let winurlsearchstr = window.location.search;
+let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
+let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
+//let p_per_page = winurlparams.get('per_page') || 200;
+//let p_page = winurlparams.get('page') || 1;
+
+function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
+function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
+function fdate(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function faddelem(etype,eparent=null,eattributes={}) {
+   let eobj = document.createElement(etype);
+   for (let [key,value] of Object.entries(eattributes)) {
+      if ( typeof value === 'object' && value !== null ) {
+         for (let [subkey,subvalue] of Object.entries(value)) { eobj[key][subkey] = subvalue; };
+      }
+      else { eobj[key] = value; };
+    };
+   if (eparent) { eparent.appendChild(eobj); };
+   return eobj;
+};
+function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
+function fpageurl(urlbase,urlparams,per_page,page) {
+   let params = new URLSearchParams(urlparams);
+   let url_per_page = params.get('per_page');
+   let url_page = params.get('page');
+   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
+   (url_page===null) ? params.append('page',page) : params.set('page',page);
+   return urlbase+'?'+params;
+};
+
+const special_taxon_id = { life:48460, allobs:-1, unknown:0 };
+
+function fdata(xobj) {
+  let taxa = xobj.results
+  let taxon_life = taxa.filter(r=>r.id===special_taxon_id.life)[0];
+  let count_unknown = xobj.count_without_taxon ? xobj.count_without_taxon-taxon_life.count : 0;  
+  
+  // add a new top-level parent node to represent all observations
+  let taxon_allobs = {
+    id:special_taxon_id.allobs,
+    count:0,
+    name:'(all observations)',
+    rank:'stateofmatter',
+    rank_level:101,
+    is_active:true,
+    parent_id:null,
+    descendant_obs_count:taxon_life.descendant_obs_count+count_unknown,
+    direct_obs_count:0,
+    seq:1,
+    tree:[],
+  }
+  taxa.push(taxon_allobs);
+  
+  // if true unknowns exist, add a node for that
+  if (count_unknown) {
+    taxa.push({
+      id:special_taxon_id.unknown,
+      count:count_unknown,
+      name:'(unknown taxon)',
+      rank:'stateofmatter',
+      rank_level:100,
+      is_active:true,
+      parent_id:special_taxon_id.allobs,
+      descendant_obs_count:count_unknown,
+      direct_obs_count:count_unknown,
+    });
+  };
+  
+  // make the original life node a child of all observations  
+  taxon_life['parent_id']=special_taxon_id.allobs;
+
+  // main function for taxonomic sort
+  // first, sort by name asc
+  // then sequence the taxa and create a hierarchical tree representation
+
+  taxa.sort((a,b)=>(a.name<b.name?-1:1));
+  //taxa.sort((a,b)=>(b.rank_level-a.rank_level));
+
+  function fchildtaxa(parent_id,tree=[]) {
+    let children = taxa.filter(r=>r.parent_id===parent_id);
+    for (let c=0; c<children.length; c++) {
+      sort_seq++
+      child_tree = [...tree,(c+1===children.length?1:0)]
+      child = children[c];
+      child['seq'] = sort_seq;
+      child['tree'] = child_tree;
+      fchildtaxa(child.id,child_tree);
+    };
+    return children.length;
+  };
+  let sort_seq = 1;
+  fchildtaxa(special_taxon_id.allobs);
+  taxa.sort((a,b)=>(a.seq-b.seq));
+
+  // this creates a textual representation of a tree diagram using UTF-8 symbols
+  for (let t of taxa) {
+     let tree_text = '';
+     let tree = t.tree;
+     for (let i=0; i<tree.length; i++) {
+        if (i+1===tree.length) {tree_text += (tree[i]?String.fromCharCode(9492):String.fromCharCode(9500)); } // the connector just before the node will either be └ (an up + right connector) or ├ (a vertical + right connector)
+        else {tree_text += (tree[i]?String.fromCharCode(8199):String.fromCharCode(9474)); }; // all other connectors will either be   (blank) or │ (a vertical connector)
+     };
+     t['tree_text'] = tree_text + ( // the node
+        (t.rank_level===10) ? String.fromCharCode(11044) : // species level = ⬤ (filled circle)
+        (t.rank_level===20) ? String.fromCharCode(11097) : // genus level = ⭙ (circle with X)
+        String.fromCharCode(9711) // other = ◯ (circle)
+     );
+  };
+
+  return taxa;
+};
+
+function fresults(xobj) {
+   if ((xobj?.results?.length??0) === 0) {
+      faddelem('p',document.body,{innerText:'No results returned.'});
+      return;
+   };
+   let results = fdata(xobj);
+   let total_results = results.length;
+   faddelem('p',document.body,{innerHTML:'total nodes: '+fcomnum(total_results)});
+   let table = faddelem('table',document.body,{id:'main'});
+   let thead = faddelem('thead',table);
+   let hrow = faddelem('tr',thead);
+   let labels = [
+      {innerText:'Seq'},
+      //{innerText:'Hierarchy'},
+      {innerText:'Tree'},
+      {innerText:'Name'},
+      {innerText:'Rank'},
+      //{innerText:'Rank Level'},
+      //{innerText:'Active'},
+      {innerText:'Parent ID'},
+      {innerText:'ID'},
+      //{classList:'tar',innerText:'Count'},
+      {classList:'tar',innerText:'Obs Count'},
+      {classList:'tar',innerText:'Exact Taxon Obs Count'},
+   ];
+   faddelems('th',hrow,labels);
+
+   let tbody = faddelem('tbody',table);
+   for (let i=0; i<results.length; i++) {
+      let brow = faddelem('tr',tbody);
+      let rec = results[i];
+      let values = [
+         {innerText:i+1},
+         //{innerText:rec.tree.join('')},
+         {classList:'nowrap',innerText:rec.tree_text},
+         {classList:'nowrap',innerText:rec.name},
+         {innerText:rec.rank},
+         //{innerText:rec.rank_level},
+         //{innerText:rec.is_active},
+         {innerText:rec.parent_id},
+         {innerHTML:(rec.id<=0)?rec.id:furl(`https://www.inaturalist.org/taxa/${rec.id}`,rec.id)},
+         {classList:'tar',innerText:fcomnum(rec.descendant_obs_count)},
+         {classList:'tar',innerText:rec.direct_obs_count?fcomnum(rec.direct_obs_count):'-'},
+      ];
+      faddelems('td',brow,values);
+   };
+};
+let apibase = 'https://api.inaturalist.org/v1/observations/taxonomy';
+let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
+let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_taxonomy';
+let apirefname = 'iNaturalist Observations Taxonomy';
+let apiref = furl(apirefurl,apirefname);
+faddelem('h1',document.body,{innerText:apirefname});
+
+if (winurlsearchstr==='') {
+   let instructions = [
+      {innerHTML:`This page displays the response from an undocumented ${apirefname} API endpoint (which provides some of the data for the Dynamic Life List page) in a human-readable format, with some modifications to present the data more completely. To use this page, add at least one query parameter to the URL. Although ${apirefname} is undocumented, the query parameters for it should be similar to those documented for ${furl(apirefurl,'iNaturalist Observations')}.`},
+      {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=pisum&taxon_id=47126'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=pisum&taxon_id=47126'))+' in your browser.'},
+      {innerHTML:`Depending on your browser and system capabilities, you may run into problems rendering the data if your query returns too many taxa. So make sure you apply enough filters to return a reasonably small result set.`},
+   ];
+   faddelems('p',document.body,instructions);
+}
+else {
+   faddelem('p',document.body,{innerHTML:`This is the base query: ${furl(famp(apiurl))}. (This page will accept most parameters from the ${furl(apirefurl,'iNaturalist Observations')} API endpoint.)`});
+   fetch(apiurl)
+   .then((response) => {
+      if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
+      return response.json();
+   })
+   .then((data) => { fresults(data); })
+   .catch((err) => {
+      console.error(err.message);
+      faddelem('p',document.body,{innerText:'There was a problem retrieving data. Error '+err.message+'.'});
+   });
+};
+
+</script>
+</body>
+
+</html>
