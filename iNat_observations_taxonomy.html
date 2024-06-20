@@ -54,21 +54,13 @@ let winurlstr = window.location.href;
 let winurlsearchstr = window.location.search;
 let winurlexsearchstr = winurlstr.replace(winurlsearchstr,'');
 let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
-//let p_per_page = winurlparams.get('per_page') || 200;
-//let p_page = winurlparams.get('page') || 1;
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
-function fdate(str,dateonly=false) {
-   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   if (dateonly) { str = str.split(' ')[0]; }
-   else {
-      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
-      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
-      str = str.replace('+00:00','±00:00');
-   };
-   return str;
+function fpct(d,p=1) {
+   x = d*100;
+   return x.toFixed(p);
 };
 function faddelem(etype,eparent=null,eattributes={}) {
    let eobj = document.createElement(etype);
@@ -82,14 +74,6 @@ function faddelem(etype,eparent=null,eattributes={}) {
    return eobj;
 };
 function faddelems(etype,eparent=null,eattributes=[]) { for (let e of eattributes) { faddelem(etype,eparent,e); }; };
-function fpageurl(urlbase,urlparams,per_page,page) {
-   let params = new URLSearchParams(urlparams);
-   let url_per_page = params.get('per_page');
-   let url_page = params.get('page');
-   (url_per_page===null) ? params.append('per_page',per_page) : params.set('per_page',per_page);
-   (url_page===null) ? params.append('page',page) : params.set('page',page);
-   return urlbase+'?'+params;
-};
 
 const special_taxon_id = { life:48460, allobs:-1, unknown:0 };
 
@@ -109,6 +93,7 @@ function fdata(xobj) {
     parent_id:null,
     descendant_obs_count:taxon_life.descendant_obs_count+count_unknown,
     direct_obs_count:0,
+    descendant_obs_count_pct:1.0,
     seq:1,
     tree:[],
   }
@@ -126,6 +111,7 @@ function fdata(xobj) {
       parent_id:special_taxon_id.allobs,
       descendant_obs_count:count_unknown,
       direct_obs_count:count_unknown,
+      descendant_obs_count_pct:count_unknown/taxon_allobs.descendant_obs_count,
     });
   };
   
@@ -138,18 +124,31 @@ function fdata(xobj) {
 
   taxa.sort((a,b)=>(a.name<b.name?-1:1));
   //taxa.sort((a,b)=>(b.rank_level-a.rank_level));
+  
+  //create sort of an index for parent-child relationships
+  /*
+  let pid_to_i = {};
+  for (let t=0; t<taxa.length; t++) {
+    let pid = (taxa[t].parent_id === null) ? 'root' : taxa[t].parent_id.toString();
+    if (pid_to_i[pid]) { pid_to_i[pid].push(t) }
+    else { pid_to_i[pid] = [t]};
+  };
+  */
 
   function fchildtaxa(parent_id,tree=[]) {
     let children = taxa.filter(r=>r.parent_id===parent_id);
-    for (let c=0; c<children.length; c++) {
+    //let children = pid_to_i[parent_id.toString()];
+    for (let c=0; (children && c<children.length); c++) {
       sort_seq++
       child_tree = [...tree,(c+1===children.length?1:0)]
       child = children[c];
+      //child = taxa[children[c]]; 
+      child['descendant_obs_count_pct'] = child.descendant_obs_count/taxon_allobs.descendant_obs_count,
       child['seq'] = sort_seq;
       child['tree'] = child_tree;
       fchildtaxa(child.id,child_tree);
     };
-    return children.length;
+    return (children ? children.length : 0);
   };
   let sort_seq = 1;
   fchildtaxa(special_taxon_id.allobs);
@@ -196,6 +195,7 @@ function fresults(xobj) {
       {innerText:'ID'},
       //{classList:'tar',innerText:'Count'},
       {classList:'tar',innerText:'Obs Count'},
+      {classList:'tar',innerText:'% of All Obs'},
       {classList:'tar',innerText:'Exact Taxon Obs Count'},
    ];
    faddelems('th',hrow,labels);
@@ -215,6 +215,7 @@ function fresults(xobj) {
          {innerText:rec.parent_id},
          {innerHTML:(rec.id<=0)?rec.id:furl(`https://www.inaturalist.org/taxa/${rec.id}`,rec.id)},
          {classList:'tar',innerText:fcomnum(rec.descendant_obs_count)},
+         {classList:'tar',innerText:fpct(rec.descendant_obs_count_pct,3)},
          {classList:'tar',innerText:rec.direct_obs_count?fcomnum(rec.direct_obs_count):'-'},
       ];
       faddelems('td',brow,values);
