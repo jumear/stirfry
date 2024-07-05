@@ -80,7 +80,7 @@ const special_taxon_id = { life:48460, allobs:-1, unknown:0 };
 function fdata(xobj) {
   let taxa = xobj.results
   let taxon_life = taxa.filter(r=>r.id===special_taxon_id.life)[0];
-  let count_unknown = xobj.count_without_taxon ? xobj.count_without_taxon-taxon_life.count : 0;  
+  let count_unknown = xobj.count_without_taxon ? xobj.count_without_taxon-taxon_life.direct_obs_count : 0;  
   
   // add a new top-level parent node to represent all observations
   let taxon_allobs = {
