@@ -138,14 +138,17 @@ function fresults() {
    let urlsumbycat = 'iNat_id_summary_by_category.html';
    let urlsumbyic = 'iNat_id_counts_by_iconic_taxa.html';
    let urlids = 'iNatAPIv1_identifications.html'
+   let urlobs = 'iNatAPIv1_observations.html'
    let apibase = 'https://api.inaturalist.org/v1/';
    let date_curr = new Date();
-   let prom_user = ffetch(apibase + 'users/' + user_id);
-   let prom_id_all = ffetch(apibase + 'identifications?per_page=0&only_id=true&user_id=' + user_id);
-   let prom_id_others = ffetch(apibase + 'identifications?per_page=0&only_id=true&own_observation=false&user_id=' + user_id);
-   let prom_id_last = ffetch(apibase + 'identifications?per_page=1&only_id=false&current=any&is_change=false&user_id=' + user_id);
+   let prom_user = ffetch(`${apibase}users/${user_id}`);
+   let prom_id_all = ffetch(`${apibase}identifications?per_page=0&only_id=true&user_id=${user_id}`);
+   let prom_id_others = ffetch(`${apibase}identifications?per_page=0&only_id=true&own_observation=false&user_id=${user_id}`);
+   let prom_id_last = ffetch(`${apibase}identifications?per_page=1&only_id=false&current=any&is_change=false&user_id=${user_id}`);
    //let prom_id_t24hrs = ffetch(apibase + 'identifications?per_page=0&only_id=true&is_change=false&user_id=' + user_id +'&d1=' + fparamdate(date_curr-(1000*60*60*24)));
-   Promise.all([prom_user,prom_id_all,prom_id_others,prom_id_last/*,prom_id_t24hrs*/])
+   let prom_annotated_obs_all = ffetch(`${apibase}observations?per_page=0&only_id=true&annotation_user_id=${user_id}`);
+   let prom_annotated_obs_others = ffetch(`${apibase}observations?per_page=0&only_id=true&annotation_user_id=${user_id}&not_user_id=${user_id}`);
+   Promise.all([prom_user,prom_id_all,prom_id_others,prom_id_last/*,prom_id_t24hrs*/,prom_annotated_obs_all,prom_annotated_obs_others])
    .then(req=>{
       if (!req[0]) {
          faddelem('p',div_main,{innerText:'No data found. Input a valid User Login or ID and try again.'});
@@ -160,6 +163,8 @@ function fresults() {
          //let id_t24hrs = req[4].total_results;
          let date_join = fISOdate(user.created_at);
          let diff_days = (date_curr-date_join) / 1000 / 60 / 60 / 24;
+         let annotated_obs_all = req[4].total_results || 0 ;
+         let annotated_obs_others = req[5].total_results || 0 ;
          if (user.icon_url) { faddelem('img',div_main,{src:user.icon_url}); };
          let table = faddelem('table',div_main);
          let tbody = faddelem('tbody',table);
@@ -175,6 +180,9 @@ function fresults() {
          faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' | '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?own_observation=false&user_id='+user.id,'by iconic taxa')+' )'}]);
          faddtr(tbody,[{innerText:'IDs (for others) per day:'},{innerText:fcomnum((id_others/diff_days).toFixed(2))}]);
          //faddtr(tbody,[{innerText:'IDs (all) last 24hrs:'},{innerHTML:fcomnum(id_t24hrs)}]);
+         faddtr(tbody,[{innerText:'Annotated Obs (all):'},{innerHTML:furl(`${urlobs}?per_page=200&annotation_user_id=${user_id}`,fcomnum(annotated_obs_all))}]);
+         faddtr(tbody,[{innerText:'Annotated Obs (for others):'},{innerHTML:furl(famp(`${urlobs}?per_page=200&annotation_user_id=${user_id}&not_user_id=${user_id}`),fcomnum(annotated_obs_others))}]);
+         faddtr(tbody,[{innerText:'Annotated Obs (for others) per day:'},{innerText:fcomnum((annotated_obs_others/diff_days).toFixed(2))}]);
       };
    });
 };
