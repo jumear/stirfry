@@ -850,7 +850,7 @@ else {
             var elevationurl_fallback = 'https://api.open-elevation.com/api/v1/lookup?locations='+obs.geojson.coordinates[1]+','+obs.geojson.coordinates[0];
             var elevation_fallback = await ffetch(elevationurl_fallback)
                .then((data) => {
-                  return data.results[0];
+                  return data?.results[0];
                });
             s += '<br />elevation: '+ (elevation_fallback?(elevation_fallback.elevation+'m'):'[Unknown]');
          };
