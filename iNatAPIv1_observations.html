@@ -150,6 +150,35 @@ function fidextra(obs) {
    };
    return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa,idextrausertaxoncategory,idextrausercategory};
 };
+function fObsTaxonAncestors(obs) {
+   let ancestors = [];
+   let rankLevel_kingdom = 70 // this is the highest-level taxon stored in identification[i].ancestors
+   let rt, taxonId, rankLevel;
+   if ((rt = obs?.taxon) && (taxonId = rt?.id) && ((rankLevel = rt?.rank_level) < rankLevel_kingdom)) {
+      for (let id of obs.identifications) {
+         let idt, idta;
+         if (idt = id?.taxon) {
+            if (idt.id === taxonId) {
+               ancestors = idt.ancestors;
+               break;
+            };
+            if (idta = idt.ancestors) {
+               for (let [i, atid] of idta.map((a)=>a.id).entries()) {
+                  if (atid === taxonId) {
+                     ancestor = idta.slice(0,i+1); // add everything above this taxon (will add this taxon later below)
+                     break;
+                  };
+               };
+            };
+            if (ancestors?.length) { break; };
+         };
+      };
+   };
+   if (rt && rankLevel <= rankLevel_kingdom) {
+      ancestors.push(rt); // add self taxon
+      return ancestors;
+   };
+};
 
 function fresults(xobj) {
    //faddelem('p',document.body,{innerHTML:furl(famp(apiurl))});
@@ -207,9 +236,22 @@ function fresults(xobj) {
       };
       if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };
       if (p_options.includes('photocurl')) { labels.push({innerText:'Photo cURLs'}); };
+      if (p_options.includes('coreancestors')) {
+         let labels_ancestors = [
+            {innerText:'Kingdom'},
+            {innerText:'Phylum'},
+            {innerText:'Class'},
+            {innerText:'Order'},
+            {innerText:'Family'},
+            {innerText:'Genus'},
+            {innerText:'Species'},
+         ];
+         labels = [...labels.slice(0,2),...labels_ancestors,...labels.slice(2)];
+      };
       faddelems('th',hrow,labels);
- 
+
       let tbody = faddelem('tbody',table);
+      let inat_taxa = 'https://www.inaturalist.org/taxa/';
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
@@ -217,7 +259,7 @@ function fresults(xobj) {
             {innerText:i+1},
             {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
-            {innerHTML:rec.taxon?furl('https://www.inaturalist.org/taxa/'+rec.taxon.id,rec.taxon.name):''},
+            {innerHTML:rec.taxon?furl(inat_taxa+rec.taxon.id,rec.taxon.name):''},
             {innerText:rec.taxon?(rec.taxon.preferred_common_name||''):''},
             {innerText:rec.taxon?rec.taxon.rank:''},
             {innerText:rec.quality_grade},
@@ -283,7 +325,21 @@ function fresults(xobj) {
             };
             if (p_options.includes('photourl')) { values.push({innerHTML:photourls.join(', ')}); };
             if (p_options.includes('photocurl')) { values.push({innerText:photocurls.join(' ')}); };
-         };   
+         };
+         if (p_options.includes('coreancestors')) {
+            let ancestors = fObsTaxonAncestors(rec);
+            let ancestor = [];
+            let values_ancestors = [
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'kingdom')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'phylum')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'class')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'order')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'family')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'genus')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+               {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'species')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
+            ];
+            values = [...values.slice(0,2),...values_ancestors,...values.slice(2)];
+         };
          faddelems('td',brow,values);
       };
 
@@ -308,7 +364,7 @@ if (winurlsearchstr==='') {
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
       {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
-      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,photourl,photocurl'))+'. '},
+      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=coreancestors will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,coreancestors,photourl,photocurl'))+'. '},
       {innerHTML:'When &options=idextra is invoked, an optional idextra_user_id parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))+'. '},
       {innerHTML:'When &options=photocurl is invoked, an optional photo_curl_filename_prefix parameter can also be set to one or more of 9 values -- photo_id, photo_license, obs_id, obs_seq, obs_date, taxon_id, taxon_name, user_id, user_login. By default, the destination filename in the curl commands will be prefixed with only photo id, but you can override this behavior by specifying the a comma-separated list of the values that you wish to include, in the order that you wish for them to be added. For example, this will prefix the destination filenames with obs id, obs seq, and photo id: '+furl(famp(winurlexsearchstr+'?user_id=bob&options=photocurl&photo_curl_filename_prefix=obs_id,obs_seq,photo_id'))+'. '},
    ];
