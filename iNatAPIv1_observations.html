@@ -165,7 +165,7 @@ function fObsTaxonAncestors(obs) {
             if (idta = idt.ancestors) {
                for (let [i, atid] of idta.map((a)=>a.id).entries()) {
                   if (atid === taxonId) {
-                     ancestor = idta.slice(0,i+1); // add everything above this taxon (will add this taxon later below)
+                     ancestors = idta.slice(0,i); // add everything above this taxon (will add this taxon later below)
                      break;
                   };
                };
