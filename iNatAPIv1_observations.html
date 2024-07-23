@@ -328,7 +328,7 @@ function fresults(xobj) {
          };
          if (p_options.includes('coreancestors')) {
             let ancestors = fObsTaxonAncestors(rec);
-            let ancestor = [];
+            let ancestor;
             let values_ancestors = [
                {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'kingdom')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
                {innerHTML: (ancestor = ancestors?.find(a => a.rank === 'phylum')) ? furl(inat_taxa+ancestor.id,ancestor.name) : null},
