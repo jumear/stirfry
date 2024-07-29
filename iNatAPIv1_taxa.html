@@ -65,6 +65,7 @@ let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 //let p_per_page = winurlparams.get('per_page') || 200;
 //let p_page = winurlparams.get('page') || 1;
 let p_options = winurlparams.get('options') || [];
+let p_all_names = winurlparams.get('all_names') || "false";
 winurlparams.delete('options');
 
 function furl(url,txt=url) { return '<a href="'+url+'">'+txt+'</a>'; };
@@ -134,8 +135,10 @@ function fexport(count=0) {
          'observations_count',
       ]];
       if (p_options.includes('ancestry')) { ary[0].splice(8,0,'ancestry'); }; 
+      if (p_all_names==="true") { ary[0].splice(3,0,'inactive_sci_names'); }; 
       for (let result of results) {
          for (let data of result.results) {
+            let s;
             let values = [
                data.id||'',
                data.name||'',
@@ -148,6 +151,7 @@ function fexport(count=0) {
                data.observations_count,
             ];
             if (p_options.includes('ancestry')) { values.splice(8,0,data.ancestor_ids.join('/')||''); };
+            if (p_all_names==="true") { values.splice(3,0,(s=data.names?.filter(n=>(n.locale==='sci'&&!n.is_valid)).map(function(e){return e.name;}).join(', '))?`"${s}"`:''); };
             ary.push(values);
          };
       };
@@ -203,6 +207,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Observations'},
       ];
       if (p_options.includes('ancestry')) { labels.splice(11,0,{innerText:'Ancestry'}); };
+      if (p_all_names==="true") { labels.splice(5,0,{innerText:'Inactive Sci Names'}); };
       faddelems('th',hrow,labels);
 
       let tbody = faddelem('tbody',table);
@@ -232,6 +237,7 @@ function fresults(xobj) {
             {classList:'tar',innerHTML:furl('https://www.inaturalist.org/observations?taxon_id='+rec.id,fcomnum(rec.observations_count))},
          ];
          if (p_options.includes('ancestry')) { values.splice(11,0,{innerHTML:rec.ancestor_ids.map(function(e){return furl('http://www.inaturalist.org/taxa/'+e,e)}).join('/')||''}); };
+         if (p_all_names==="true") { values.splice(5,0,{innerText:rec.names?.filter(n=>(n.locale==='sci'&&!n.is_valid)).map(function(e){return e.name;}).join(', ')||''}) };
          faddelems('td',brow,values);
       };
 
@@ -258,6 +264,7 @@ if (winurlsearchstr==='') {
       {innerHTML:'Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
       {innerHTML:'Also note that &is_active=any is undocumented, but that is the parameter to use if you want to pull back both active and inactive taxa. Otherwise, you will get only active taxa by default.'},
       {innerHTML:'The parameter &order_by is also undocumented, but if it is not specified, the API will by default sort based on observation count, which provides inconsistent ordering (in cases where observation count is the same for multiple taxa). To ensure you see all taxa across multiple pages, it is recommended that you specify &order_by=id. (The export function on this page will do this by default.) Another possible value is &order_by=created_at, but that could result in inconsistent ordering, too.'},
+      {innerHTML:'If you invoke the parameter &all_names=true, then you will get an additional column that shows a list of inactive scientific names.'},
       {innerHTML:'You can also invoke a couple of extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. To invoke both options, use a comma-separated value list for the parameter (&options=ancestry,bigger_image).'},
    ];
    faddelems('p',document.body,instructions);
