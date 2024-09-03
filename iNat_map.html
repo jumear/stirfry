@@ -73,6 +73,7 @@ L.TileLayer.USGS = L.TileLayer.extend({
          -data.y*mTile+mMax,
       ];
       data['p'] = `&f=image&bboxSR=102100&imageSR=102100&size=${this._tileSize.x},${this._tileSize.y}&bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}`;
+      if (this.options.renderingRule) { data['p'] += `&renderingRule=%7B"rasterFunction"%3A"${this.options.renderingRule}"%7D`; };
       return this._url + data.p;
       //return Util.template(this._url, Util.extend(data, this.options));
    },
@@ -1096,13 +1097,16 @@ else {
    var l_usgs_ecolandunit = L.tileLayer.usgs('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
 
    // USGS Elevation (US, Mexico, Canada)
-   // (Note: The WMS responds ok. So we don't need to use the /exportImage route to get tiled images.)
-   // var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
-   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?';
+   // (Note: The WMS Server seems to be gone as of 2024. So we'll go with /exportImage route to get tiled images.)
+   //var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer';
+   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?';
    var s_usgs_3dep_attribution = '<a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer">USGS 3D Elevation Program</a>';
-   var l_usgs_3dep_hillshade = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
-   var l_usgs_3dep_aspect = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
-   var l_usgs_3dep_slope = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+   //var l_usgs_3dep_hillshade = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   //var l_usgs_3dep_aspect = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   //var l_usgs_3dep_slope = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+   var l_usgs_3dep_hillshade = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   var l_usgs_3dep_aspect = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   var l_usgs_3dep_slope = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
 
    // USGS other overlays (US only)
    // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
