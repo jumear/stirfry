@@ -13,8 +13,8 @@
    a { text-decoration:none; }
 </style>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
 
@@ -73,6 +73,7 @@ L.TileLayer.USGS = L.TileLayer.extend({
          -data.y*mTile+mMax,
       ];
       data['p'] = `&f=image&bboxSR=102100&imageSR=102100&size=${this._tileSize.x},${this._tileSize.y}&bbox=${bb[0]},${bb[1]},${bb[2]},${bb[3]}`;
+      if (this.options.renderingRule) { data['p'] += `&renderingRule=%7B"rasterFunction"%3A"${this.options.renderingRule}"%7D`; };
       return this._url + data.p;
       //return Util.template(this._url, Util.extend(data, this.options));
    },
@@ -1068,9 +1069,14 @@ else {
    var l_eox_bluemarble = L.tileLayer(f_eox_url('bluemarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Blue Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
    var l_eox_terrain = L.tileLayer(f_eox_url('terrain_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
    var l_eox_terrain_light = L.tileLayer(f_eox_url('terrain-light_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain Light</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+   var l_eox_sentinel2_2023 = L.tileLayer(f_eox_url('s2cloudless-2023_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2023) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   var l_eox_sentinel2_2022 = L.tileLayer(f_eox_url('s2cloudless-2022_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2022) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   var l_eox_sentinel2_2021 = L.tileLayer(f_eox_url('s2cloudless-2021_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2021) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2020 = L.tileLayer(f_eox_url('s2cloudless-2020_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2020) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2019 = L.tileLayer(f_eox_url('s2cloudless-2019_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2018 = L.tileLayer(f_eox_url('s2cloudless-2018_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2019) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
+   //var l_eox_sentinel2_2017 = L.tileLayer(f_eox_url('s2cloudless-2017_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017) released under <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.'});
+   //var l_eox_sentinel2_2016 = L.tileLayer(f_eox_url('s2cloudless-2016_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016 &amp; 2017) released under <a rel="license" href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.'});
    // overlays
    var l_eox_hydrography = L.tileLayer(f_eox_url('hydrography_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Hydrography overlay</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Rendering &copy; <a href="https://eox.at">EOX</a> and <a href="https://github.com/mapserver/basemaps">MapServer</a> }'});
    var l_eox_coastline = L.tileLayer(f_eox_url('coastline_3857','png'),{minZoom:0, maxZoom:20, attribution:'<a href="https://maps.eox.at">Coastline overlay</a> { Rendering &copy; <a href="https://eox.at">EOX</a> }'}); 
@@ -1096,13 +1102,16 @@ else {
    var l_usgs_ecolandunit = L.tileLayer.usgs('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
 
    // USGS Elevation (US, Mexico, Canada)
-   // (Note: The WMS responds ok. So we don't need to use the /exportImage route to get tiled images.)
-   // var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
-   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer?';
+   // (Note: The WMS Server seems to be gone as of 2024. So we'll go with /exportImage route to get tiled images.)
+   //var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer';
+   var s_usgs_3dep_urlbase = 'https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage?';
    var s_usgs_3dep_attribution = '<a href="https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer">USGS 3D Elevation Program</a>';
-   var l_usgs_3dep_hillshade = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
-   var l_usgs_3dep_aspect = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
-   var l_usgs_3dep_slope = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+   //var l_usgs_3dep_hillshade = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   //var l_usgs_3dep_aspect = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   //var l_usgs_3dep_slope = L.tileLayer.wms(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, format:'image/png32', transparent:false, layers:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
+   var l_usgs_3dep_hillshade = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Hillshade Gray'}); //possible values: 'Hillshade Gray', 'Hillshade Multidirectional' , 'Hillshade Elevation Tinted', 'GreyHillshade_elevationFill'
+   var l_usgs_3dep_aspect = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Aspect Map'}); //possible values: 'Aspect Map', 'Aspect Degrees'
+   var l_usgs_3dep_slope = L.tileLayer.usgs(s_usgs_3dep_urlbase,{minZoom:0, maxZoom:20, attribution:s_usgs_3dep_attribution, renderingRule:'Slope Map'}); //possible values: 'Slope Map', 'Slope Degrees'
 
    // USGS other overlays (US only)
    // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
@@ -1173,9 +1182,14 @@ else {
       "EOX OSM": l_eox_osm,
       "EOX Black Marble": l_eox_blackmarble,
       "EOX Blue Marble": l_eox_bluemarble,
+      "EOX Sentinel-2 2023": l_eox_sentinel2_2023,
+      "EOX Sentinel-2 2022": l_eox_sentinel2_2022,
+      "EOX Sentinel-2 2021": l_eox_sentinel2_2021,
       "EOX Sentinel-2 2020": l_eox_sentinel2_2020,
       "EOX Sentinel-2 2019": l_eox_sentinel2_2019,
       "EOX Sentinel-2 2018": l_eox_sentinel2_2018,
+      //"EOX Sentinel-2 2017": l_eox_sentinel2_2017,
+      //"EOX Sentinel-2 2016": l_eox_sentinel2_2016,
       "EOX Terrain": l_eox_terrain,
       "EOX Terrain (Light)": l_eox_terrain_light,
       "USGS Imagery": l_usgs_img,
