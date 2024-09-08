@@ -186,6 +186,7 @@ function fresults(xobj) {
 
       let tbody = faddelem('tbody',table);
       let associatedobs = [];
+      let urlobs = 'https://www.inaturalist.org/observations';
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
@@ -193,7 +194,7 @@ function fresults(xobj) {
          let idinobsids = fgetidvsidsfromobs(rec);
          let values = [
             {innerText:i+1},
-            {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.observation.id,rec.observation.id)},
+            {innerHTML:furl(`${urlobs}/${rec.observation.id}`,rec.observation.id)},
             {innerHTML:'<img class="photo" src="'+(rec.observation.photos[0]?rec.observation.photos[0].url:'')+'" />'},
             {innerText:rec.observation.quality_grade},
             {innerHTML:'<img class="icon" src="'+rec.observation.user.icon+'" />'},
@@ -231,7 +232,7 @@ function fresults(xobj) {
          faddelems('td',brow,values);
          if (!associatedobs.includes(rec.observation.id)) { associatedobs.push(rec.observation.id); }; 
       };
-      document.getElementById("associatedobslink").innerHTML = `[related observations: ${furl(('https://www.inaturalist.org/observations?verifiable=any&place=any&id='+associatedobs.join(',')),'Explore')} | ${furl(('https://www.inaturalist.org/observations/identify?quality_grade=needs_id,research,casual&verifiable=any&place=any&id='+associatedobs.join(',')),'Identify')}]`;
+      document.getElementById("associatedobslink").innerHTML = `[related observations: ${furl((urlobs+'?verifiable=any&place=any&id='+associatedobs.join(',')),'Explore')} | ${furl((urlobs+'/identify?per_page='+per_page+'&quality_grade=needs_id,research,casual&verifiable=any&place=any&id='+associatedobs.join(',')),'Identify')}]`;
 
       // buttons to go to prev or next page
       let nav = faddelem('div',document.body,{id:'nav'});
