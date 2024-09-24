@@ -31,6 +31,7 @@
 |[iNat_obs_species_counts_packed_circles.html](https://jumear.github.io/stirfry/iNat_obs_species_counts_packed_circles)|https://forum.inaturalist.org/t/inaturalist-visualization-what-introduced-species-are-in-my-place/12889/15|
 |[iNat_observation_grid_widget.html](https://jumear.github.io/stirfry/iNat_observation_grid_widget)|https://forum.inaturalist.org/t/observations-widget-is-not-working-anymore/7892/10|
 |[iNat_observation_slideshow.html](https://jumear.github.io/stirfry/iNat_observation_slideshow)|https://forum.inaturalist.org/t/presentation-mode-as-a-full-screen-slideshow-of-observation-images/8316/4|
+|[iNat_observations_taxonomy.html](https://jumear.github.io/stirfry/iNat_observations_taxonomy)|https://observablehq.com/@robin-song/inaturalist-observations-by-taxon|
 |[iNat_observations_updates.html](https://jumear.github.io/stirfry/iNat_observations_updates)|https://forum.inaturalist.org/t/is-there-an-easy-way-to-open-all-notifications/25913/35|
 |[iNat_places.html](https://jumear.github.io/stirfry/iNat_places)|https://forum.inaturalist.org/t/what-place-has-the-densest-amount-of-observations/23452/16|
 |[iNat_print_friendly_obs.html](https://jumear.github.io/stirfry/iNat_print_friendly_obs)|https://forum.inaturalist.org/t/tool-for-making-observations-printer-friendly/4513/16|
