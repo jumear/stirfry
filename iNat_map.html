@@ -749,18 +749,22 @@ var centerlng = winurlparams.get('centerlng');
 var defaultzoom = winurlparams.get('defaultzoom');
 var showtaxonplace = winurlparams.get('showtaxonplace') || 'false';
 var showtaxonrange = winurlparams.get('showtaxonrange') || 'false';
+var showexpectednearby = winurlparams.get('showexpectednearby') || 'false';
 var showplace = winurlparams.get('showplace') || 'false';
 var view = winurlparams.get('view') || 'default';
 var compexclparam = winurlparams.get('compare_exclude_param');
+var thresholded = winurlparams.get('thresholded') || 'true'; // even though the default in the API is false, set the default to true, since we're going to usually want to see Expected Nearby rather than Unthresholded
 
 winurlparams.delete('centerlat');
 winurlparams.delete('centerlng');
 winurlparams.delete('defaultzoom');
 winurlparams.delete('showtaxonplace');
 winurlparams.delete('showtaxonrange');
+winurlparams.delete('showexpectednearby');
 winurlparams.delete('showplace');
 winurlparams.delete('view');
 winurlparams.delete('compare_exclude_param');
+winurlparams.delete('thresholded');
 
 let compareurlparams = new URLSearchParams(winurlparams);
 if (compexclparam) { for (p of compexclparam.split(',')) { compareurlparams.delete(p); }; };
@@ -806,7 +810,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showplace can be set to true to display specific layers by default.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showexpectednearby, and showplace can be set to true to display specific layers by default.');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -1012,6 +1016,9 @@ else {
    var l_inat_taxonplace = L.tileLayer(inat_urlbase+'taxon_places/'+taxon_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_places_taxon_id_zoom_x_y_png">iNaturalist taxon place checklist data</a>'});
    var l_inat_taxonrange = L.tileLayer(inat_urlbase+'taxon_ranges/'+taxon_id+'/{z}/{x}/{y}.png',{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'docs/#!/Polygon_Tiles/get_taxon_ranges_taxon_id_zoom_x_y_png">iNaturalist taxon range data</a>'});
 
+   // Geomodel layers
+   var l_inat_geomodel = L.tileLayer(inat_urlbase+'geomodel/'+taxon_id+'/{z}/{x}/{y}.png?thresholded='+thresholded,{minZoom:2, maxZoom:20, attribution:'<a href="'+inat_urlbase+'">iNaturalist geomodel</a>'});
+
    // Stamen layers
    // these are deprecated as Stamen tiles are now maintained by Stadia
    var s_stamen_copyright = 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under <a href="https://www.openstreetmap.org/copyright">ODbL</a>.'; // used for all sets except Watercolor
@@ -1134,6 +1141,7 @@ else {
    if (taxon_id!==null) {
       if (showtaxonplace==='true') {defaultlayers.push(l_inat_taxonplace)};
       if (showtaxonrange==='true') {defaultlayers.push(l_inat_taxonrange)};
+      if (showexpectednearby==='true') {defaultlayers.push(l_inat_geomodel)};
    };
    if (place_id!==null) { 
       if (showplace==='true') {defaultlayers.push(l_inat_place)};
@@ -1219,6 +1227,7 @@ else {
       "EOX Overlay (Bright)": l_eox_overlay_bright,
       ...((taxon_id==null) ? {} : {"iNaturalist Taxon Range": l_inat_taxonrange}),
       ...((taxon_id==null) ? {} : {"iNaturalist Taxon Places": l_inat_taxonplace}),
+      ...((taxon_id==null) ? {} : (thresholded? {"iNaturalist Expected Nearby": l_inat_geomodel} : {"iNaturalist Unthresholded Geomodel": l_inat_geomodel})),
       ...((place_id==null) ? {} : {"iNaturalist Place": l_inat_place}),
       ...((compexclparam==null) ? {} : {"iNaturalist Subset Ratio (Red=1.0, Blue=0.0)": l_utfgrid_compare}),
       //"iNaturalist Observations Density in GBIF (no filters)": l_gbif,
