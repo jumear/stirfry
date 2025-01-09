@@ -135,10 +135,12 @@ function fresults() {
    div_main = faddelem('div',document.body,{id:'main'});
    let user_id = input_user.value 
 
-   let urlsumbycat = 'iNat_id_summary_by_category.html';
-   let urlsumbyic = 'iNat_id_counts_by_iconic_taxa.html';
-   let urlids = 'iNatAPIv1_identifications.html'
-   let urlobs = 'iNatAPIv1_observations.html'
+   let urlsumbycat = 'iNat_id_summary_by_category';
+   let urlsumbyic = 'iNat_id_counts_by_iconic_taxa';
+   let urlids = 'iNatAPIv1_identifications';
+   let urlobs = 'iNatAPIv1_observations.html';
+   let urlidspecies = 'iNatAPIv1_identifications_species_counts.html';
+   let urlobsspecies = 'iNatAPIv1_observations_species_counts.html';
    let apibase = 'https://api.inaturalist.org/v1/';
    let date_curr = new Date();
    let prom_user = ffetch(`${apibase}users/${user_id}`);
@@ -176,12 +178,12 @@ function fresults() {
          faddtr(tbody,[{innerText:'Days Since Last ID:'},{innerText:diff_last_id?fcomnum(diff_last_id.toFixed(2)):'N/A'}]);
          faddtr(tbody,[{innerText:'Date Joined:'},{innerText:date_join.toString()}]);
          faddtr(tbody,[{innerText:'Days Since Joining:'},{innerText:fcomnum(diff_days.toFixed(2))}]);
-         faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' | '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?user_id='+user.id,'by iconic taxa')+' )'}]);
-         faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' | '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?own_observation=false&user_id='+user.id,'by iconic taxa')+' )'}]);
+         faddtr(tbody,[{innerText:'IDs (all):'},{innerHTML:fcomnum(id_all)+' ( view: '+furl(urlids+'?per_page=100&user_id='+user.id,'detail')+' | '+furl(urlidspecies+'?per_page=500&user_id='+user.id,'by species')+' | '+furl(urlsumbycat+'?user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?user_id='+user.id,'by iconic taxa')+' )'}]);
+         faddtr(tbody,[{innerText:'IDs (for others):'},{innerHTML:fcomnum(id_others)+' ( view: '+furl(urlids+'?per_page=100&own_observation=false&user_id='+user.id,'detail')+' | '+furl(urlidspecies+'?per_page=500&own_observation=false&user_id='+user.id,'by species')+' | '+furl(urlsumbycat+'?own_observation=false&user_id='+user.id,'by category')+' | '+furl(urlsumbyic+'?own_observation=false&user_id='+user.id,'by iconic taxa')+' )'}]);
          faddtr(tbody,[{innerText:'IDs (for others) per day:'},{innerText:fcomnum((id_others/diff_days).toFixed(2))}]);
          //faddtr(tbody,[{innerText:'IDs (all) last 24hrs:'},{innerHTML:fcomnum(id_t24hrs)}]);
-         faddtr(tbody,[{innerText:'Annotated Obs (all):'},{innerHTML:furl(`${urlobs}?per_page=200&annotation_user_id=${user_id}`,fcomnum(annotated_obs_all))}]);
-         faddtr(tbody,[{innerText:'Annotated Obs (for others):'},{innerHTML:furl(famp(`${urlobs}?per_page=200&annotation_user_id=${user_id}&not_user_id=${user_id}`),fcomnum(annotated_obs_others))}]);
+         faddtr(tbody,[{innerText:'Annotated Obs (all):'},{innerHTML:fcomnum(annotated_obs_all)+' ( view: '+furl(`${urlobs}?per_page=200&annotation_user_id=${user_id}`,'detail')+' | '+furl(`${urlobsspecies}?per_page=500&annotation_user_id=${user_id}`,'by species')+' )'}]);
+         faddtr(tbody,[{innerText:'Annotated Obs (for others):'},{innerHTML:fcomnum(annotated_obs_others)+' ( view: '+furl(famp(`${urlobs}?per_page=200&annotation_user_id=${user_id}&not_user_id=${user_id}`),'detail')+' | '+furl(famp(`${urlobsspecies}?per_page=500&annotation_user_id=${user_id}&not_user_id=${user_id}`),'by species')+' )'}]);
          faddtr(tbody,[{innerText:'Annotated Obs (for others) per day:'},{innerText:fcomnum((annotated_obs_others/diff_days).toFixed(2))}]);
       };
    });
