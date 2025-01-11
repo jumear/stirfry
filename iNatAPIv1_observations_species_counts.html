@@ -148,6 +148,7 @@ function fexport(count=0) {
                data.count||'',
                data.taxon.observations_count||'',
             ];
+            if (p_options.includes('wikipedia_url')) { values.splice(5,0,data?.taxon?.wikipedia_url||''); };
             if (p_options.includes('ancestry')) { values.splice(5,0,data.taxon.ancestor_ids.join('/')); };
             ary.push(values);
          };
@@ -194,6 +195,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:'Taxon Obs Count'},
          {classList:'tar',innerText:'Taxon Ttl Obs Count'},
       ];
+      if (p_options.includes('wikipedia_url')) { labels.splice(7,0,{innerText:'Wikipedia URL'}); };
       if (p_options.includes('ancestry')) { labels.splice(7,0,{innerText:'Ancestry'}); };
       faddelems('th',hrow,labels);
 
@@ -227,6 +229,7 @@ function fresults(xobj) {
             {classList:'tar',innerHTML:furl(famp(url_explore+obsparam_verifiable+(obsparams==''?'':('&'+obsparams))),fcomnum(rec.count))},
             {classList:'tar',innerHTML:furl(url_explore+'&verifiable=any',fcomnum(rec.taxon.observations_count))},
          ];
+         if (p_options.includes('wikipedia_url')) { values.splice(7,0,{innerHTML:furl(rec?.taxon?.wikipedia_url||'')})};
          if (p_options.includes('ancestry')) { values.splice(7,0,{innerHTML:rec.taxon.ancestor_ids.map(function(e){return furl('http://www.inaturalist.org/taxa/'+e,e)}).join('/')||''}); };
          faddelems('td',brow,values);
       };
@@ -251,7 +254,7 @@ if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob'))+' in your browser.'},
-      {innerHTML:'You can also invoke a few extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=bigger_image will display a larger version of the taxon photo. Adding &options=unlimitedexport will allow you export a lot of records. To invoke multiple options, use a comma-separated value list for the parameter (ex. &options=ancestry,bigger_image,unlimitedexport).'},
+      {innerHTML:'You can also invoke a few extra options. Adding &options=ancestry to the URL parameter list will include a column with taxon ancestry in the results. Adding &options=wikipedia_url will display a column with a link to the Wikipedia article for the taxon.  Adding &options=bigger_image will display a larger version of the taxon photo. Adding &options=unlimitedexport will allow you export a lot of records. To invoke multiple options, use a comma-separated value list for the parameter (ex. &options=ancestry,wikipedia_url,bigger_image,unlimitedexport).'},
       {innerHTML:'Note that the counts returned by this page vs the '+furl('https://www.inaturalist.org/observations','Explore page')+' in iNaturalist may not tie exactly because the Explore page will always filter out spam observations. Also, if you filter for a subspecies taxon on this page, the taxon shown here will be the species level, but the count will reflect the subspecies count, and the link to the Explore page will take you to the species level.'},
    ];
    faddelems('p',document.body,instructions);
