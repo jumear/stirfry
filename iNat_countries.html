@@ -119,7 +119,8 @@ function fgetwdinfo(ary,key) {
       population : obj.population?obj.population.value:null,
       area : obj.area?obj.area.value:null,
       entity: obj.country?obj.country.value.substring(obj.country.value.lastIndexOf('/')+1):null,
-      url: obj.country?obj.country.value:null
+      url: obj.country?obj.country.value:null,
+      isoCode3: obj.isoCode3?obj.isoCode3.value:null
    } 
    : { isoCode:key };
 };
@@ -209,14 +210,15 @@ Promise.all(promiseary).then(data=>{
       }
    }
    const endpointUrl = 'https://query.wikidata.org/sparql';
-   const sparqlQuery = `SELECT ?isoCode ?countryLabel ?country ?population ?area WHERE {
+   const sparqlQuery = `SELECT ?isoCode ?countryLabel ?country ?population ?area ?isoCode3 WHERE {
        ?country wdt:P297 ?isoCode .
        OPTIONAL { ?country wdt:P1082 ?population } .
        OPTIONAL { ?country wdt:P2046 ?area } .
+       OPTIONAL { ?country wdt:P298 ?isoCode3 } .
       #  OPTIONAL { ?country p:P2046/psn:P2046/wikibase:quantityAmount ?area } .
       SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
       }
-      ORDER BY ?isoCode DESC(?population) ?area`;
+      ORDER BY ?isoCode DESC(?population) ?area ?isoCode3`;
    const queryDispatcher = new SPARQLQueryDispatcher( endpointUrl );
    let wd = await queryDispatcher.query( sparqlQuery );
   // .then( console.log );
@@ -246,6 +248,7 @@ Promise.all(promiseary).then(data=>{
       {innerText:'#'},
       {innerText:'ID'},
       {innerText:'Alpha-2 Code'},
+      {innerText:'Alpha-3 Code'},
       {innerText:'Flag'},
       {innerText:'Name'},
 //      {innerText:'display_name'},
@@ -286,6 +289,7 @@ Promise.all(promiseary).then(data=>{
          {innerText:i+1},
          {innerHTML:furl('https://www.inaturalist.org/places/'+rec.id,rec.id)},
          {innerHTML:(rec.code==null)?'':furl('https://www.iso.org/obp/ui/#iso:code:3166:'+rec.code,rec.code)},
+         {innerText:wdinfo.entity?wdinfo.isoCode3:null},
          {classList:'flag',innerText:rec.code?getFlagEmoji(rec.code):''},
          {innerHTML:furl('https://www.inaturalist.org/observations?place_id='+rec.id,rec.name)},
 //         {innerText:rec.display_name},
