@@ -334,7 +334,7 @@ Promise.all(promiseary).then(data=>{
 
    for (let i=0; i<countries.length; i++) {
       for (let j=0; j<datatoget.length; j++) {
-         await delay(1000);
+         await delay(1050); // 1050 instead of 1000 to work around issue noted in https://forum.inaturalist.org/t/429-error-from-observations-histogram-api-when-calling-at-60-calls-minute/64709/8
          Promise.all([
             Promise.resolve(countries[i].id),
             Promise.resolve(datatoget[j].tdid),
