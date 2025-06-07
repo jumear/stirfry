@@ -107,6 +107,7 @@ function fgetidvsidsfromobs(rec) {
    let id = rec.id;
    let obs = rec.observation;
    let obsids = obs.identifications;
+   obsids.sort(function(a, b) { return a.id-b.id; }); // need to explicitly sort, since identifications do not seem to be sorted by default
    let idvsall = {seq_all:0,seq_curr:0,count_all:0,count_curr:0};
    for (let o=0; o<obsids.length; o++) {
       idvsall.count_all+=1;
