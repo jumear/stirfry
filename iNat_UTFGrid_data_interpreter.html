@@ -205,7 +205,7 @@ function fresults(xobj) {
          showlines: faddoptioncheckbox(optionstbody,'Show Grid Lines','showgrid'),
          showoverlay: faddoptioncheckbox(optionstbody,'Show iNat Obs Grid','showoverlay',false),
          showbasemap: faddoptioncheckbox(optionstbody,'Show Basemap','showbasemap'),
-         selectcellstyle: faddoptionselect(optionstbody, 'Cell Fill Style', 'selectcellstyle', ['None','Binary 1.0', 'Binary 0.5', 'Linear', 'Logarithmic'], 3)
+         selectcellstyle: faddoptionselect(optionstbody, 'Cell Fill Style', 'selectcellstyle', ['None','Binary 1.0', 'Binary 0.5', 'Linear', 'Logarithmic 2', 'Logarithmic 4'], 3)
       };
       options.showchar.addEventListener('change', function() {
          mapgrid.classList.add((this.checked)?'mgcharon':'mgcharoff');
@@ -321,7 +321,8 @@ function fresults(xobj) {
                   (options.selectcellstyle.selectedIndex == 1) ? ((cellCount > 0) ? 1 : 0)
                   : (options.selectcellstyle.selectedIndex == 2) ? ((cellCount > 0) ? 0.5 : 0)
                   : (options.selectcellstyle.selectedIndex == 3) ? cellCount/utfgrid.cellCountMax
-                  : (options.selectcellstyle.selectedIndex == 4) ? ((cellCount > 0) ? (Math.log10(cellCount/utfgrid.cellCountMax*10000)/4.0) : 0)
+                  : (options.selectcellstyle.selectedIndex == 4) ? ((cellCount > 0) ? (Math.log10(cellCount/utfgrid.cellCountMax*100)/2.0) : 0)
+                  : (options.selectcellstyle.selectedIndex == 5) ? ((cellCount > 0) ? (Math.log10(cellCount/utfgrid.cellCountMax*10000)/4.0) : 0)
                   : 0
                })`;
             });
