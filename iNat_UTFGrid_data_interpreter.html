@@ -43,7 +43,7 @@
    tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
    tr:nth-child(even) { background:var(--color-base); }
    .tar { text-align:right; }
-   .car { text-align:center; }
+   .tac { text-align:center; }
    .icon { height:48px; width:48px; border-radius:50%; }
    .photo { height:64px; width:64px; }
    img { margin:0; padding:0; border:0; }
@@ -124,6 +124,15 @@ function faddoptioncheckbox(parent,label,name,value=true) {
    faddelem('label',infotr.childNodes[0],{htmlFor:name,innerText:label});
    return faddelem('input',infotr.childNodes[1],{type:'checkbox',id:name,name:name,checked:value});   
 };
+function faddoptionselect(parent,label,name,items=[],selectedindex=-1) {
+   let infotr = faddelem('tr',parent);
+   faddelems('td',infotr,[{},{}]);
+   faddelem('label',infotr.childNodes[0],{htmlFor:name,innerText:label});
+   input = faddelem('select',infotr.childNodes[1],{id:name,name:name});
+   for (item of items) { faddelem('option',input,{value:item,innerText:item}) };
+   if (selectedindex >= 0) { input.selectedIndex = selectedindex; };
+   return input;
+};
 function futfgridlink(xyzobj) { return (xyzobj && !xyzobj.exceedsMaxZoom)?furl(`${winurlexsearchstr}?z=${xyzobj.z}&x=${xyzobj.x}&y=${xyzobj.y}&${winurlparams}`,`z:${xyzobj.z}, x:${xyzobj.x}, y:${xyzobj.y}`):'-'; };
 function furlparams(url,params={}) {
    for (param of Object.entries(params)) { url = url.replace(`{${param[0]}}`,param[1]); }; 
@@ -172,12 +181,15 @@ function fresults(xobj) {
          y: faddelem('div',mapdiv,{classList:'mapsel',id:'mapsely',style:{width:'calc(100% - 1px)',height:gridsize.vizcellpx+'px'}})
       };
       let mapgrid = faddelem('table',mapdiv,{classList:'mglineson mgcharon',id:'mapgrid'});
+      let cellswithobs = 0;
       for (let gy=0; gy<gridsize.eff; gy++) {
          let mgrow = faddelem('tr',mapgrid,{style:{padding:0,margin:0,background:'none'}});
          for (let gx=0; gx<gridsize.eff; gx++) {
             faddelem('td',mgrow,{innerText:'',x:gx,y:gy,style:{height:gridsize.vizcellpx+'px',width:gridsize.vizcellpx+'px',fontSize:gridsize.vizcellpx-10+'px'}});
          };
       };
+      faddelem('p',document.body,{style:{marginTop:'5px',textAlign:'right',width:`${mapdiv.offsetWidth}px`},innerHTML:`<a href="${furlparams((p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Basemap</a> ${(p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
+
       let infodiv = faddelem('div',mapdiv,{id:'infodiv',style:{marginLeft:gridsize.vizcellpx*0.6+'px'}});
 
       let maxZoom = 20;
@@ -193,6 +205,7 @@ function fresults(xobj) {
          showlines: faddoptioncheckbox(optionstbody,'Show Grid Lines','showgrid'),
          showoverlay: faddoptioncheckbox(optionstbody,'Show iNat Obs Grid','showoverlay',false),
          showbasemap: faddoptioncheckbox(optionstbody,'Show Basemap','showbasemap'),
+         selectcellstyle: faddoptionselect(optionstbody, 'Cell Fill Style', 'selectcellstyle', ['None','Binary 1.0', 'Binary 0.5', 'Linear', 'Logarithmic'], 3)
       };
       options.showchar.addEventListener('change', function() {
          mapgrid.classList.add((this.checked)?'mgcharon':'mgcharoff');
@@ -204,6 +217,13 @@ function fresults(xobj) {
       });
       options.showbasemap.addEventListener('change', function() { maptilebase.style.visibility=(this.checked)?'visible':'hidden'; });
       options.showoverlay.addEventListener('change', function() { maptileover.style.visibility=(this.checked)?'visible':'hidden'; });
+      options.selectcellstyle.addEventListener('change', function() {
+         for (mgr of mapgrid.children) {
+            for (mgc of mgr.children) {
+               mgc.dispatchEvent(new Event('mouseout'));
+            };
+         };
+      });
 
       faddelem('h2',infodiv,{innerText:'Grid Info'});
       let infotablegrid = faddelem('table',infodiv,{id:'infotablegrid'});
@@ -219,8 +239,6 @@ function fresults(xobj) {
       faddelem('h2',infodiv,{innerText:'Cell Info'});
       let infotablecell = faddelem('table',infodiv,{id:'infotablecell'});
       let infotbodycell = faddelem('tbody',infotablecell,{id:'infotbodycell',innerHTML:'< Select a grid cell to view its details.'});
-
-      faddelem('p',infodiv,{style:{position:'absolute',bottom:0, marginBottom:0},innerHTML:`<a href="${furlparams((p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.url:basemap_osm_de.url,{z:p_z,x:p_x,y:p_y})}">Basemap</a> ${(p_z<=basemap_osm_std.maxZoom)?basemap_osm_std.attribution:basemap_osm_de.attribution}`});
 
       faddelem('h2',document.body,{style:{marginTop:gridsize.vizcellpx*1.25+'px'},innerText:'Details for All Cells in Grid'});
       let table = faddelem('table',document.body,{id:'main'});
@@ -238,8 +256,8 @@ function fresults(xobj) {
          //{innerText:'E Lng'},
          //{innerText:'S Lat'},
          //{innerText:'W Lng'},
-         {classList:'car',innerText:`Equiv (Z+${gridsize.effzstep}) UTFGrid`},
-         {classList:'car',innerText:'Z+1 UTFGrid'},
+         {classList:'tac',innerText:`Equiv (Z+${gridsize.effzstep}) UTFGrid`},
+         {classList:'tac',innerText:'Z+1 UTFGrid'},
          {innerText:'Center Lat'},
          {innerText:'Center Lng'},
          //{innerText:'Center Lat (calc)'},
@@ -260,6 +278,7 @@ function fresults(xobj) {
             cell.charCode = utfgrid.grid[cell.base.y].charCodeAt(cell.base.x);
             let i = cell.charCode-((cell.charCode>=93)?34:(cell.charCode>=35)?33:32);
             cell.data = utfgrid.data[utfgrid.keys[i]];
+            if (cell.charCode !== 32) { cellswithobs++; };
 
             let equivutfgrid = {
                z:p_z+gridsize.effzstep,
@@ -282,8 +301,8 @@ function fresults(xobj) {
                {classList:'tar',innerHTML:furl(fexplorelink(equivutfgrid.x,equivutfgrid.y,equivutfgrid.z),((cell.data)?fcomnum(cell.data?.cellCount):'-'))},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountMax*100,7):'-'},
                {classList:'tar',innerText:(cell.data)?fround((cell.data?.cellCount)/utfgrid.cellCountTotal*100,9):'-'},
-               {classList:'car',innerHTML:futfgridlink(equivutfgrid)},
-               {classList:'car',innerHTML:futfgridlink(zoominutfgrid)},
+               {classList:'tac',innerHTML:futfgridlink(equivutfgrid)},
+               {classList:'tac',innerHTML:futfgridlink(zoominutfgrid)},
                {innerText:cell.data?.latitude??''},
                {innerText:cell.data?.longitude??''},
                //{innerText:flatfromgrid(p_y*Math.pow(2,gridsize.effzstep)+cell.eff.y+0.5,p_z+gridsize.effzstep)},
@@ -295,9 +314,17 @@ function fresults(xobj) {
             let mgcell = mapgrid.childNodes[cell.eff.y].childNodes[cell.eff.x];
             mgcell.innerText = cell.char;
             let mgcellcolor = `hsla(120,100%,50%,${cell.data?cell.data.cellCount/utfgrid.cellCountMax:0})`;
-            mgcell.style.background = mgcellcolor;
             mgcell.addEventListener('mouseover', function() { this.style.background = 'yellow'; });
-            mgcell.addEventListener('mouseout', function() { this.style.background = mgcellcolor; });
+            mgcell.addEventListener('mouseout', function() {
+               cellCount = cell.data?.cellCount??0;
+               this.style.background = `hsla(120,100%,50%,${
+                  (options.selectcellstyle.selectedIndex == 1) ? ((cellCount > 0) ? 1 : 0)
+                  : (options.selectcellstyle.selectedIndex == 2) ? ((cellCount > 0) ? 0.5 : 0)
+                  : (options.selectcellstyle.selectedIndex == 3) ? cellCount/utfgrid.cellCountMax
+                  : (options.selectcellstyle.selectedIndex == 4) ? ((cellCount > 0) ? (Math.log10(cellCount/utfgrid.cellCountMax*10000)/4.0) : 0)
+                  : 0
+               })`;
+            });
             mgcell.addEventListener('click', function() {
                infotbodycell.innerHTML = '';
                for (let c=0; c<hrow.childNodes.length; c++) {
@@ -310,6 +337,8 @@ function fresults(xobj) {
             });
          };
       };
+      options.selectcellstyle.dispatchEvent(new Event('change'));
+      faddinfotr(infotbodygrid,{innerText:'Cells with Obs'},{innerHTML:`${cellswithobs} of 1024`});
    }
    else { faddelem('p',document.body,{innerText:'No results returned.'}); };
 };
