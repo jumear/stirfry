@@ -808,9 +808,10 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'This page requires that you input at least one filter parameter in the URL. For example, if the URL of this page is '+winurlexsearchstr +', and you want to see research grade ocotillo observations, then you would navigate to '+furl(winurlexsearchstr+'?taxon_id=49325&quality_grade=research')+' in your web browser. This page will accept most parameters documented for the '+ furl(inat_urlbase+'docs/#!/Observations/get_observations','iNaturalist API Get Observations Endpoint')+ '.');
    faddelem('p',div,null,null,'If place_id is included as a parameter, then the place polygon will be available as an optional layer in the map. If taxon_id is included as a parameter, then taxon places and taxon range will be available as optional layers in this map (if they have been defined in iNaturalist).');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
-   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showexpectednearby, and showplace can be set to true to display specific layers by default.');
+   faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    //faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
+   faddelem('p',div,null,null,'The map used to offer a USGS Ecological Land Unit overlay on a dark basemap, with pop-ups offering detailed USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). However, USGS no longer provides this data as of early 2025. USGS offers similar, newer data in the form of '+furl('https://www.sciencebase.gov/catalog/item/6296791ed34ec53d276bb293','World Terrestrial Ecosystems') +'. However, WTEs do not appear to be as detailed / useful as ELUs. So this map does not offer WTEs as a replacement option.');
+   faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showexpectednearby, and showplace can be set to true to display specific layers by default.');
 }
 else {
    var mapdiv = faddelem('div',document.body,null,'mapid');
@@ -866,6 +867,8 @@ else {
 //      if (obs.description==null) {}
 //      else if (obs.description.length < 200) {s += '<br />'+obs.description }
 //      else {s += '<br />'+(obs.description.substring(0,191)+'... (more)')};
+/*
+      // ecological land units data is no longer provided as of early 2025 :(
       if (view==='ecolandunit') {
          function latlngtoxy(latlng) { return L.CRS.EPSG3857.project(latlng); };
          let mapExtent = mymap.getBounds();
@@ -911,6 +914,7 @@ else {
             s += '</details>';
          };
       };
+*/
       if (count>1) {
          s += '<hr />'
          s += `This marker also denotes ${count-1} older observation${(count>2)?'s':''}.`
@@ -1076,6 +1080,7 @@ else {
    var l_eox_bluemarble = L.tileLayer(f_eox_url('bluemarble_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Blue Marble</a> { &copy; <a href="http://nasa.gov">NASA</a> }'});
    var l_eox_terrain = L.tileLayer(f_eox_url('terrain_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
    var l_eox_terrain_light = L.tileLayer(f_eox_url('terrain-light_3857','jpg'),{minZoom:0, maxNativeZoom:18, maxZoom:20, attribution:'<a href="https://maps.eox.at">Terrain Light</a> { Data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors and <a href="https://maps.eox.at/#data">others</a>, Rendering &copy; <a href="https://eox.at">EOX</a> }'});
+   var l_eox_sentinel2_2024 = L.tileLayer(f_eox_url('s2cloudless-2024_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2024) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2023 = L.tileLayer(f_eox_url('s2cloudless-2023_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2023) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2022 = L.tileLayer(f_eox_url('s2cloudless-2022_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2022) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
    var l_eox_sentinel2_2021 = L.tileLayer(f_eox_url('s2cloudless-2021_3857','jpg'),{minZoom:0, maxZoom:20, attribution:'<a xmlns:dct="http://purl.org/dc/terms/" href="https://s2maps.eu" property="dct:title">Sentinel-2 cloudless - https://s2maps.eu</a> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://eox.at" property="cc:attributionName" rel="cc:attributionURL">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2021) released under <a rel="license" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. For commercial usage please see <a href="https://cloudless.eox.at">https://cloudless.eox.at</a>'});
@@ -1103,10 +1108,10 @@ else {
    //var l_usgs_relief = L.tileLayer(s_usgs_urlbase+'USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSShadedReliefOnly/MapServer">USGS The National Map</a>: 3D Elevation Program'});
    var l_usgs_hydro = L.tileLayer(s_usgs_urlbase+'USGSHydroCached/MapServer/tile/{z}/{y}/{x}',{minZoom:0, maxNativeZoom:16, maxZoom:20, attribution:'<a href="'+s_usgs_urlbase+'USGSHydroCached/MapServer">USGS The National Map</a>: National Hydrography Dataset'});
 
-   // USGS Ecological Land Units (Worldwide coverage)
+   // USGS Ecological Land Units (Worldwide coverage) -- no longer available as of early 2025
    // (Note: The WMS Server doesn't respond very well when requesting many tiled images. So we'll request images from the /export route instead using a custom tileLayer extension.)
    //var l_usgs_ecolandunit = L.tileLayer.wms('https://rmgsc.cr.usgs.gov/arcgis/services/globalelus/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', format:'image/png32', transparent:true, layers:'4'});
-   var l_usgs_ecolandunit = L.tileLayer.usgs('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
+   //var l_usgs_ecolandunit = L.tileLayer.usgs('https://rmgsc.cr.usgs.gov/ArcGIS/rest/services/globalelus/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0',{minZoom:0, maxZoom:20, attribution:'<a href="https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems">USGS Global Ecosystems</a>', filter:'opacity(100%)'});
 
    // USGS Elevation (US, Mexico, Canada)
    // (Note: The WMS Server seems to be gone as of 2024. So we'll go with /exportImage route to get tiled images.)
@@ -1134,7 +1139,7 @@ else {
    var l_debug = L.gridLayer.debugCoords();
 
    var defaultlayers = (view==='elevation') ? [g_usgs_topo]
-      : (view==='ecolandunit') ? [l_eox_terrain,l_usgs_ecolandunit,l_eox_overlay]
+      //: (view==='ecolandunit') ? [l_eox_terrain,l_usgs_ecolandunit,l_eox_overlay]
       : (view==='heatmap') ? [l_stamen_watercolor_mod_muted,l_eox_overlay]
       : (view==='subsetratio') ? [l_osm_std_mod_medgray2]
       : [l_osm_std];
@@ -1190,6 +1195,7 @@ else {
       "EOX OSM": l_eox_osm,
       "EOX Black Marble": l_eox_blackmarble,
       "EOX Blue Marble": l_eox_bluemarble,
+      "EOX Sentinel-2 2024": l_eox_sentinel2_2024,
       "EOX Sentinel-2 2023": l_eox_sentinel2_2023,
       "EOX Sentinel-2 2022": l_eox_sentinel2_2022,
       "EOX Sentinel-2 2021": l_eox_sentinel2_2021,
@@ -1211,7 +1217,7 @@ else {
 
    // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
    var overlaymaps = {
-      "USGS Ecological Land Units": l_usgs_ecolandunit,
+      //"USGS Ecological Land Units": l_usgs_ecolandunit,
       "USGS Hydro": l_usgs_hydro,
       "EOX Hydrography": l_eox_hydrography,
       "USGS Contours (US only)": l_usgs_3dep_contours,
