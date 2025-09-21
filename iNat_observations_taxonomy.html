@@ -127,16 +127,6 @@ function fdata(xobj) {
   taxa.sort((a,b)=>(a.name<b.name?-1:1));
   //taxa.sort((a,b)=>(b.rank_level-a.rank_level));
   
-  //create sort of an index for parent-child relationships
-  /*
-  let pid_to_i = {};
-  for (let t=0; t<taxa.length; t++) {
-    let pid = (taxa[t].parent_id === null) ? 'root' : taxa[t].parent_id.toString();
-    if (pid_to_i[pid]) { pid_to_i[pid].push(t) }
-    else { pid_to_i[pid] = [t]};
-  };
-  */
-
   function fchildtaxa(parent_id,tree=[]) {
     let children = taxa.filter(r=>r.parent_id===parent_id);
     //let children = pid_to_i[parent_id.toString()];
@@ -165,9 +155,23 @@ function fdata(xobj) {
         else {tree_text += (tree[i]?String.fromCharCode(8199):String.fromCharCode(9474)); }; // all other connectors will either be   (blank) or │ (a vertical connector)
      };
      t['tree_text'] = tree_text + ( // the node
-        (t.rank_level===10) ? String.fromCharCode(11044) : // species level = ⬤ (filled circle)
-        (t.rank_level===20) ? String.fromCharCode(11097) : // genus level = ⭙ (circle with X)
-        String.fromCharCode(9711) // other = ◯ (circle)
+        (t.id===special_taxon_id.allobs) ? String.fromCharCode(11044) : // base node = ⬤ (filled circle)
+        (t.id===special_taxon_id.unknown) ? String.fromCharCode(11198) : // subspecies level = ⮾ (circle with x)
+        (t.id===special_taxon_id.life) ? String.fromCharCode(11095) : // subspecies level = ⭗ (circle with x)
+        (t.rank_level===70) ? String.fromCharCode(11203) : // kingdom level = ⯃ (filled octagon)
+        (t.rank_level===60) ? String.fromCharCode(11042) : // phylum level = ⬢ (filled hexagon)
+        (t.rank_level>50) ? String.fromCharCode(11041) : // between phylum and class = ⬡ (hexagon)
+        (t.rank_level===50) ? String.fromCharCode(11039) : // class level = ⬟ (filled pentagon)
+        (t.rank_level>40) ? String.fromCharCode(11040) : // between class and order = ⬠ (pentagon) 
+        (t.rank_level===40) ? String.fromCharCode(11091) : // order level = ⭓ (rotated filled pentagon)
+        (t.rank_level>30) ? String.fromCharCode(11092) : // between order and family = ⭔ (rotated pentagon)
+        (t.rank_level===30) ? String.fromCharCode(9724) : // genus level = ◼ (filled sqaure)
+        (t.rank_level>20) ? String.fromCharCode(9723) : // between genus and species = ◻ (square)
+        (t.rank_level===20) ? String.fromCharCode(9670) : // family level = ◆ (filled diamond)
+        (t.rank_level>10) ? String.fromCharCode(9671) : // between family and genus = ◇ (diamond)
+        (t.rank_level===10) ? String.fromCharCode(9733) : // species level = ★ (filled star)
+        (t.rank_level<10) ? String.fromCharCode(9734) : // subspecies level = ☆ (star)
+        String.fromCharCode(11096) // other = ⭘ (circle)
      );
   };
 
