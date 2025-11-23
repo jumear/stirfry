@@ -113,15 +113,16 @@ function fpushifnew(ary,value) {
 function fidextra(obs) {
    let taxon = obs.taxon;
    let ids = obs.identifications;
+   ids.sort(function(a, b) { return a.id-b.id; }); // need to explicitly sort, since identifications do not seem to be sorted by default
    if (!ids || !taxon) { return null; }
    let taxa = {obs:[],ancestor:[],descendant:[],other:[]};
    let idextracategory = '';
-   let idextrausercategory = [];
-   let idextrausertaxoncategory = [];
+   let idextrauser = {seq:[],category:[],taxoncategory:[]};
    if (p_idextra_user_id && p_idextra_user_id.length > 0) {
       for (u=0; u<p_idextra_user_id.length; u++) {
-         idextrausercategory.push('N/A');
-         idextrausertaxoncategory.push('N/A');
+         idextrauser.category.push('N/A');
+         idextrauser.taxoncategory.push('N/A');
+         idextrauser.seq.push('N/A');
       };
    };
    let countall = 0;
@@ -141,14 +142,15 @@ function fidextra(obs) {
          if (p_idextra_user_id && p_idextra_user_id.length > 0) {
             for (w=0; w<p_idextra_user_id.length; w++) {
                if ( p_idextra_user_id[w]==i.user.id || p_idextra_user_id[w]==i.user.login ) {
-                  idextrausertaxoncategory[w] = idextracategory;
-                  idextrausercategory[w] = i.category;
+                  idextrauser.seq[w] = countall;
+                  idextrauser.taxoncategory[w] = idextracategory;
+                  idextrauser.category[w] = i.category + (i.disagreement?' (disagree)':'');
                };
             };
          };
       };
    };
-   return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa,idextrausertaxoncategory,idextrausercategory};
+   return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa,idextrauser};
 };
 function fObsTaxonAncestors(obs) {
    let ancestors = [];
@@ -228,8 +230,9 @@ function fresults(xobj) {
          ];
          if (p_idextra_user_id && p_idextra_user_id.length>0) {
             for (u=0; u<p_idextra_user_id.length; u++) {
-               labels_id.push({innerText:'User ' +p_idextra_user_id[u]+ ' ID taxon category'});
-               labels_id.push({innerText:'User ' +p_idextra_user_id[u]+ ' ID category'});
+               labels_id.push({classList:'tar',innerText:'@' +p_idextra_user_id[u]+ ' ID seq'});
+               labels_id.push({innerText:'@' +p_idextra_user_id[u]+ ' ID taxon category'});
+               labels_id.push({innerText:'@' +p_idextra_user_id[u]+ ' ID category'});
             };
          };
          labels = [...labels.slice(0,7),...labels_id,...labels.slice(7)];
@@ -285,8 +288,9 @@ function fresults(xobj) {
             ];
             if (p_idextra_user_id && p_idextra_user_id.length>0) {
                for (u=0; u<p_idextra_user_id.length; u++) {
-                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausertaxoncategory[u]});
-                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrausercategory[u]});
+                  values_id.push({classList:'tar',innerText:(idextra===null)?'N/A':idextra.idextrauser.seq[u]});
+                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrauser.taxoncategory[u]});
+                  values_id.push({innerText:(idextra===null)?'N/A':idextra.idextrauser.category[u]});
                };
             };
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
