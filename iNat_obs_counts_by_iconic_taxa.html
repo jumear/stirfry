@@ -59,11 +59,16 @@ function fgetcount(url) {
          if (!response.ok) { throw new Error(response.status+': '+response.statusText); };
          return response.json();
       })
-      .then((data) => { return data.total_results; })
+      .then((data) => {
+         let results = data?.results;
+         let obs_count = {"casual":0,"needs_id":0,"research":0};
+         for (const r of results) { obs_count[r.quality_grade] = r.count; };
+         return obs_count;
+      })
       .catch((err) => { console.error(err); });
 };
 
-var apiurl = 'https://api.inaturalist.org/v1/observations?per_page=0&only_id=true'+((winurlparams!='')?('&'+winurlparams):'');
+var apiurl = 'https://api.inaturalist.org/v1/observations/quality_grades?'+((winurlparams!='')?('&'+winurlparams):'');
 var ary_it = [
    {icon_taxa:"Mammalia",disp_name:"Mammals",icon:"🐒",color:"mediumblue"},
    {icon_taxa:"Aves",disp_name:"Birds",icon:"🦅",color:"blue"},
@@ -128,15 +133,14 @@ for (j=0;j<(ary_it.length-1);j++) { // note that this is using length-1 because 
    var str_it = ary_it[j].icon_taxa
    var p_it = '&iconic_taxa='+str_it;
    var prom0 = Promise.resolve(str_it);
-   var prom1 = fgetcount(apiurl+p_it+'&verifiable=true');
-   var prom2 = fgetcount(apiurl+p_it+'&quality_grade=research');
-   var prom3 = fgetcount(apiurl+p_it);
-   Promise.all([prom0,prom1,prom2,prom3]).then(function(values) {
+   var prom1 = fgetcount(apiurl+p_it);
+   Promise.all([prom0,prom1]).then(function(values) {
       var it = values[0];
-      var v = values[1];
-      var rg = values[2];
-      var a = values[3];
-      var n = v-rg;
+      var c = values[1].casual;
+      var rg = values[1].research;
+      var n = values[1].needs_id;
+      var v = rg + n;
+      var a = v + c;
       fsettdvalue(it,'v',fcomnum(v));
       fsettdvalue(it,'rg',fcomnum(rg));
       fsettdvalue(it,'rgv',fpct(rg/v));
