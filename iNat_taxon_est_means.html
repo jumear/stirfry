@@ -57,7 +57,7 @@ let winurlparams = new URLSearchParams(winurlsearchstr.substring(1));
 let p_taxon_id = winurlparams.get('taxon_id');
 let p_options = winurlparams.get('options') || [];
 winurlparams.delete('options');
-let p_max_requests = parseInt(winurlparams.get('max_requests'));
+let p_max_requests = parseInt(winurlparams.get('max_requests') || 100); // there shouldn't be that many establishment records. so we'll keep track of fetch attempts and set an arbitrary default max limit for attempts just in case something goes wrong. the limit can be overridden via user-input value.
 winurlparams.delete('max_requests');
 
 
@@ -143,7 +143,6 @@ function faddmapthumb (eparent,lat,lng) {
    }});
 };
 
-let maxfetchattempt = p_max_requests || 100; // there shouldn't be that many establishment records. so keep track of fetch attempts and set an arbitrary max limit for attempts just in case something goes wrong. it can be overridden via user-input parameter.
 async function fresults(taxon) {
    if (taxon.listed_taxa_count=0) { return false; };
 
@@ -200,7 +199,7 @@ async function fresults(taxon) {
    let places = [];
    for (let em of p_options.includes('includenull')?[...estmeans, null]:estmeans) {
       page++;
-      while (page>0 && fetchattempt<maxfetchattempt) {
+      while (page>0 && fetchattempt<p_max_requests) {
          fetchattempt++;
          await fetch(`https://www.inaturalist.org/places.json?per_page=200&page=${page}&taxon=${taxon.id}${em?('&establishment_means='+em):''}`)
          .then((response) => {
@@ -271,7 +270,7 @@ async function fresults(taxon) {
    
    // the count returned from the taxon endpoint is incorrect. so this is just a workaround to get a proper count for now.
    let reccount = document.getElementById('reccount');
-   reccount.innerText = fcomnum(recnum) + (fetchattempt===maxfetchattempt?' (not all records retrieved. too many records.)':'');
+   reccount.innerText = fcomnum(recnum) + (fetchattempt===p_max_requests?` (not all records may have been retrieved. reached max ${p_max_requests} request limit.)`:'');
    
    //sort by admin level, parent place id, place name, place id
    let coloffset = (p_options.includes('map'))?1:0;
@@ -288,7 +287,7 @@ if (winurlsearchstr===''||p_taxon_id===null) {
       {innerHTML:'This page provides establishment means records for a given taxon. It is useful when the standard iNaturalist '+furl('https://www.inaturalist.org/taxa','taxon page')+' does not provide full establishment means data for some reason (ex. more than 100 establishment means records for the taxon).'},
       {innerHTML:'To use this page, add a taxon_id parameter and value to the URL. For example, if you want to get establishment means for Liquidambar stryaciflua (American Sweetgum), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=49658'))+' in your browser.'},
       {innerHTML:'A special options parameter can be used to display extra columns with coordinates (options=coords) and/or a tiny map (options=map). To tell the page to get all checklist records for the taxon, even when establishment means is not defined, use options=includenull. To tell the page to get only standard places, use options=onlystdplaces. Separate the parameter values with commas if you want to invoke multipe options. For example, if you want to get establishment means with both coordinates and map for Berberis aquifolium (Oregon Grape), then you would open '+furl(famp(winurlexsearchstr+'?taxon_id=126887&options=coords,map'))+' in your browser.'},
-      {innerText:`Note that the page will stop trying to retrieve records after ${maxfetchattempt} requests by default. An indicator will be displayed next to the record count at the top of the page when this occurs. The max number of requests can be overridden using a special max_requests parameter.`},
+      {innerText:`Note that the page will stop trying to retrieve records after ${p_max_requests} requests. An indicator will be displayed next to the record count at the top of the page when this occurs. The max number of requests can be overridden using a special max_requests parameter.`},
    ];
    faddelems('p',document.body,instructions);
 }
