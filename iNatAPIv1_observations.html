@@ -237,6 +237,7 @@ function fresults(xobj) {
          };
          labels = [...labels.slice(0,7),...labels_id,...labels.slice(7)];
       };
+      if (p_options.includes('reviewers')) { labels = [...labels.slice(0,7),{classList:'tar',innerText:'Reviewers'},...labels.slice(7)]; };
       if (p_options.includes('photourl')) { labels.push({innerText:'Photo URLs'}); };
       if (p_options.includes('photocurl')) { labels.push({innerText:'Photo cURLs'}); };
       if (p_options.includes('coreancestors')) {
@@ -295,6 +296,7 @@ function fresults(xobj) {
             };
             values = [...values.slice(0,7),...values_id,...values.slice(7)];
          };
+         if (p_options.includes('reviewers')) { values = [...values.slice(0,7),{classList:'tar',innerText:rec.reviewed_by.length??0},...values.slice(7)]; };
          if (p_options.includes('photourl') || p_options.includes('photocurl')) { 
             let photourls = [];
             let photocurls = [];
@@ -368,7 +370,7 @@ if (winurlsearchstr==='') {
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=bob&per_page=200'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200'))+' in your browser.'},
       {innerHTML:'The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this by using the id_above and id_below parameters.'},
-      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=coreancestors will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,coreancestors,photourl,photocurl'))+'. '},
+      {innerHTML:'This page can display extra columns based on a special options parameter. Adding &options=idextra to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding &options=coreancestors will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding &options=reviewers will display a column with reviewer count. Adding &options=photourl to the parameter list will display a column that includes URLs for all photos in each observation. Adding &options=photourl to the parameter list will display a column that includes cURL commands to download all photos in each observation. All options can be invoked together like this: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra,coreancestors,reviewers,photourl,photocurl'))+'. '},
       {innerHTML:'When &options=idextra is invoked, an optional idextra_user_id parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: '+furl(famp(winurlexsearchstr+'?user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))+'. '},
       {innerHTML:'When &options=photocurl is invoked, an optional photo_curl_filename_prefix parameter can also be set to one or more of 9 values -- photo_id, photo_license, obs_id, obs_seq, obs_date, taxon_id, taxon_name, user_id, user_login. By default, the destination filename in the curl commands will be prefixed with only photo id, but you can override this behavior by specifying the a comma-separated list of the values that you wish to include, in the order that you wish for them to be added. For example, this will prefix the destination filenames with obs id, obs seq, and photo id: '+furl(famp(winurlexsearchstr+'?user_id=bob&options=photocurl&photo_curl_filename_prefix=obs_id,obs_seq,photo_id'))+'. '},
    ];
