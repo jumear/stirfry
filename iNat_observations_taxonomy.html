@@ -127,7 +127,7 @@ function fdata(xobj) {
   taxa.sort((a,b)=>(a.name<b.name?-1:1));
   //taxa.sort((a,b)=>(b.rank_level-a.rank_level));
   
-  function fchildtaxa(parent_id,tree=[]) {
+  function fchildtaxa(parent_id,tree=[],ancestry=[]) {
     let children = taxa.filter(r=>r.parent_id===parent_id);
     //let children = pid_to_i[parent_id.toString()];
     for (let c=0; (children && c<children.length); c++) {
@@ -138,7 +138,12 @@ function fdata(xobj) {
       child['descendant_obs_count_pct'] = child.descendant_obs_count/taxon_allobs.descendant_obs_count,
       child['seq'] = sort_seq;
       child['tree'] = child_tree;
-      fchildtaxa(child.id,child_tree);
+      if (p_options.includes('ancestry')) {
+        child_ancestry = (parent_id > 0) ? [...ancestry,parent_id] : ancestry;
+        child['ancestry'] = child_ancestry;
+        fchildtaxa(child.id,child_tree,child_ancestry);
+      }
+      else { fchildtaxa(child.id,child_tree); };
     };
     return (children ? children.length : 0);
   };
@@ -204,6 +209,7 @@ function fresults(xobj) {
       {classList:'tar',innerText:'% of All Obs'},
       {classList:'tar',innerText:'Exact Taxon Obs Count'},
    ];
+   if (p_options.includes('ancestry')) {labels = [...labels.slice(0,6),{innerText:'Ancestry'},...labels.slice(6)]; };
    if (p_options.includes('species')) {labels = [...labels.slice(0,3),{innerText:'"Species"'},...labels.slice(3)]; };
    if (p_options.includes('leaf')) {labels = [...labels.slice(0,3),{innerText:'"Leaf"'},...labels.slice(3)]; };
    faddelems('th',hrow,labels);
@@ -226,6 +232,7 @@ function fresults(xobj) {
          {classList:'tar',innerText:fpct(rec.descendant_obs_count_pct,3)},
          {classList:'tar',innerText:rec.direct_obs_count?fcomnum(rec.direct_obs_count):'-'},
       ];
+      if (p_options.includes('ancestry')) {values = [...values.slice(0,6),{innerText: (rec.id <= 0) ? '' : [...rec.ancestry,rec.id].join('/')??''},...values.slice(6)]; };
       if (p_options.includes('species')) {values = [...values.slice(0,3),{innerText: (rec.rank_level == 10) ? '🍂' : ''},...values.slice(3)]; };
       if (p_options.includes('leaf')) {values = [...values.slice(0,3),{innerText: (rec.rank_level < 100 && (rec.rank_level === 10 || (rec.rank_level > 10 && rec.direct_obs_count === rec.descendant_obs_count)) ) ? '🍃' : ''},...values.slice(3)]; };
       faddelems('td',brow,values);
@@ -242,7 +249,7 @@ if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:`This page displays the response from an undocumented ${apirefname} API endpoint (which provides some of the data for the Dynamic Life List page) in a human-readable format, with some modifications to present the data more completely. To use this page, add at least one query parameter to the URL. Although ${apirefname} is undocumented, the query parameters for it should be similar to those documented for ${furl(apirefurl,'iNaturalist Observations')}.`},
       {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', <br />and you want to see the results of '+furl(famp(apibase+'?user_id=pisum&taxon_id=47126'))+' in a friendly format, <br />then you would open '+furl(famp(winurlexsearchstr+'?user_id=pisum&taxon_id=47126'))+' in your browser.'},
-      {innerHTML:`There is a special parameter "options" which accepts "leaf", "species", or both values (separated by a comma). When "leaf" is passed, a column will be added that identifies taxa that are considered "leaves" in iNaturalist. When "species" is passed, a column will added that identifies taxa that are considered "species". Here's an example page that will show these columns for a particular user's taxa: ${furl(famp(winurlexsearchstr+'?user_id=pisum&options=leaf,species'))}.`},
+      {innerHTML:`There is a special parameter "options" which accepts "leaf", "species", "ancestry", or all values (separated by a comma). When "leaf" is passed, a column will be added that identifies taxa that are considered "leaves" in iNaturalist. When "species" is passed, a column will added that identifies taxa that are considered "species". When "ancestry" is passed, a column will be added to show the ancestry chain for each taxon. Here's an example page that will show these columns for a particular user's taxa: ${furl(famp(winurlexsearchstr+'?user_id=pisum&options=leaf,species,ancestry'))}.`},
       {innerHTML:`Depending on your browser and system capabilities, you may run into problems rendering the data if your query returns too many taxa. So make sure you apply enough filters to return a reasonably small result set.`},
    ];
    faddelems('p',document.body,instructions);
