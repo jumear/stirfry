@@ -214,6 +214,20 @@ function fresults(xobj) {
    if (p_options.includes('leaf')) {labels = [...labels.slice(0,3),{innerText:'"Leaf"'},...labels.slice(3)]; };
    faddelems('th',hrow,labels);
 
+   function fexacttaxonurl(taxon_id) {
+      urlparams = new URLSearchParams(winurlparams);
+      if (taxon_id) { urlparams.set("exact_taxon_id",taxon_id); }
+      else { urlparams.set("identified",false); }; 
+      urlparams.delete('taxon_id'); // optional, but it makes the resulting URL cleaner
+      urlparams.delete('without_taxon_id'); // optional, but it makes the resulting URL cleaner
+      if (urlparams.get('per_page') === null) { urlparams.set("per_page",200); }; // get the max records that the API will return
+      //if (urlparams.get('place_id') === null) { urlparams.set("place_id","any"); }; // this would be needed if linking to the Explore page
+      //if (urlparams.get('verifiable') === null) { urlparams.set("verifiable","any"); }; // this would be needed if linking to the Explore page
+      //if (urlparams.get('reviewed') === null) { urlparams.set("reviewed","any"); }; // this would be needed if linking to the Identify page
+      //if (urlparams.get('quality_grade') === null) { urlparams.set("quality_grade","research,needs_id,casual"); }; // this would be needed if linking to the Identify page
+      return `https://jumear.github.io/stirfry/iNatAPIv1_observations?${urlparams}`;
+   };
+
    let tbody = faddelem('tbody',table);
    for (let i=0; i<results.length; i++) {
       let brow = faddelem('tr',tbody);
@@ -230,7 +244,7 @@ function fresults(xobj) {
          {innerHTML:(rec.id<=0)?rec.id:furl(`https://www.inaturalist.org/taxa/${rec.id}`,rec.id)},
          {classList:'tar',innerText:fcomnum(rec.descendant_obs_count)},
          {classList:'tar',innerText:fpct(rec.descendant_obs_count_pct,3)},
-         {classList:'tar',innerText:rec.direct_obs_count?fcomnum(rec.direct_obs_count):'-'},
+         {classList:'tar',innerHTML:rec.direct_obs_count?furl(fexacttaxonurl(rec.id),fcomnum(rec.direct_obs_count)):'-'},
       ];
       if (p_options.includes('ancestry')) {values = [...values.slice(0,6),{innerText: (rec.id <= 0) ? '' : [...rec.ancestry,rec.id].join('/')??''},...values.slice(6)]; };
       if (p_options.includes('species')) {values = [...values.slice(0,3),{innerText: (rec.rank_level == 10) ? '🍂' : ''},...values.slice(3)]; };
