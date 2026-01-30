@@ -195,7 +195,8 @@ function fresults(xobj) {
 
       faddelem('p',document.body,{innerHTML:'total observations: '+fcomnum(total_results)+'<br />'
          +'per page: '+fcomnum(per_page)+'<br />'
-         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)+'<br />'
+         +'page: '+fcomnum(page_curr)+' of '+fcomnum(page_max)
+         +' <span id="obslink"></span>'
          });
 
       let table = faddelem('table',document.body,{id:'main'});
@@ -255,13 +256,15 @@ function fresults(xobj) {
       faddelems('th',hrow,labels);
 
       let tbody = faddelem('tbody',table);
+      let obsinpage = [];
+      let urlobs = 'https://www.inaturalist.org/observations';
       let inat_taxa = 'https://www.inaturalist.org/taxa/';
       for (let i=0; i<results.length; i++) {
          let brow = faddelem('tr',tbody);
          let rec = results[i];
          let values = [
             {innerText:i+1},
-            {innerHTML:furl('https://www.inaturalist.org/observations/'+rec.id,rec.id)},
+            {innerHTML:furl(urlobs+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
             {innerHTML:rec.taxon?furl(inat_taxa+rec.taxon.id,rec.taxon.name):''},
             {innerText:rec.taxon?(rec.taxon.preferred_common_name||''):''},
@@ -347,6 +350,29 @@ function fresults(xobj) {
             values = [...values.slice(0,2),...values_ancestors,...values.slice(2)];
          };
          faddelems('td',brow,values);
+         obsinpage.push(rec.id);
+      };
+      if (obsinpage.length>0) {
+         function fexploreurl(startwithurlparams=true) {
+            urlparams = new URLSearchParams(startwithurlparams?winurlparams:'');
+            urlparams.delete('per_page');
+            urlparams.delete('page');
+            if (urlparams.get('place_id') === null) { urlparams.set("place_id","any"); };
+            if (urlparams.get('verifiable') === null) { urlparams.set("verifiable","any"); };
+            return `${urlobs}?${urlparams}`;
+         };
+         function fidentifyurl(startwithurlparams=true) {
+            urlparams = new URLSearchParams(startwithurlparams?winurlparams:'');
+            if (!startwithurlparams) { urlparams.delete('page'); };
+            if (urlparams.get('per_page') === null) { urlparams.set("per_page",per_page); };
+            if (urlparams.get('place_id') === null) { urlparams.set("place_id","any"); };
+            if (urlparams.get('verifiable') === null) { urlparams.set("verifiable","any"); };
+            if (urlparams.get('reviewed') === null) { urlparams.set("reviewed","any"); };
+            if (urlparams.get('quality_grade') === null) { urlparams.set("quality_grade","research,needs_id,casual"); };
+            return `${urlobs}/identify?${urlparams}`;
+         };
+         document.getElementById("obslink").innerHTML = `[view obs from this page in: ${furl((fexploreurl(false)+'&id='+obsinpage.join(',')),'Explore')} | ${furl((fidentifyurl(false)+'&id='+obsinpage.join(',')),'Identify')}]`
+            + ` [apply parameters to: ${furl(fexploreurl(),'Explore')} | ${furl(fidentifyurl(),'Identify')}]`;
       };
 
       // buttons to go to prev or next page

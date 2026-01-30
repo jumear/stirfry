@@ -231,7 +231,7 @@ function fresults(xobj) {
          faddelems('td',brow,values);
          if (!associatedobs.includes(rec.observation.id)) { associatedobs.push(rec.observation.id); }; 
       };
-      document.getElementById("associatedobslink").innerHTML = `[related observations: ${furl((urlobs+'?verifiable=any&place=any&id='+associatedobs.join(',')),'Explore')} | ${furl((urlobs+'/identify?per_page='+per_page+'&quality_grade=needs_id,research,casual&verifiable=any&place=any&id='+associatedobs.join(',')),'Identify')}]`;
+      if (associatedobs.length>0) { document.getElementById("associatedobslink").innerHTML = `[related observations: ${furl((urlobs+'?verifiable=any&place=any&id='+associatedobs.join(',')),'Explore')} | ${furl((urlobs+'/identify?per_page='+per_page+'&quality_grade=needs_id,research,casual&verifiable=any&place=any&reviewed=any&id='+associatedobs.join(',')),'Identify')}]`; };
 
       // buttons to go to prev or next page
       let nav = faddelem('div',document.body,{id:'nav'});
