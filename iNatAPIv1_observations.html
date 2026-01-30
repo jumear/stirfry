@@ -264,7 +264,7 @@ function fresults(xobj) {
          let rec = results[i];
          let values = [
             {innerText:i+1},
-            {innerHTML:furl(urlobs+rec.id,rec.id)},
+            {innerHTML:furl(urlobs+'/'+rec.id,rec.id)},
             {innerHTML:'<img class="photo" src="'+((rec.photos&&rec.photos.length>0)?rec.photos[0].url:'')+'" />'},
             {innerHTML:rec.taxon?furl(inat_taxa+rec.taxon.id,rec.taxon.name):''},
             {innerText:rec.taxon?(rec.taxon.preferred_common_name||''):''},
