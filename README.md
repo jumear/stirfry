@@ -20,6 +20,7 @@
 |[iNat_UTFgrid_based_density_comparison_map.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_density_comparison_map)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/22|
 |[iNat_UTFgrid_based_density_map_for_Leaflet.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_density_map_for_Leaflet)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/12|
 |[iNat_Ungrafted_taxa.html](https://jumear.github.io/stirfry/iNat_Ungrafted_taxa)|https://forum.inaturalist.org/t/how-does-one-list-all-ungrafted-taxa/6612/20|
+|[iNat_calendar_heatmap.html](https://jumear.github.io/stirfry/iNat_calendar_heatmap)|https://forum.inaturalist.org/t/shifting-plant-phenology-and-annotations/75174/7|
 |[iNat_countries.html](https://jumear.github.io/stirfry/iNat_countries)|https://forum.inaturalist.org/t/overview-statistics-of-all-countries/13973/4|
 |[iNat_id_counts_by_iconic_taxa.html](https://jumear.github.io/stirfry/iNat_id_counts_by_iconic_taxa)|https://forum.inaturalist.org/t/identifriday-is-the-happiest-day-of-the-week/26908/20|
 |[iNat_id_summary_by_category.html](https://jumear.github.io/stirfry/iNat_id_summary_by_category)|https://forum.inaturalist.org/t/many-ids-have-id-category-null/19061/4|
