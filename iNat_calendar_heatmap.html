@@ -177,6 +177,7 @@ function fresults(data) {
          params = new URLSearchParams(winurlparams);
          params.set((mode==='year')?'year':'on',cell.id);
          params.set('per_page',200);
+         params.delete('interval');
          cell.parentElement.href = `https://jumear.github.io/stirfry/iNatAPIv1_observations?${params}`;
       };
    };
