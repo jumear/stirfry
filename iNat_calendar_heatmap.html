@@ -36,9 +36,13 @@
          --color-base-translucent: rgba(0,0,0,0.85);
       }
    }
+   .year { position:relative; }
    .yearheader { width:100%; text-align:center; position:absolute; padding:2px; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); }
-   .calendarcell { position:absolute; }
-   .calendarday { border:1px solid var(--color-border-minor); }
+   .yearanchor { position:absolute; }
+   .yearcell { border:1px solid var(--color-border-minor); background:var(--color-base); }
+   .calendar { position:relative; }
+   .dayanchor { position:absolute; }
+   .daycell { border:1px solid var(--color-border-minor); }
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
 </style>
@@ -55,12 +59,12 @@ winurlparams.delete('options');
 winurlparams.delete('date_field'); // the page currently handles only observation counts based on observed date
 winurlparams.set('interval','day'); // the page currently is designed for only daily counts
 
-// if d1 is not specified, default set d1 to 10 years before the first day of the year of d2 (if specified) or the current date (if d2 is not specified)
+// d1 is not specified, default d1 to 9 years before the first day of either d2 (if specified) or the current year (if d2 is not specified)
 p_d1 = winurlparams.get('d1');
 p_d2 = winurlparams.get('d2');
 let effective_d2 = p_d2 ? new Date(p_d2) : new Date();
-let default_d1 = new Date(effective_d2.getFullYear()-10,0,1);
-if (!p_d1) { winurlparams.set('d1',fyyyymmdd(default_d1)); }; 
+let default_d1 = new Date(effective_d2.getFullYear()-9,0,1);
+if (!p_d1) { winurlparams.set('d1',fyyyymmdd(default_d1)); };
 
 function fcssrootvar(variable) {
    cssroot = getComputedStyle(document.querySelector(':root'));
@@ -68,6 +72,7 @@ function fcssrootvar(variable) {
 };
 function furl(url,txt=url) { return `<a href="${url}">${txt}</a>`; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
+function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
 function faddelem(etype,eparent=null,eattributes={}) {
    let eobj = document.createElement(etype);
    for (let [key,value] of Object.entries(eattributes)) {
@@ -98,28 +103,28 @@ function fyear(year,parent=document.body,xshift=0) {
    days.sort(function(a, b) { return a.getDay()-b.getDay(); });
    let cellsize = 12;
    let cellborder = 1;
-   divyear = faddelem('div',parent,{id:String(year),style:{width:`${(cellsize+1)*7}px`}});
-   divyear.style.position = 'relative';
-   divyear.style.left = `${xshift}px`;
+   divyear = faddelem('div',parent,{id:`div${String(year)}`,classList:'year',style:{width:`${(cellsize+1)*7}px`,left:`${xshift}px`}});
    divhdr = faddelem('div',divyear,{innerText:String(year),classList:'yearheader'});
-   divcal = faddelem('div',divyear,{style:{top:`${divhdr.clientHeight+8}px`,position:'relative'}});
+   yearanchor = faddelem('a',divhdr,{classList:'yearanchor',style:{top:'3px',left:'4px'}});
+   yearcell = faddelem('div',yearanchor,{id:String(year),title:String(year),classList:'yearcell',value:0,days:0,style:{width:`${cellsize}px`,height:`${cellsize}px`}});
+   divcal = faddelem('div',divyear,{classList:'calendar',style:{top:`${divhdr.clientHeight+8}px`}});
    let yshift = 1;
    let ypos = 0;
    for (let i = 0; i < days.length; i++) {
       day = days[i];
-      divcell = faddelem('a',divcal,{classList:'calendarcell'})
-      divday = faddelem('div',divcell,{id:fyyyymmdd(day),title:fyyyymmdd(day),classList:'calendarday',style:{width:`${cellsize}px`,height:`${cellsize}px`}});
+      dayanchor = faddelem('a',divcal,{classList:'dayanchor'})
+      daycell = faddelem('div',dayanchor,{id:fyyyymmdd(day),title:fyyyymmdd(day),classList:'daycell',style:{width:`${cellsize}px`,height:`${cellsize}px`}});
       if (i === 0 || days[i-1].getDay() < day.getDay()) {
          ypos = 0;
          if (day.getTime() == firstday.getTime()) { yshift = 0; };
-         divday.style.borderTopColor=fcssrootvar('--color-border');
+         daycell.style.borderTopColor=fcssrootvar('--color-border');
       };
-      if (i === 0 || days[i-1].getMonth() < day.getMonth()) { divday.style.borderTopColor=fcssrootvar('--color-border'); };
-      if (day.getDay() === 0 || day.getDate() === 1) { divday.style.borderLeftColor=fcssrootvar('--color-border'); };
-      if ( i + 1 === days.length || day.getDay() <  days[i+1].getDay() ) { divday.style.borderBottomColor=fcssrootvar('--color-border'); };
-      if ( day.getDay() === 6 || day.getTime() === lastday.getTime() ) { divday.style.borderRightColor=fcssrootvar('--color-border'); };
-      divcell.style.left=`${day.getDay() * (cellsize+cellborder)}px`;
-      divcell.style.top=`${(ypos + yshift) * (cellsize+cellborder)}px`;
+      if (i === 0 || days[i-1].getMonth() < day.getMonth()) { daycell.style.borderTopColor=fcssrootvar('--color-border'); };
+      if (day.getDay() === 0 || day.getDate() === 1) { daycell.style.borderLeftColor=fcssrootvar('--color-border'); };
+      if ( i + 1 === days.length || day.getDay() <  days[i+1].getDay() ) { daycell.style.borderBottomColor=fcssrootvar('--color-border'); };
+      if ( day.getDay() === 6 || day.getTime() === lastday.getTime() ) { daycell.style.borderRightColor=fcssrootvar('--color-border'); };
+      dayanchor.style.left=`${day.getDay() * (cellsize+cellborder)}px`;
+      dayanchor.style.top=`${(ypos + yshift) * (cellsize+cellborder)}px`;
       ypos++;
    };
    return divyear;
@@ -143,11 +148,11 @@ function fresults(data) {
       return;
    };
    days.sort();
-   let maxvalue = 0;
+   let maxvalue = {day:0, year:0};
    for (let i=days.length; i>0; i--) {
       day = days[i-1];
       let value = results[day];
-      if (maxvalue < value) { maxvalue = value; };
+      if (maxvalue.day < value) { maxvalue.day = value; };
       year = parseInt(day.substring(0,4));
       if (!years.includes(year)) {
          if (years.length >= maxyears) { break; };
@@ -156,22 +161,48 @@ function fresults(data) {
    };
    years.sort();
    fyears(years);
+
+   function fsetcellcolorandlink(cell,maxvalue,mode='day') {
+      let value = cell.value;
+      cell.title += `\nobs: ${fcomnum(cell.value)}`;
+      if (mode==='year') { cell.title += `\ndays w/obs: ${cell.days}`; };
+      if (value>0) {
+         cell.style.background = (window.matchMedia('(prefers-color-scheme: dark)').matches) // choose algorithm based on dark mode setting
+            ? `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(10+(value/maxvalue*70)):0}%`
+            : `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(90-(value/maxvalue*70)):100}%`;
+         if (maxvalue===value) {
+            cell.style.borderColor = 'red';
+            cell.parentElement.style.zIndex = '99999'
+         };
+         params = new URLSearchParams(winurlparams);
+         params.set((mode==='year')?'year':'on',cell.id);
+         params.set('per_page',200);
+         cell.parentElement.href = `https://jumear.github.io/stirfry/iNatAPIv1_observations?${params}`;
+      };
+   };
    for (let i=days.length; i>0; i--) {
       day = days[i-1];
       year = parseInt(day.substring(0,4));
       if (!years.includes(year)) { break; };
       let value = results[day];
       let cell = document.getElementById(day);
-      cell.style.background = (window.matchMedia('(prefers-color-scheme: dark)').matches) // choose algorithm based on dark mode setting
-         ? `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(10+(value/maxvalue*70)):0}%`
-         : `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(90-(value/maxvalue*70)):100}%`;
       cell.value = value;
-      cell.title += `\nobs: ${cell.value}`;
-      if (maxvalue===value) {
-         cell.style.borderColor = 'red';
-         cell.parentElement.style.zIndex = '99999'
+      fsetcellcolorandlink(cell,maxvalue.day);
+      if (value>0) {
+         let yearcell = document.getElementById(String(year));
+         yearcell.value += value;
+         yearcell.days++;
       };
-      if (value>0) { cell.parentElement.href = `https://jumear.github.io/stirfry/iNatAPIv1_observations?${winurlparams}&on=${day}`; };
+   };
+   for (year of years) {
+      cell = document.getElementById(String(year));
+      value = cell.value;
+      if (maxvalue.year<value) { maxvalue.year = value; }; 
+   };
+   for (year of years) {
+      cell = document.getElementById(String(year));
+      value = cell.value;
+      fsetcellcolorandlink(cell,maxvalue.year,'year');
    };
 };
 
@@ -184,9 +215,9 @@ faddelem('h1',document.body,{innerText:document.title});
 if (winurlsearchstr==='') {
    let instructions = [
       {innerHTML:'This page displays the response from the '+apiref+' API endpoint in a calendar heatmap visualization. To use this page, add at least one query parameter to the URL. See '+furl(apirefurl)+' for available query parameters.'},
-      {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', and you want to see the results of '+furl(famp(apibase+'?user_id=pisum&interval=day&d1=2020-01-01'))+' in a friendly format, then you would open '+furl(famp(winurlexsearchstr+'?user_id=pisum&interval=day&d1=2020-01-01'))+' in your browser.'},
-      {innerText:`The page will force interval=day and date_field=observed as filter parameters when retrieving data. Additionally, if you don't specify a d1 parameter, the API will retrieve only a limited number of days. So the page will automatically apply d1=[10 years prior to d2 or the current date] to get a larger set of data than the API would otherwise deliver. The page will also limit the visualization to 15 years max, even if the API returns more days than that.`},
-      {innerText:`You can click on the cells to see the underlying observations for the day. You can also mouseover a cell to see the date and observation count. The day with the highest count in the set will have a red border.`},
+      {innerHTML:'Suppose the address of this page is '+winurlexsearchstr+', and you want to see the results of '+furl(famp(apibase+'?user_id=pisum&interval=day&d1=2020-01-01'))+' in a calendar heatmap visualization, then you would open '+furl(famp(winurlexsearchstr+'?user_id=pisum&interval=day&d1=2020-01-01'))+' in your browser.'},
+      {innerText:`Note that the page will force interval=day and date_field=observed as parameters when retrieving data. Additionally, if you don't specify a d1 parameter, the API will retrieve only a limited number of days. So in an attempt to get a larger set of data than the API would otherwise deliver when d1 is not specified, the page will automatically apply a parameter d1=[9 years prior to the first day of either d2 or the current year] when requesting data. The page will also limit the visualization to 15 years max, even if the API returns more data than that.`},
+      {innerText:`You can click on the cells to see the underlying observations for the day. You can also mouseover a cell to see the date and observation count. The cell(s) with the highest count in the set will have a red border.`},
    ];
    faddelems('p',document.body,instructions);
 }
