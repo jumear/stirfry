@@ -43,6 +43,12 @@
    .calendar { position:relative; }
    .dayanchor { position:absolute; }
    .daycell { border:1px solid var(--color-border-minor); }
+   .majorbordertop { border-top-color:var(--color-border); }
+   .majorborderbottom { border-bottom-color:var(--color-border); }
+   .majorborderleft { border-left-color:var(--color-border); }
+   .majorborderright { border-right-color:var(--color-border); }
+   .maxcount { border-color:red; }
+   a:has(.maxcount) { z-index:99999998; }
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
 </style>
@@ -66,10 +72,6 @@ let effective_d2 = p_d2 ? new Date(p_d2) : new Date();
 let default_d1 = new Date(effective_d2.getFullYear()-9,0,1);
 if (!p_d1) { winurlparams.set('d1',fyyyymmdd(default_d1)); };
 
-function fcssrootvar(variable) {
-   cssroot = getComputedStyle(document.querySelector(':root'));
-   return cssroot.getPropertyValue(variable);
-};
 function furl(url,txt=url) { return `<a href="${url}">${txt}</a>`; };
 function famp(str) { return str.replace(/&/g,'&amp;'); };
 function fcomnum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',') };
@@ -92,15 +94,41 @@ function fyyyymmdd(date) {
     return `${year}-${month}-${day}`;
 };
 function fyear(year,parent=document.body,xshift=0) {
-   let days = [];
+   // get first day and last day of year, and create an array that contains all days in the year
    let firstday = new Date(year,0,1);
    let lastday = new Date(year,11,31);
    let day = new Date(firstday);
+   let days = [];
    while (day.getTime() <= lastday.getTime()) { 
       days.push(new Date(day));
       day.setDate(day.getDate() + 1);
    };
-   days.sort(function(a, b) { return a.getDay()-b.getDay(); });
+   // determine the position of each day in the calendar timeline, and determine whether any of the borders of each cell are major borders
+   days.sort(function(a, b) { return a.getDay()-b.getDay(); }); // group days by day of week
+   let yshift = 1;
+   let ypos = 0;
+   let dayformat = {};
+   function fmajorborder(df,border) {
+      if (df?.borders) { if (!df.borders.includes(border)) { df.borders.push(border) }; }
+      else { df.borders = [border]; };
+   };
+   for (let i = 0; i < days.length; i++) {
+      day = days[i];
+      df = dayformat[fyyyymmdd(day)] = {};
+      if (i === 0 || days[i-1].getDay() < day.getDay()) {
+         ypos = 0;
+         if (day.getTime() == firstday.getTime()) { yshift = 0; };
+         fmajorborder(df,'top');
+      };
+      if (i === 0 || days[i-1].getMonth() < day.getMonth()) { fmajorborder(df,'top'); };
+      if (day.getDay() === 0 || day.getDate() === 1) { fmajorborder(df,'left'); };
+      if ( i + 1 === days.length || day.getDay() <  days[i+1].getDay() ) { fmajorborder(df,'bottom'); };
+      if ( day.getDay() === 6 || day.getTime() === lastday.getTime() ) { fmajorborder(df,'right'); };
+      df.xpos = day.getDay();
+      df.ypos = ypos + yshift;
+      ypos++;
+   };
+   // create the base calendar structure
    let cellsize = 12;
    let cellborder = 1;
    divyear = faddelem('div',parent,{id:`div${String(year)}`,classList:'year',style:{width:`${(cellsize+1)*7}px`,left:`${xshift}px`}});
@@ -108,72 +136,72 @@ function fyear(year,parent=document.body,xshift=0) {
    yearanchor = faddelem('a',divhdr,{classList:'yearanchor',style:{top:'3px',left:'4px'}});
    yearcell = faddelem('div',yearanchor,{id:String(year),title:String(year),classList:'yearcell',value:0,days:0,style:{width:`${cellsize}px`,height:`${cellsize}px`}});
    divcal = faddelem('div',divyear,{classList:'calendar',style:{top:`${divhdr.clientHeight+8}px`}});
-   let yshift = 1;
-   let ypos = 0;
-   for (let i = 0; i < days.length; i++) {
-      day = days[i];
-      dayanchor = faddelem('a',divcal,{classList:'dayanchor'})
-      daycell = faddelem('div',dayanchor,{id:fyyyymmdd(day),title:fyyyymmdd(day),classList:'daycell',style:{width:`${cellsize}px`,height:`${cellsize}px`}});
-      if (i === 0 || days[i-1].getDay() < day.getDay()) {
-         ypos = 0;
-         if (day.getTime() == firstday.getTime()) { yshift = 0; };
-         daycell.style.borderTopColor=fcssrootvar('--color-border');
-      };
-      if (i === 0 || days[i-1].getMonth() < day.getMonth()) { daycell.style.borderTopColor=fcssrootvar('--color-border'); };
-      if (day.getDay() === 0 || day.getDate() === 1) { daycell.style.borderLeftColor=fcssrootvar('--color-border'); };
-      if ( i + 1 === days.length || day.getDay() <  days[i+1].getDay() ) { daycell.style.borderBottomColor=fcssrootvar('--color-border'); };
-      if ( day.getDay() === 6 || day.getTime() === lastday.getTime() ) { daycell.style.borderRightColor=fcssrootvar('--color-border'); };
-      dayanchor.style.left=`${day.getDay() * (cellsize+cellborder)}px`;
-      dayanchor.style.top=`${(ypos + yshift) * (cellsize+cellborder)}px`;
-      ypos++;
+   days.sort((a, b)=>a-b); // rearrange days to original order (ascending)
+   const daystext = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+   for (let day of days) {
+      df = dayformat[fyyyymmdd(day)];
+      dayanchor = faddelem('a',divcal,{classList:'dayanchor',style:{left:`${df.xpos*(cellsize+cellborder)}px`,top:`${df.ypos*(cellsize+cellborder)}px`}});
+      daycell = faddelem('div',dayanchor,{id:fyyyymmdd(day),title:`${fyyyymmdd(day)} (${daystext[day.getDay()]})`,classList:['daycell',...(df?.borders??[]).map(t=>'majorborder'+t)].join(' '),style:{width:`${cellsize}px`,height:`${cellsize}px`}});
    };
    return divyear;
 };
 function fyears(years=[]) {
    divyears = faddelem('div',document.body,{id:'divyears',style:{position:'relative'}});
-   xshift = 0;
    xspacing = 16;
+   xshift = 0;
    for (year of years) {
       divyear = fyear(year,divyears,xshift);
       xshift = divyear.offsetLeft + divyear.offsetWidth + xspacing;
    };
 };
 function fresults(data) {
-   let years = [];
-   let maxyears = 15;
    let results = data?.results?.day ?? {};
    let days = Object.keys(results) ?? [];
    if (days.length === 0) {
       faddelem('p',document.body,{innerText:'No results found for these parameters.'});
       return;
    };
-   days.sort();
+   // based on the results returned, determine which years to visualize, count days with observations and sum observation counts by year, and get max observation counts across all days and all years
+   let years = [];
+   let maxyears = 15;
    let maxvalue = {day:0, year:0};
+   let counts = {};
+   days.sort();
    for (let i=days.length; i>0; i--) {
       day = days[i-1];
-      let value = results[day];
+      count = counts[String(day)] = {};
+      let value = count.obs = results[day];
       if (maxvalue.day < value) { maxvalue.day = value; };
       year = parseInt(day.substring(0,4));
       if (!years.includes(year)) {
          if (years.length >= maxyears) { break; };
          years.push(year);
+         counts[String(year)] = {obs:0, dayswobs:0};
+      };
+      if (value>0) {
+         counts[String(year)].obs+=value;
+         counts[String(year)].dayswobs++;
       };
    };
+   // create the base calendar structures
    years.sort();
    fyears(years);
-
-   function fsetcellcolorandlink(cell,maxvalue,mode='day') {
-      let value = cell.value;
-      cell.title += `\nobs: ${fcomnum(cell.value)}`;
-      if (mode==='year') { cell.title += `\ndays w/obs: ${cell.days}`; };
-      if (value>0) {
+   // format the day and year cells
+   function fsetcellcolorandlink(id,mode='day') {
+      let maxobscount = (mode === 'year') ? maxvalue.year : maxvalue.day;
+      let count = counts[id];
+      let cell = document.getElementById(id);
+      cell.value = count.obs;
+      cell.title += `\nobs: ${fcomnum(count.obs)}`;
+      if (mode==='year') {
+         cell.daysWithObs = count.dayswobs
+         cell.title += `\ndays w/obs: ${count.dayswobs}`;
+      };
+      if (count.obs>0) {
          cell.style.background = (window.matchMedia('(prefers-color-scheme: dark)').matches) // choose algorithm based on dark mode setting
-            ? `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(10+(value/maxvalue*70)):0}%`
-            : `hsl(120,${maxvalue?value/maxvalue*100:0}%,${maxvalue?(90-(value/maxvalue*70)):100}%`;
-         if (maxvalue===value) {
-            cell.style.borderColor = 'red';
-            cell.parentElement.style.zIndex = '99999'
-         };
+            ? `hsl(120,${maxobscount?count.obs/maxobscount*100:0}%,${maxvalue?(10+(count.obs/maxobscount*70)):0}%`
+            : `hsl(120,${maxobscount?count.obs/maxobscount*100:0}%,${maxvalue?(90-(count.obs/maxobscount*70)):100}%`;
+         if (maxobscount===count.obs) { cell.classList.add('maxcount'); };
          params = new URLSearchParams(winurlparams);
          params.set((mode==='year')?'year':'on',cell.id);
          params.set('per_page',200);
@@ -183,28 +211,14 @@ function fresults(data) {
    };
    for (let i=days.length; i>0; i--) {
       day = days[i-1];
-      year = parseInt(day.substring(0,4));
-      if (!years.includes(year)) { break; };
-      let value = results[day];
-      let cell = document.getElementById(day);
-      cell.value = value;
-      fsetcellcolorandlink(cell,maxvalue.day);
-      if (value>0) {
-         let yearcell = document.getElementById(String(year));
-         yearcell.value += value;
-         yearcell.days++;
-      };
+      if (!years.includes(parseInt(day.substring(0,4)))) { break; };
+      fsetcellcolorandlink(day);
    };
    for (year of years) {
-      cell = document.getElementById(String(year));
-      value = cell.value;
-      if (maxvalue.year<value) { maxvalue.year = value; }; 
+      value = counts[String(year)].obs;
+      if (maxvalue.year<value) { maxvalue.year = value; };
    };
-   for (year of years) {
-      cell = document.getElementById(String(year));
-      value = cell.value;
-      fsetcellcolorandlink(cell,maxvalue.year,'year');
-   };
+   for (year of years) { fsetcellcolorandlink(year,'year'); };
 };
 
 let apibase = 'https://api.inaturalist.org/v1/observations/histogram';
@@ -223,7 +237,7 @@ if (winurlsearchstr==='') {
    faddelems('p',document.body,instructions);
 }
 else {
-   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+'. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+' ['+furl('https://jumear.github.io/stirfry/iNatAPIv1_observation_histogram?'+winurlparams,'chart + table')+']. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
    fetch(apiurl)
    .then((response) => {
       if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
