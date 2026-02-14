@@ -48,6 +48,8 @@
    .majorborderleft { border-left-color:var(--color-border); }
    .majorborderright { border-right-color:var(--color-border); }
    .maxcount { border-color:red; }
+   .months { width:28px; position:relative; color:var(--color-border); }
+   .months div { position:absolute; }
    a:has(.maxcount) { z-index:99999998; }
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
@@ -149,6 +151,10 @@ function fyears(years=[]) {
    divyears = faddelem('div',document.body,{id:'divyears',style:{position:'relative'}});
    xspacing = 16;
    xshift = 0;
+   divmonths = faddelem('div',divyears,{id:'divmonths',classList:'months'});
+   const months = ['01','02','03','04','05','06','07','08','09','10','11','12']; 
+   for (let i=0; i<months.length; i++ ) { faddelem('div',divmonths,{style:{top:`${45+i*58}px`},innerText:months[i]}); };
+   xshift = divmonths.offsetWidth;
    for (year of years) {
       divyear = fyear(year,divyears,xshift);
       xshift = divyear.offsetLeft + divyear.offsetWidth + xspacing;
