@@ -50,9 +50,11 @@
    .maxcount { border-color:red; }
    .months { width:28px; position:relative; color:var(--color-border); }
    .months div { position:absolute; }
-   a:has(.maxcount) { z-index:99999998; }
+   a:has(.maxcount) { z-index:99999997; }
    a { text-decoration:none; color:var(--color-text-link); }
    a:hover { background:var(--color-hover); }
+   a:has(.daycell):hover, a:has(.yearcell):hover { background:none; z-index:99999998;}
+   .daycell:hover, .yearcell:hover { border:1px solid var(--color-text-link); z-index:99999999; }
 </style>
 </head>
 
@@ -243,7 +245,7 @@ if (winurlsearchstr==='') {
    faddelems('p',document.body,instructions);
 }
 else {
-   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+' ['+furl('https://jumear.github.io/stirfry/iNatAPIv1_observation_histogram?'+winurlparams,'chart + table')+']. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
+   faddelem('p',document.body,{innerHTML:'This is the base query: '+furl(famp(apiurl))+' ['+furl('https://jumear.github.io/stirfry/iNatAPIv1_observation_histogram?'+winurlparams,'chart+table')+']. (This page will accept most parameters from the '+apiref+' API endpoint.)'});
    fetch(apiurl)
    .then((response) => {
       if (!response.ok) { throw new Error(response.status+' ('+response.statusText+') returned from '+response.url); };
