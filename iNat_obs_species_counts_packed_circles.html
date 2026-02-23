@@ -3,15 +3,44 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="iNaturalist API Get Observation Leaf Taxa Counts" />
-<title>iNaturalist API Get Observation Leaf Taxa Counts</title>
+<meta name="viewport" content="width=device-width, minimum-scale=0.6">
+<meta name="description" content="iNaturalist Observation Leaf Taxa Counts => Packed Circles" />
+<title>iNaturalist Observation Leaf Taxa Counts => Packed Circles</title>
 <style>
-   body { font:10pt Sans-Serif; }
-   circle { fill:green; opacity:0.5; stroke:white; }
-   text { font-family:sans-serif; fill:white; font-size:10px; text-anchor:middle; }
-   a { text-decoration:none; }
+   :root {
+      background: var(--color-base);
+      color: var(--color-text);
+      font: 14px Sans-Serif;
+      --color-base: white;
+      --color-alt: whitesmoke;
+      --color-brand: forestgreen;
+      --color-text: black;
+      --color-text-invert: white;
+      --color-text-link: royalblue;
+      --color-border: lightgray;
+      --color-hover: lightgray;
+      --color-base-translucent: rgba(255,255,255,0.85);
+   }
+   @media (prefers-color-scheme: dark) {
+      :root {
+         --color-base: black;
+         --color-alt: #171717;
+         --color-brand: forestgreen;
+         --color-text: #bababa;
+         --color-text-invert: black;
+         --color-text-link: cornflowerblue;
+         --color-border: #444;
+         --color-hover: #444;
+         --color-base-translucent: rgba(0,0,0,0.85);
+      }
+   }
+   #main { width:100%; }
+   a { text-decoration:none; color:var(--color-text-link); }
+   a:hover { background:var(--color-hover); }
    h1 { margin:0px; padding:0px; }
-   p { margin:5px 0px 0px 0px; padding:0px; }
+   p { margin:5px 0px 12px 0px; padding:0px; }
+   circle { fill:var(--color-brand); opacity:0.5; }
+   text { text-anchor:middle; }
 </style>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 </head>
