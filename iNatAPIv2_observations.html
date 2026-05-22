@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist API Get Observations" />
+<title>iNaturalist API v2 Get Observations</title>
+<style>
+  :root {
+    background: var(--color-base);
+    color: var(--color-text);
+    font: 14px Sans-Serif;
+    --color-base: white;
+    --color-alt: whitesmoke;
+    --color-brand: forestgreen;
+    --color-text: black;
+    --color-text-invert: white;
+    --color-text-link: royalblue;
+    --color-border: lightgray;
+    --color-hover: lightgray;
+    --color-base-translucent: rgba(255,255,255,0.85);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-base: black;
+      --color-alt: #171717;
+      --color-brand: forestgreen;
+      --color-text: #bababa;
+      --color-text-invert: black;
+      --color-text-link: cornflowerblue;
+      --color-border: #444;
+      --color-hover: #444;
+      --color-base-translucent: rgba(0,0,0,0.85);
+    }
+  }
+  #main { width:100%; }
+  table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+  th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+  tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+  tr:nth-child(even) { background:var(--color-base); }
+  .tar { text-align:right; }
+  .icon { height:48px; width:48px; border-radius:50%; }
+  .photo { height:64px; width:64px; }
+  img { margin:0; padding:0; border:0; }
+  a { text-decoration:none; color:var(--color-text-link); }
+  a:hover { background:var(--color-hover); }
+  #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+  @media print { #nav { display:none; } } 
+  .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+  .button { background:var(--color-alt); }
+  .button_inactive { background:none; color:var(--color-border); }
+  .bin_true { text-decoration: underline wavy rgba(34,139,34,0.35); }
+  .bin_false { text-decoration: underline wavy rgba(178,34,34,0.35); }
+</style>
+</head>
+
+<body>
+<script>
+function dateToString(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function groupDigits(n,delimiter=',') { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,delimiter) };
+function escapeHTML(str) {
+  return String(str).replace(/&/g,'&amp;')
+   .replace(/</g,'&lt;')
+   .replace(/>/g,'&gt;')
+   .replace(/"/g,'&quot;')
+   .replace(/'/g,'&#39;')
+};
+function hyperlink(url,txt=url) { return `<a href="${url}">${escapeHTML(txt)}</a>`; };
+function imgWithFallback(src,imgClass='photo') { return `<img class="${imgClass}" src="${src}" onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22rgba(128,128,128,.2)%22/></svg>';"/>` };
+
+function addElem(eType,eParent=null,eAttr={}) {
+  const e = document.createElement(eType);
+  for (let [key,value] of Object.entries(eAttr)) {
+    if ( typeof value === 'object' && value !== null ) { for (let [subKey,subValue] of Object.entries(value)) { e[key][subKey] = subValue; }; }
+    else { e[key] = value; };
+  };
+  if (eParent) { eParent.appendChild(e); };
+  return e;
+};
+function addElems(eType,eParent=null,eAttr=[]) { for (let a of eAttr) { addElem(eType,eParent,a); }; };
+
+// add params to base URL; replace page / per_page parameter values, if alternate values specified.
+function createURL(base,params,perPage=null,page=null) {
+  const url = new URL(base);
+  url.search = params.toString();
+  if (perPage!==null) {url.searchParams.set('per_page',perPage);};
+  if (page!==null) {url.searchParams.set('page',page);};
+  return url.href;
+};
+
+// get data from API; log errors encountered; delay start, if specified
+async function get(url,options=null,delay=0) {
+  try {
+    if (delay > 0) { await sleep(delay); };
+    const response = await fetch(url,options);
+    const data = await response.json();
+    if (data.errors) { // v2 can log multiple errors
+      const errorText = `Server responded with error(s): ${data.errors.map(e => `${e.errorCode} (${e.message})`).join(', ')}`
+      console.error(errorText);
+      addElem('p',document.body,{innerText:errorText});      
+    }
+    else if (data.error) { // v1 logs a single error
+      const errorText = `Server responded with error: ${data.status} (${data.error})`
+      console.error(errorText);
+      addElem('p',document.body,{innerText:errorText});      
+    } 
+    return data;
+  }
+  catch (err) {
+    const errorText = `There was a problem retrieving data. ${err.message}.`
+    console.error(errorText);
+    addElem('p',document.body,{innerText:errorText});
+  };
+};
+
+// define endpoint
+const endpoint = {
+   description: document.title,
+   docURL: 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations',
+   reqURLBase:'https://api.inaturalist.org/v2/observations',
+};
+addElem('h1',document.body,{innerText:endpoint.description});
+
+// get base URL and parameters from the browser window URL
+const winURL = new URL(window.location.href);
+const winURLBase = new URL(window.location.href.split(/[?#]/)[0]);
+const winURLParams = new URLSearchParams(window.location.search);
+const reqURLParamsBase = new URLSearchParams(winURLParams); // this is intended to be the same as winURLParams, except we will strip away parameters used only by the page (not by the API)
+reqURLParamsBase.delete('fields'); // delete this so that there are no unexpected results in v2
+//const p_per_page = winURLParams.get('per_page') || 200;
+//const p_page = winURLParams.get('page') || 1;
+const p_options = winURLParams.get('options') || [];
+reqURLParamsBase.delete('options');
+const p_idextra_user_id = winURLParams.get('idextra_user_id')?.split(',') || [];;
+reqURLParamsBase.delete('idextra_user_id');
+//const p_photo_curl_filename_prefix = winURLParams.get('photo_curl_filename_prefix')?.split(',') || ['photo_id'];
+//reqURLParamsBase.delete('photo_curl_filename_prefix');
+
+function getExtraIDInfo(obs) {
+   let taxon = obs.taxon;
+   let ids = obs.identifications;
+   ids.sort(function(a, b) { return a.id-b.id; }); // need to explicitly sort, since identifications do not seem to be sorted by default
+   if (!ids || !taxon) { return null; }
+   let taxa = {obs:[],ancestor:[],descendant:[],other:[]};
+   let idextracategory = '';
+   let idextrauser = {seq:[],category:[],taxoncategory:[]};
+   if (p_idextra_user_id && p_idextra_user_id.length > 0) {
+      for (u=0; u<p_idextra_user_id.length; u++) {
+         idextrauser.category.push('N/A');
+         idextrauser.taxoncategory.push('N/A');
+         idextrauser.seq.push('N/A');
+      };
+   };
+   let countall = 0;
+   let countobs = 0;
+   for (const i of ids) {
+      if (i.current && !i.hidden) {
+         countall++;
+         let id = i.taxon.id;
+         if ( id===taxon.id ) {
+            countobs++;
+            idextracategory='obs';
+         }
+         else if ( taxon.ancestry && taxon.ancestry.split('/').map(s=>Number(s)).includes(id) ) { idextracategory='ancestor'; }
+         else if ( i.taxon.ancestry && i.taxon.ancestry.split('/').map(s=>Number(s)).includes(taxon.id) ) { idextracategory='descendant'; }
+         else { idextracategory='other'; };
+
+         if(!taxa[idextracategory].includes(id)) { taxa[idextracategory].push(id) };
+         if (p_idextra_user_id && p_idextra_user_id.length > 0) {
+            for (w=0; w<p_idextra_user_id.length; w++) {
+               if ( p_idextra_user_id[w]==i.user.id || p_idextra_user_id[w]==i.user.login ) {
+                  idextrauser.seq[w] = countall;
+                  idextrauser.taxoncategory[w] = idextracategory;
+                  idextrauser.category[w] = i.category + (i.disagreement?' (disagree)':'');
+               };
+            };
+         };
+      };
+   };
+   return {obs_taxon_is_community:(taxon.id===obs.community_taxon_id)?true:false,count:{all:countall,by_others:obs.identifications_count,obs:countobs},taxa,idextrauser};
+};
+
+function getObsTaxonAncestors(obs) {
+   let ancestors = [];
+   let rankLevel_kingdom = 70 // this is the highest-level taxon stored in identification[i].ancestors
+   let rt, taxonId, rankLevel;
+   if ((rt = obs?.taxon) && (taxonId = rt?.id) && ((rankLevel = rt?.rank_level) < rankLevel_kingdom)) {
+      for (let id of obs.identifications) {
+         let idt, idta;
+         if (idt = id?.taxon) {
+            if (idt.id === taxonId) {
+               ancestors = idt.ancestors;
+               break;
+            };
+            if (idta = idt.ancestors) {
+               for (let [i, atid] of idta.map((a)=>a.id).entries()) {
+                  if (atid === taxonId) {
+                     ancestors = idta.slice(0,i); // add everything above this taxon (will add this taxon later below)
+                     break;
+                  };
+               };
+            };
+            if (ancestors?.length) { break; };
+         };
+      };
+   };
+   if (rt && rankLevel <= rankLevel_kingdom) {
+      ancestors.push(rt); // add self taxon
+      return ancestors;
+   };
+};
+
+// main function to get data and create data table
+async function dataToTable(reqURL,dataDef,recLabel='records') {
+  // add fields to return to request (for the v2 API)
+  const paramfields = [...new Set(dataDef.map(n=>n.fields).flat().filter(v => v != null))].join(',');
+  const urlOrig = new URL(reqURL);
+  const url = new URL(reqURL);
+  url.searchParams.set('fields',paramfields);
+  addElem('p',document.body,{innerHTML:`Base request URL: ${hyperlink(url.href,urlOrig.href)}`});
+
+  // get data, and stop if no results are returned
+  const response = await get(url.href);
+  const results = response?.results;
+  if (!results) { return false; }
+  if (results.length === 0) {
+    addElem('p',document.body,{innerText:`No records were retrieved for these parameters.`});
+    return response;
+  };
+  
+  // calculate max page based on total_results and per_page returned in response
+  const total_results = response.total_results;
+  const per_page = response.per_page;
+  const page_curr = response.page;
+  const page_max = Math.ceil(total_results/per_page);
+  const page_prev = ((page_curr>1)?page_curr-1:null);
+  const page_next = ((page_curr<page_max)?page_curr+1:null);
+
+  // create summary statistics
+  addElem('p',document.body,{innerHTML:`total ${recLabel}: ${groupDigits(total_results)}<br />`
+    +`per page: ${groupDigits(per_page)}<br />`
+    +`page: ${groupDigits(page_curr)} of ${groupDigits(page_max)}`
+    +' <span id="addlInfo"></span>'
+  });
+
+  // create table for data
+  const table = addElem('table',document.body,{id:'main'});
+  const thead = addElem('thead',table);
+  const tbody = addElem('tbody',table);
+  let obsInPage = [];
+  for (const [i,r] of results.entries()) {
+    const addlResults = {};
+    if (p_options.includes('idextra')) { addlResults['idextra'] = getExtraIDInfo(r); };
+    if (p_options.includes('coreancestors')) { addlResults['ancestors'] = getObsTaxonAncestors(r); };
+    if (i===0) {
+      const hrow = addElem('tr',thead);
+      addElems('th',hrow,dataDef.map(n=>n.th));
+    };
+    const brow = addElem('tr',tbody);
+    addElems('td',brow,dataDef.map(n=>n.td(r,i,addlResults)));
+    obsInPage.push(r.id);
+  };
+  if (obsInPage.length>0) {
+    function explorePageURL(startWithURLParams=true) {
+      urlParams = new URLSearchParams(startWithURLParams?reqURLParamsBase:'');
+      urlParams.delete('per_page');
+      urlParams.delete('page');
+      if (urlParams.get('place_id') === null) { urlParams.set("place_id","any"); };
+      if (urlParams.get('verifiable') === null) { urlParams.set("verifiable","any"); };
+      return createURL(iNatURL.obs,urlParams);
+    };
+    function fidentifyurl(startWithURLParams=true) {
+      urlParams = new URLSearchParams(startWithURLParams?reqURLParamsBase:'');
+      if (!startWithURLParams) { urlParams.delete('page'); };
+      if (urlParams.get('per_page') === null) { urlParams.set("per_page",per_page); };
+      if (urlParams.get('place_id') === null) { urlParams.set("place_id","any"); };
+      if (urlParams.get('verifiable') === null) { urlParams.set("verifiable","any"); };
+      if (urlParams.get('reviewed') === null) { urlParams.set("reviewed","any"); };
+      if (urlParams.get('quality_grade') === null) { urlParams.set("quality_grade","research,needs_id,casual"); };
+      return createURL(iNatURL.identify,urlParams);
+    };
+    document.getElementById("addlInfo").innerHTML = `[view obs from this page in: ${hyperlink((explorePageURL(false)+'&id='+obsInPage.join(',')),'Explore')} | ${hyperlink((fidentifyurl(false)+'&id='+obsInPage.join(',')),'Identify')}]`
+      + ` [apply parameters to: ${hyperlink(explorePageURL(),'Explore')} | ${hyperlink(fidentifyurl(),'Identify')}]`;
+  };
+
+  // create buttons to navigate to first / prev / next / last page
+  const nav = addElem('div',document.body,{id:'nav'});
+  const navButtons = [
+     {id:'button_first',page:1,symbol:'&laquo',active:(page_curr>1),title:{active:'first page',inactive:'already on first page'}},
+     {id:'button_prev',page:page_prev,symbol:'&#8249',active:(page_prev!==null),title:{active:'previous page',inactive:'no previous page'}},
+     {id:'button_next',page:page_next,symbol:'&#8250',active:(page_next!==null),title:{active:'next page',inactive:'no next page'}},
+     {id:'button_last',page:page_max,symbol:'&raquo',active:(page_curr<page_max),title:{active:'last page',inactive:'already on last page'}},
+  ];
+  for (b of navButtons) { b.active ? addElem('a',nav,{classList:'button',title:b.title.active,id:b.id,innerHTML:b.symbol,href:createURL(winURLBase,winURLParams,per_page,b.page)}) : addElem('span',nav,{classList:'button_inactive',title:b.title.inactive,innerHTML:b.symbol}); };
+};
+
+const iNatURL = {base:'http://www.inaturalist.org'};
+const iNatItems = [['obs','observations'],['taxa'],['users'],['projects'],['photos'],['identify','observations/identify']];
+for (item of iNatItems) { iNatURL[item[0]] = `${iNatURL.base}/${item[1]??item[0]}` };
+
+// define the table structure and fields needed to be retrieved from API
+// table column values (td) are set up to accept a record (r), sequence (i), and other/optional values (o)
+let dataDef = [
+  { th:{innerText:'#'}, td:(r,i,o)=>({innerText:i+1}), },
+  { th:{innerText:'ID'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.obs}/${r.id}`,r.id)}), fields:['id'], },
+  { th:{innerText:'Photo'}, td:(r,i,o)=>({innerHTML:imgWithFallback(((r.photos&&r.photos.length>0)?r.photos[0].url:''),'photo')}), fields:['photos.url'], },
+  { th:{innerText:'Name'}, td:(r,i,o)=>({innerHTML:r.taxon?hyperlink(`${iNatURL.taxa}/${r.taxon.id}`,r.taxon.name):''}), fields:['taxon.id','taxon.name'], },
+  { th:{innerText:'Common Name'}, td:(r,i,o)=>({innerText:r.taxon?(r.taxon.preferred_common_name||''):''}), fields:['taxon.preferred_common_name'], },
+  { th:{innerText:'Rank'}, td:(r,i,o)=>({innerText:r.taxon?r.taxon.rank:''}), fields:['taxon.rank'], },
+  { th:{innerText:'Grade'}, td:(r,i,o)=>({innerText:r.quality_grade}), fields:['quality_grade'], },
+  { th:{innerText:'User Photo'}, td:(r,i,o)=>({innerHTML:imgWithFallback(r.user.icon,'icon')}), fields:['user.icon'], },
+  { th:{innerText:'User Login'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.users}/${r.user.login}`,r.user.login)}), fields:['user.login'], },
+  { th:{innerText:'Observe Date'}, td:(r,i,o)=>({innerText:(r.time_observed_at?dateToString(r.time_observed_at):(r.observed_on||''))}), fields:['time_observed_at','observed_on'], },
+  { th:{innerText:'Submit Date'}, td:(r,i,o)=>({innerText:(dateToString(r.created_at||r.created_at_details.date))}), fields:['created_at','created_at_details.date'], },
+  { th:{innerText:'Update Date'}, td:(r,i,o)=>({innerText:dateToString(r.updated_at)}), fields:['updated_at'], },
+  { th:{innerText:'Coordinates'}, td:(r,i,o)=>({innerText:r.location?r.location.replace(',',', '):''}), fields:['location'], },
+  { th:{innerText:'Location Description'}, td:(r,i,o)=>({innerText:r.place_guess}), fields:['place_guess'], },
+  { th:{innerText:'Description'}, td:(r,i,o)=>({innerText:r.description}), fields:['description'], },
+];
+if (p_options.includes('idextra')) {
+  const fields = {
+    base:['community_taxon_id','taxon.id','taxon.ancestry','identifications.id','identifications.current','identifications.hidden','identifications.taxon.id','identifications.taxon.ancestry'],
+    user:['identifications.category','identifications.disagreement','identifications.user.id','identifications.user.login'],
+  };
+  let dataDefID = [
+    { th:{classList:'tar',innerText:'ID Count'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?0:o.idextra.count.all}), fields:fields.base, },
+    { th:{classList:'tar',innerText:'ID Count @ Obs'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?0:o.idextra.count.obs}), fields:fields.base, },
+    { th:{classList:'tar',innerText:'ID Taxa @ Obs'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?'N/A':o.idextra.taxa.obs.length}), fields:fields.base, },
+    { th:{classList:'tar',innerText:'ID Taxa @ Ansc'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?'N/A':o.idextra.taxa.ancestor.length}), fields:fields.base, },
+    { th:{classList:'tar',innerText:'ID Taxa @ Desc'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?'N/A':o.idextra.taxa.descendant.length}), fields:fields.base, },
+    { th:{classList:'tar',innerText:'ID Taxa @ Other'}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?'N/A':o.idextra.taxa.other.length}), fields:fields.base, },
+    { th:{innerText:'Obs Taxon = Community Taxon'}, td:(r,i,o)=>({innerText:(o.idextra===null)?'N/A':o.idextra.obs_taxon_is_community,classList:`bin_${(o.idextra===null||o.idextra.obs_taxon_is_community)}`}), fields:fields.base, },
+  ];
+  if (p_idextra_user_id && p_idextra_user_id.length>0) {
+    for (const [u,user] of p_idextra_user_id.entries()) {
+      dataDefID.push({ th:{classList:'tar',innerText:`@${user} ID seq`}, td:(r,i,o)=>({classList:'tar',innerText:(o.idextra===null)?'N/A':o.idextra.idextrauser.seq[u]}), fields:fields.user, });
+      dataDefID.push({ th:{innerText:`@${user} ID taxon category`}, td:(r,i,o)=>({innerText:(o.idextra===null)?'N/A':o.idextra.idextrauser.taxoncategory[u]}), fields:fields.user, });
+      dataDefID.push({ th:{innerText:`@${user} ID category`}, td:(r,i,o)=>({innerText:(o.idextra===null)?'N/A':o.idextra.idextrauser.category[u]}), fields:fields.user, });
+    };
+  };
+  dataDef.splice(7,0,...dataDefID);
+};
+if (p_options.includes('reviewers')) {dataDef.splice(7,0,{ th:{classList:'tar',innerText:'Reviewers'}, td:(r,i,o)=>({classList:'tar',innerText:r.reviewed_by.length??0}), fields:['reviewed_by'], })};
+if (p_options.includes('coreancestors')) {
+  const coreRanks = ['Kingdom','Phylum','Class','Order','Family','Genus','Species'];
+  let ancestor;
+  let dataDefAnsc = [];
+  for (const [c,coreRank] of coreRanks.entries()) {
+    dataDefAnsc.push({ 
+      th:{innerText:coreRank},
+      td:(r,i,o)=>({innerHTML: (ancestor = o.ancestors?.find(a => a.rank === coreRank.toLowerCase())) ? hyperlink(`${iNatURL.taxa}/${ancestor.id}`,ancestor.name) : null}),
+      fields:['taxon.id','taxon.rank_level','identifications.taxon.id','identifications.taxon.ancestors.id','identifications.taxon.ancestors.name','identifications.taxon.ancestors.rank'],
+    });
+  };
+  dataDef.splice(2,0,...dataDefAnsc);
+};
+
+// if no parameters are specified, show page instructions; otherwise, get data and create table
+if (reqURLParamsBase.size===0) {
+  const instructions = [
+    {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
+    {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&per_page=200&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob&per_page=200'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200'))} in your browser.`},
+    {innerHTML:`The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this limitation by using the <code>id_above</code> and <code>id_below</code> parameters.`},
+    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=idextra</code> to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding <code>&options=reviewers</code> will display a column with reviewer count. All options can be invoked together like this: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra,coreancestors,reviewers'))}.`},
+    {innerHTML:`When <code>&options=idextra</code> is invoked, an optional <code>idextra_user_id</code> parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))}.`},
+  ];
+  addElems('p',document.body,instructions);
+}
+else { dataToTable(createURL(endpoint.reqURLBase,reqURLParamsBase),dataDef,'observations'); };
+</script>
+</body>
+
+</html>
