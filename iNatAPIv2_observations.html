@@ -220,6 +220,35 @@ function getObsTaxonAncestors(obs) {
    };
 };
 
+function obsSetURL(destination='explore',params,useBaseParams=true) {
+  urlParams = new URLSearchParams(useBaseParams?reqURLParamsBase:'');
+  addlParams = new URLSearchParams(params);
+  for (const [key, value] of addlParams) { urlParams.set(key, value); };
+  // Some parameters apply only to Explore, but we'll set Identify the same way, just so it's easier for the user to convert a resulting Identify URL to an Explore URL
+  if (urlParams.get('place_id') === null) { urlParams.set("place_id","any"); }; // the explore page defaults to place_id=any
+  if (urlParams.get('verifiable') === null) { urlParams.set("verifiable","any"); }; // the explore defaults to verifiable=any
+  let taxon_id; // the explore page allows filtering for multiple taxon_ids only via taxon_ids
+  if (taxon_id = urlParams?.get('taxon_id')) {
+    if (taxon_id.split(',').length > 1) {
+      urlParams.set("taxon_ids",taxon_id);
+      urlParams.delete("taxon_id");
+    };
+  };
+  // These apply only to Explore
+  if (destination==='explore') {
+    urlParams.delete('page'); // this page has its own version of paging
+    return createURL(iNatURL.obs,urlParams);
+  }
+  // These apply only to Idenify
+  else if (destination==='identify') {
+    if (urlParams.get('quality_grade') === null) { urlParams.set("quality_grade","research,needs_id,casual"); }; // quality_grade=research,needs_id,casual returns the most results
+    if (urlParams.get('reviewed') === null) { urlParams.set("reviewed","any"); }; // reviewed=any returns the most results
+    if (!useBaseParams) { urlParams.delete('page'); };
+    return createURL(iNatURL.identify,urlParams);
+  };
+  return null;
+};
+
 // main function to get data and create data table
 async function dataToTable(reqURL,dataDef,recLabel='records') {
   // add fields to return to request (for the v2 API)
@@ -270,27 +299,11 @@ async function dataToTable(reqURL,dataDef,recLabel='records') {
     addElems('td',brow,dataDef.map(n=>n.td(r,i,addlResults)));
     obsInPage.push(r.id);
   };
+
+  // add some links to Explore and Identify pages
   if (obsInPage.length>0) {
-    function explorePageURL(startWithURLParams=true) {
-      urlParams = new URLSearchParams(startWithURLParams?reqURLParamsBase:'');
-      urlParams.delete('per_page');
-      urlParams.delete('page');
-      if (urlParams.get('place_id') === null) { urlParams.set("place_id","any"); };
-      if (urlParams.get('verifiable') === null) { urlParams.set("verifiable","any"); };
-      return createURL(iNatURL.obs,urlParams);
-    };
-    function fidentifyurl(startWithURLParams=true) {
-      urlParams = new URLSearchParams(startWithURLParams?reqURLParamsBase:'');
-      if (!startWithURLParams) { urlParams.delete('page'); };
-      if (urlParams.get('per_page') === null) { urlParams.set("per_page",per_page); };
-      if (urlParams.get('place_id') === null) { urlParams.set("place_id","any"); };
-      if (urlParams.get('verifiable') === null) { urlParams.set("verifiable","any"); };
-      if (urlParams.get('reviewed') === null) { urlParams.set("reviewed","any"); };
-      if (urlParams.get('quality_grade') === null) { urlParams.set("quality_grade","research,needs_id,casual"); };
-      return createURL(iNatURL.identify,urlParams);
-    };
-    document.getElementById("addlInfo").innerHTML = `[view obs from this page in: ${hyperlink((explorePageURL(false)+'&id='+obsInPage.join(',')),'Explore')} | ${hyperlink((fidentifyurl(false)+'&id='+obsInPage.join(',')),'Identify')}]`
-      + ` [apply parameters to: ${hyperlink(explorePageURL(),'Explore')} | ${hyperlink(fidentifyurl(),'Identify')}]`;
+    document.getElementById("addlInfo").innerHTML = `[view obs from this page in: ${hyperlink(obsSetURL('explore',`id=${obsInPage.join(',')}`,false),'Explore')} | ${hyperlink(obsSetURL('identify',`id=${obsInPage.join(',')}`,false),'Identify')}]`
+      +` [apply parameters to: ${hyperlink(obsSetURL('explore'),'Explore')} | ${hyperlink(obsSetURL('identify',`per_page=${per_page}`),'Identify')}]`;
   };
 
   // create buttons to navigate to first / prev / next / last page
@@ -323,7 +336,7 @@ let dataDef = [
   { th:{innerText:'Observe Date'}, td:(r,i,o)=>({innerText:(r.time_observed_at?dateToString(r.time_observed_at):(r.observed_on||''))}), fields:['time_observed_at','observed_on'], },
   { th:{innerText:'Submit Date'}, td:(r,i,o)=>({innerText:(dateToString(r.created_at||r.created_at_details.date))}), fields:['created_at','created_at_details.date'], },
   { th:{innerText:'Update Date'}, td:(r,i,o)=>({innerText:dateToString(r.updated_at)}), fields:['updated_at'], },
-  { th:{innerText:'Coordinates'}, td:(r,i,o)=>({innerText:r.location?r.location.replace(',',', '):''}), fields:['location'], },
+  { th:{innerText:'Location'}, td:(r,i,o)=>({innerText:(r.geoprivacy==='private'||r.taxon_geoprivacy==='private')?'(private)':!r.location?'':[r.location.replace(',',', '),((r.geoprivacy??'open')==='open'&&(r.taxon_geoprivacy??'open')==='open')?((r.positional_accuracy==null)?null:`(${r.positional_accuracy}m)`):((r.public_positional_accuracy==null)?null:`(${r.public_positional_accuracy}m)`),((r.geoprivacy==='obscured'||r.taxon_geoprivacy==='obscured')?'(obsc)':null)].filter(l=>l!==null).join(' ')}), fields:['location','positional_accuracy','public_positional_accuracy','geoprivacy','taxon_geoprivacy'], },
   { th:{innerText:'Location Description'}, td:(r,i,o)=>({innerText:r.place_guess}), fields:['place_guess'], },
   { th:{innerText:'Description'}, td:(r,i,o)=>({innerText:r.description}), fields:['description'], },
 ];
@@ -364,6 +377,8 @@ if (p_options.includes('coreancestors')) {
   };
   dataDef.splice(2,0,...dataDefAnsc);
 };
+if (p_options.includes('uuid')) {dataDef.splice(1,0,{ th:{innerText:'UUID'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.obs}/${r.uuid}`,r.uuid)}), fields:['uuid'], })};
+
 
 // if no parameters are specified, show page instructions; otherwise, get data and create table
 if (reqURLParamsBase.size===0) {
@@ -371,7 +386,7 @@ if (reqURLParamsBase.size===0) {
     {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
     {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&per_page=200&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob&per_page=200'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200'))} in your browser.`},
     {innerHTML:`The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this limitation by using the <code>id_above</code> and <code>id_below</code> parameters.`},
-    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=idextra</code> to the parameter list will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding <code>&options=reviewers</code> will display a column with reviewer count. All options can be invoked together like this: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra,coreancestors,reviewers'))}.`},
+    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=uuid</code> to the parameter list will display each observation's UUID. Adding <code>&options=reviewers</code> will display reviewer count. Adding <code>&options=idextra</code> will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. All options can be invoked together like this: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=uuid,reviewers,idextra,coreancestors'))}.`},
     {innerHTML:`When <code>&options=idextra</code> is invoked, an optional <code>idextra_user_id</code> parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))}.`},
   ];
   addElems('p',document.body,instructions);
