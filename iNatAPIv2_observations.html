@@ -320,7 +320,7 @@ async function dataToTable(reqURL,dataDef,recLabel='records') {
 };
 
 const iNatURL = {base:'http://www.inaturalist.org'};
-const iNatPages = [['obs','observations'],['taxa'],['users'],['projects'],['photos'],['identify','observations/identify']];
+const iNatPages = [['obs','observations'],['taxa'],['users'],['projects'],['photos'],['identify','observations/identify'],['apps','oauth/applications']];
 for (const i of iNatPages) { iNatURL[i[0]] = `${iNatURL.base}/${i[1]??i[0]}` };
 
 // define the table structure and fields needed to be retrieved from API
@@ -380,7 +380,10 @@ if (p_options.includes('coreancestors')) {
   dataDef.splice(2,0,...dataDefAnsc);
 };
 if (p_options.includes('uuid')) {dataDef.splice(1,0,{ th:{innerText:'UUID'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.obs}/${r.uuid}`,r.uuid)}), fields:['uuid'], })};
-
+if (p_options.includes('tags')) {dataDef.push({ th:{innerText:'Tags'}, td:(r,i,o)=>({innerText:r?.tags.join('; ')}), fields:['tags'], })};
+if (p_options.includes('license')) {dataDef.push({ th:{innerText:'License'}, td:(r,i,o)=>({innerText:r.license_code??''}), fields:['license_code'], })};
+if (p_options.includes('app')) {dataDef.push({ th:{innerText:'App'}, td:(r,i,o)=>({innerHTML:r?.oauth_application_id?hyperlink(`${iNatURL.apps}/${r.oauth_application_id}`,r.oauth_application_id):''}), fields:['oauth_application_id'], })};
+if (p_options.includes('outlinks')) {dataDef.push({ th:{innerText:'Outlinks'}, td:(r,i,o)=>({innerHTML:r?.outlinks.map(o=>`${o.source}: ${hyperlink(o.url)}`).join('; <br />')}), fields:['outlinks.source','outlinks.url'], })};
 
 // if no parameters are specified, show page instructions; otherwise, get data and create table
 if (reqURLParamsBase.size===0) {
@@ -388,7 +391,8 @@ if (reqURLParamsBase.size===0) {
     {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
     {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&per_page=200&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob&per_page=200'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200'))} in your browser.`},
     {innerHTML:`The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this limitation by using the <code>id_above</code> and <code>id_below</code> parameters.`},
-    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=uuid</code> to the parameter list will display each observation's UUID. Adding <code>&options=reviewers</code> will display reviewer count. Adding <code>&options=idextra</code> will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. All options can be invoked together like this: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=uuid,reviewers,idextra,coreancestors'))}.`},
+    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=uuid</code> to the parameter list will display each observation's UUID. Adding <code>&options=reviewers</code> will display reviewer count. Adding <code>&options=idextra</code> will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding <code>&options=tags</code> will display tags. Adding <code>&options=license</code> will show the observation license (if any). Adding <code>&options=app</code> will show which application was used to create the observation. Adding <code>&options=outlinks</code> will show links to other systems (ex. GBIF) where the observation has been pushed. `
+      +`Multiple options can be invoked together using a comma-separated list of values, like so: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=uuid,reviewers,idextra,coreancestors,tags,license,app,outlinks'))}.`},
     {innerHTML:`When <code>&options=idextra</code> is invoked, an optional <code>idextra_user_id</code> parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))}.`},
   ];
   addElems('p',document.body,instructions);
