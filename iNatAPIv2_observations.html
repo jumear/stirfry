@@ -75,7 +75,7 @@ function escapeHTML(str) {
    .replace(/"/g,'&quot;')
    .replace(/'/g,'&#39;')
 };
-function hyperlink(url,txt=url) { return `<a href="${url}">${escapeHTML(txt)}</a>`; };
+function hyperlink(url,txt=url) { return url===null?'':`<a href="${url}">${escapeHTML(txt)}</a>`; };
 function imgWithFallback(src,imgClass='photo') { return `<img class="${imgClass}" src="${src}" onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22rgba(128,128,128,.2)%22/></svg>';"/>` };
 
 function addElem(eType,eParent=null,eAttr={}) {
@@ -102,7 +102,7 @@ function createURL(baseURL,params1,params2='') {
 // get data from API; log errors encountered; delay start, if specified
 async function get(url,options=null,delay=0) {
   try {
-    if (delay > 0) { await sleep(delay); };
+    if (delay > 0) { await new Promise(d => setTimeout(d, delay)); };
     const response = await fetch(url,options);
     const data = await response.json();
     if (data.errors) { // v2 can log multiple errors
@@ -393,8 +393,15 @@ if (reqURLParamsBase.size===0) {
     {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
     {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&per_page=200&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob&per_page=200'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200'))} in your browser.`},
     {innerHTML:`The max records per page for this endpoint is 200. Note that the API will not return records beyond the 10,000th record for a given set of parameters, but you can work around this limitation by using the <code>id_above</code> and <code>id_below</code> parameters.`},
-    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter. Adding <code>&options=uuid</code> to the parameter list will display each observation's UUID. Adding <code>&options=reviewers</code> will display reviewer count. Adding <code>&options=idextra</code> will display some columns that provide extra information about IDs added to each observation. Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species. Adding <code>&options=tags</code> will display tags. Adding <code>&options=license</code> will show the observation license (if any). Adding <code>&options=app</code> will show which application was used to create the observation. Adding <code>&options=outlinks</code> will show links to other systems (ex. GBIF) where the observation has been pushed. `
-      +`Multiple options can be invoked together using a comma-separated list of values, like so: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=uuid,reviewers,idextra,coreancestors,tags,license,app,outlinks'))}.`},
+    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter.<ul>`
+      +`<li>Adding <code>&options=uuid</code> to the parameter list will display each observation's UUID.</li>`
+      +`<li>Adding <code>&options=reviewers</code> will display reviewer count.</li>`
+      +`<li>Adding <code>&options=idextra</code> will display some columns that provide extra information about IDs added to each observation.</li>`
+      +`<li>Adding <code>&options=coreancestors</code> will display some columns for kingdom, phylum, class, order, family, genus, and species.</li>`
+      +`<li>Adding <code>&options=tags</code> will display tags. Adding <code>&options=license</code> will show the observation license (if any).</li>`
+      +`<li>Adding <code>&options=app</code> will show which application was used to create the observation.</li>`
+      +`<li>Adding <code>&options=outlinks</code> will show links to other systems (ex. GBIF) where the observation has been pushed.</li>`
+      +`</ul>Multiple options can be invoked together using a comma-separated list of values (ex. <code>&options=uuid,reviewers,idextra,coreancestors,tags,license,app,outlinks</code>).`},
     {innerHTML:`When <code>&options=idextra</code> is invoked, an optional <code>idextra_user_id</code> parameter can also be used to get additional information about the IDs by a specific user (or lists of users, separated by commas). For example: ${hyperlink(createURL(winURLBase,'user_id=bob&per_page=200&options=idextra&idextra_user_id=bob,jane'))}.`},
   ];
   addElems('p',document.body,instructions);
