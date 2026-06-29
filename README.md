@@ -10,10 +10,11 @@
 |[iNatAPIv1_observation_histogram.html](https://jumear.github.io/stirfry/iNatAPIv1_observation_histogram)|https://forum.inaturalist.org/t/viewing-your-own-user-stats/10328/3|
 |[iNatAPIv1_observations.html](https://jumear.github.io/stirfry/iNatAPIv1_observations) (deprecated)|https://forum.inaturalist.org/t/tool-for-making-observations-printer-friendly/4513/18|
 |[iNatAPIv1_observations_observers.html](https://jumear.github.io/stirfry/iNatAPIv1_observations_observers)|https://forum.inaturalist.org/t/cutoff-for-2023-top-500-exceeds-6-000-observations/47901/27|
-|[iNatAPIv1_observations_species_counts.html](https://jumear.github.io/stirfry/iNatAPIv1_observations_species_counts)|https://forum.inaturalist.org/t/viewing-species-in-a-project-beyond-the-top-500/11420/10|
+|[iNatAPIv1_observations_species_counts.html](https://jumear.github.io/stirfry/iNatAPIv1_observations_species_counts) (deprecated)|https://forum.inaturalist.org/t/viewing-species-in-a-project-beyond-the-top-500/11420/10|
 |[iNatAPIv1_projects.html](https://jumear.github.io/stirfry/iNatAPIv1_projects)|https://forum.inaturalist.org/t/make-collection-and-umbrella-projects-show-up-in-nearby-projects-in-the-app/30268/7|
 |[iNatAPIv1_taxa.html](https://jumear.github.io/stirfry/iNatAPIv1_taxa)|https://forum.inaturalist.org/t/is-there-a-tool-code-snippet-that-allows-downloading-of-taxonomy-data-from-the-site/14268/6|
 |[iNatAPIv2_observations.html](https://jumear.github.io/stirfry/iNatAPIv2_observations)|https://jumear.github.io/stirfry/iNatAPIv1_observations|
+|[iNatAPIv2_observations_species_counts.html](https://jumear.github.io/stirfry/iNatAPIv2_observations_species_counts)|https://jumear.github.io/stirfry/iNatAPIv1_observations_species_counts|
 |[iNat_PKCE_flow_example.html](https://jumear.github.io/stirfry/iNat_PKCE_flow_example)|https://forum.inaturalist.org/t/batch-add-users-to-collection-project-filters/8086/4|
 |[iNat_UTFGrid_data_interpreter.html](https://jumear.github.io/stirfry/iNat_UTFGrid_data_interpreter)|https://forum.inaturalist.org/t/inatguessr-can-you-guess-the-location-from-the-observations/44518/50|
 |[iNat_UTFgrid_based_custom_density_map.html](https://jumear.github.io/stirfry/iNat_UTFgrid_based_custom_density_map)|https://forum.inaturalist.org/t/looking-for-inaturalist-observation-map-visualisation-suggestions/7322/12|
