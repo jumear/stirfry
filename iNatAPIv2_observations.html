@@ -309,14 +309,16 @@ async function dataToTable(reqURL,dataDef,recLabel='records') {
   };
 
   // create buttons to navigate to first / prev / next / last page
-  const nav = addElem('div',document.body,{id:'nav'});
-  const navButtons = [
-     {id:'button_first',page:1,symbol:'&laquo',active:(page_curr>1),title:{active:'first page',inactive:'already on first page'}},
-     {id:'button_prev',page:page_prev,symbol:'&#8249',active:(page_prev!==null),title:{active:'previous page',inactive:'no previous page'}},
-     {id:'button_next',page:page_next,symbol:'&#8250',active:(page_next!==null),title:{active:'next page',inactive:'no next page'}},
-     {id:'button_last',page:page_max,symbol:'&raquo',active:(page_curr<page_max),title:{active:'last page',inactive:'already on last page'}},
-  ];
-  for (b of navButtons) { b.active ? addElem('a',nav,{classList:'button',title:b.title.active,id:b.id,innerHTML:b.symbol,href:createURL(winURLBase,winURLParams,`per_page=${per_page}&page=${b.page}`)}) : addElem('span',nav,{classList:'button_inactive',title:b.title.inactive,innerHTML:b.symbol}); };
+  if (page_max > 1) {
+    const nav = addElem('div',document.body,{id:'nav'});
+    const navButtons = [
+      {id:'button_first',page:1,symbol:'&laquo',active:(page_curr>1),title:{active:'first page',inactive:'already on first page'}},
+      {id:'button_prev',page:page_prev,symbol:'&#8249',active:(page_prev!==null),title:{active:'previous page',inactive:'no previous page'}},
+      {id:'button_next',page:page_next,symbol:'&#8250',active:(page_next!==null),title:{active:'next page',inactive:'no next page'}},
+      {id:'button_last',page:page_max,symbol:'&raquo',active:(page_curr<page_max),title:{active:'last page',inactive:'already on last page'}},
+    ];
+    for (b of navButtons) { b.active ? addElem('a',nav,{classList:'button',title:b.title.active,id:b.id,innerHTML:b.symbol,href:createURL(winURLBase,winURLParams,`per_page=${per_page}&page=${b.page}`)}) : addElem('span',nav,{classList:'button_inactive',title:b.title.inactive,innerHTML:b.symbol}); };
+  };
 };
 
 const iNatURL = {base:'http://www.inaturalist.org'};
