@@ -214,7 +214,7 @@ function fresults(data) {
          params.set((mode==='year')?'year':'on',cell.id);
          params.set('per_page',200);
          params.delete('interval');
-         cell.parentElement.href = `https://jumear.github.io/stirfry/iNatAPIv1_observations?${params}`;
+         cell.parentElement.href = `https://jumear.github.io/stirfry/iNatAPIv2_observations?${params}`;
       };
    };
    for (let i=days.length; i>0; i--) {
@@ -229,9 +229,9 @@ function fresults(data) {
    for (year of years) { fsetcellcolorandlink(year,'year'); };
 };
 
-let apibase = 'https://api.inaturalist.org/v1/observations/histogram';
+let apibase = 'https://api.inaturalist.org/v2/observations/histogram';
 let apiurl = apibase+((winurlparams!='')?('?'+winurlparams):'');
-let apirefurl = 'https://api.inaturalist.org/v1/docs/#!/Observations/get_observations_histogram';
+let apirefurl = 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations_histogram';
 let apirefname = 'iNaturalist Observations Histogram';
 let apiref = furl(apirefurl,apirefname);
 faddelem('h1',document.body,{innerText:document.title});
