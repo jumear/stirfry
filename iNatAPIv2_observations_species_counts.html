@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, minimum-scale=1.0" />
+<meta name="description" content="iNaturalist API Get Observation Species Counts" />
+<title>iNaturalist API v2 Get Observation Species Counts</title>
+<style>
+  :root {
+    background: var(--color-base);
+    color: var(--color-text);
+    font: 14px Sans-Serif;
+    --color-base: white;
+    --color-alt: whitesmoke;
+    --color-brand: forestgreen;
+    --color-text: black;
+    --color-text-invert: white;
+    --color-text-link: royalblue;
+    --color-border: lightgray;
+    --color-hover: lightgray;
+    --color-base-translucent: rgba(255,255,255,0.85);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-base: black;
+      --color-alt: #171717;
+      --color-brand: forestgreen;
+      --color-text: #bababa;
+      --color-text-invert: black;
+      --color-text-link: cornflowerblue;
+      --color-border: #444;
+      --color-hover: #444;
+      --color-base-translucent: rgba(0,0,0,0.85);
+    }
+  }
+  #main { width:100%; }
+  table, td, th { border-collapse:collapse; margin:0; padding:4px; }
+  th { position:-webkit-sticky /*Safari*/; position:sticky; top:0; font-weight:600; background:var(--color-brand); color:var(--color-text-invert); text-align:left; vertical-align:bottom; }
+  tbody>tr { border-width:1px 0px; border-style:solid; border-color:var(--color-border); background:var(--color-alt);}
+  tr:nth-child(even) { background:var(--color-base); }
+  .tar { text-align:right; }
+  .icon { height:48px; width:48px; border-radius:50%; }
+  .icon_big { height:250px; width:250px; border-radius:10%; object-fit: cover; object-position: center; }
+  .photo { height:64px; width:64px; }
+  img { margin:0; padding:0; border:0; }
+  a { text-decoration:none; color:var(--color-text-link); }
+  a:hover { background:var(--color-hover); }
+  #nav { margin-left:-8px; position:-webkit-sticky /*Safari*/; position:sticky; left:0; bottom:0; background:var(--color-base-translucent); width:188px; height:52px; border-radius:14px; }
+  @media print { #nav { display:none; } } 
+  .button, .button_inactive { display:inline-block; margin-left:10px; margin-top:10px; height:32px; width:32px; border:1px solid var(--color-border); border-radius:35%; font-size:24px; vertical-align:middle; text-align:center; }
+  .button { background:var(--color-alt); }
+  .button_inactive { background:none; color:var(--color-border); }
+  .bin_true { text-decoration: underline wavy rgba(34,139,34,0.35); }
+  .bin_false { text-decoration: underline wavy rgba(178,34,34,0.35); }
+</style>
+</head>
+
+<body>
+<script>
+function dateToString(str,dateonly=false) {
+   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+   if (dateonly) { str = str.split(' ')[0]; }
+   else {
+      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+      str = str.replace('+00:00','±00:00');
+   };
+   return str;
+};
+function groupDigits(n,delimiter=',') { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,delimiter) };
+function escapeHTML(str) {
+  return String(str).replace(/&/g,'&amp;')
+   .replace(/</g,'&lt;')
+   .replace(/>/g,'&gt;')
+   .replace(/"/g,'&quot;')
+   .replace(/'/g,'&#39;')
+};
+function hyperlink(url,txt=url) { return url===null?'':`<a href="${url}">${escapeHTML(txt)}</a>`; };
+function imgWithFallback(src,imgClass='photo') { return `<img class="${imgClass}" src="${src}" onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22rgba(128,128,128,.2)%22/></svg>';"/>` };
+
+function addElem(eType,eParent=null,eAttr={}) {
+  const e = document.createElement(eType);
+  for (let [key,value] of Object.entries(eAttr)) {
+    if ( typeof value === 'object' && value !== null ) { for (let [subKey,subValue] of Object.entries(value)) { e[key][subKey] = subValue; }; }
+    else { e[key] = value; };
+  };
+  if (eParent) { eParent.appendChild(e); };
+  return e;
+};
+function addElems(eType,eParent=null,eAttr=[]) { for (let a of eAttr) { addElem(eType,eParent,a); }; };
+
+// add params to base URL (params2 allows for a second level of parameter replacement)
+function createURL(baseURL,params1,params2='') {
+  const url = new URL(baseURL);
+  for (const params of [params1,params2]) {
+    const ps = new URLSearchParams(params);
+    for (const [pk,pv] of ps) { url.searchParams.set(pk,pv); };
+  };
+  return url.href;
+};
+
+// get data from API; log errors encountered; delay start, if specified
+async function get(url,options=null,delay=0) {
+  try {
+    if (delay > 0) { await new Promise(d => setTimeout(d, delay)); };
+    const response = await fetch(url,options);
+    const data = await response.json();
+    if (data.errors) { // v2 can log multiple errors
+      const errorText = `Server responded with error(s): ${data.errors.map(e => `${e.errorCode} (${e.message})`).join(', ')}`
+      console.error(errorText);
+      addElem('p',document.body,{innerText:errorText});      
+    }
+    else if (data.error) { // v1 logs a single error
+      const errorText = `Server responded with error: ${data.status} (${data.error})`
+      console.error(errorText);
+      addElem('p',document.body,{innerText:errorText});      
+    };
+    return data;
+  }
+  catch (err) {
+    const errorText = `There was a problem retrieving data. ${err.message}.`
+    console.error(errorText);
+    addElem('p',document.body,{innerText:errorText});
+  };
+};
+
+// define endpoint
+const endpoint = {
+   description: document.title,
+   docURL: 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations_species_counts',
+   reqURLBase:'https://api.inaturalist.org/v2/observations/species_counts',
+};
+addElem('h1',document.body,{innerText:endpoint.description});
+
+// get base URL and parameters from the browser window URL
+const winURL = new URL(window.location.href);
+const winURLBase = new URL(window.location.href.split(/[?#]/)[0]);
+const winURLParams = new URLSearchParams(window.location.search);
+
+// extract parameters used specifically by this page (not just passed through to the API)
+const p_options = winURLParams.get('options')?.split(',') || [];
+
+// create a copy of winURLParams and remove from it parameters that should not be passed through to the API (note: although fields is a valid API parameter, passing it through could cause the API to return less data than needed by this page)
+const reqURLParamsBase = new URLSearchParams(winURLParams);
+const paramsTBD = ['fields','options']
+for (const pTBD of paramsTBD) { reqURLParamsBase.delete(pTBD); };
+
+// creates a URL to either iNat's Explore page or Identify page, accounting for differences in the way those pages apply parameters vs the API
+function obsSetURL(destination='explore',params='',useBaseParams=true) {
+  const baseParams = new URLSearchParams(useBaseParams?reqURLParamsBase:'');
+  const addlParams = new URLSearchParams(params);
+  for (const [key, value] of addlParams) { baseParams.set(key, value); };
+  // Some parameters apply only to Explore, but we'll set Identify the same way, just so it's easier for the user to convert a resulting Identify URL to an Explore URL
+  if (baseParams.get('place_id') === null) { baseParams.set("place_id","any"); }; // the explore page defaults to place_id=any
+  if (baseParams.get('verifiable') === null) { baseParams.set("verifiable","any"); }; // the explore defaults to verifiable=any
+  let taxon_id; // the explore page allows filtering for multiple taxon_ids only via taxon_ids (not via taxon_id)
+  if (taxon_id = baseParams?.get('taxon_id')) {
+    if (taxon_id.split(',').length > 1) {
+      baseParams.set("taxon_ids",taxon_id);
+      baseParams.delete("taxon_id");
+    };
+  };
+  if (destination==='explore') { // These apply only to Explore
+    baseParams.delete('page'); // this page has its own version of paging
+    baseParams.delete('per_page'); // this page has its own version of paging
+    return createURL(iNatURL.obs,baseParams);
+  }
+  else if (destination==='identify') { // These apply only to Identify
+    if (baseParams.get('quality_grade') === null) { baseParams.set("quality_grade","research,needs_id,casual"); }; // quality_grade=research,needs_id,casual returns the most results
+    if (baseParams.get('reviewed') === null) { baseParams.set("reviewed","any"); }; // reviewed=any returns the most results
+    if (!useBaseParams) { baseParams.delete('page'); };
+    return createURL(iNatURL.identify,baseParams);
+  };
+  return null;
+};
+
+// main function to get data and create data table
+async function dataToTable(reqURL,dataDef,recLabel='records') {
+  // add fields to return to request (for the v2 API)
+  const paramfields = [...new Set(dataDef.map(n=>n.fields).flat().filter(v => v != null))].join(',');
+  const urlOrig = new URL(reqURL);
+  const url = new URL(reqURL);
+  url.searchParams.set('fields',paramfields);
+  addElem('p',document.body,{innerHTML:`Base request URL: ${hyperlink(url.href,urlOrig.href)}`});
+
+  // get data, and stop if no results are returned
+  const response = await get(url.href);
+  const results = response?.results;
+  if (!results) { return false; }
+  if (results.length === 0) {
+    addElem('p',document.body,{innerText:`No records were retrieved for these parameters.`});
+    return response;
+  };
+  
+  // calculate max page based on total_results and per_page returned in response
+  const total_results = response.total_results;
+  const per_page = response.per_page;
+  const page_curr = response.page;
+  const page_max = Math.ceil(total_results/per_page);
+  const page_prev = ((page_curr>1)?page_curr-1:null);
+  const page_next = ((page_curr<page_max)?page_curr+1:null);
+
+  // create summary statistics
+  addElem('p',document.body,{innerHTML:`total ${recLabel}: ${groupDigits(total_results)} `
+    +`[<span id="export"><a id="exportButton">export</a></span>]<br />`
+    +`per page: ${groupDigits(per_page)}<br />`
+    +`page: ${groupDigits(page_curr)} of ${groupDigits(page_max)}`
+    +' <span id="addlInfo"></span>'
+  });
+  document.getElementById("exportButton").addEventListener("click",()=>{exportData(exportDef, url.href, total_results);});
+
+  // create table for data
+  const table = addElem('table',document.body,{id:'main'});
+  const thead = addElem('thead',table);
+  const tbody = addElem('tbody',table);
+  for (const [i,r] of results.entries()) {
+    const addlResults = {};
+    if (i===0) {
+      const hrow = addElem('tr',thead);
+      addElems('th',hrow,dataDef.map(n=>n.th));
+    };
+    const brow = addElem('tr',tbody);
+    addElems('td',brow,dataDef.map(n=>n.td(r,i,addlResults)));
+  };
+
+  // create buttons to navigate to first / prev / next / last page
+  if (page_max > 1) {
+    const nav = addElem('div',document.body,{id:'nav'});
+    const navButtons = [
+      {id:'button_first',page:1,symbol:'&laquo',active:(page_curr>1),title:{active:'first page',inactive:'already on first page'}},
+      {id:'button_prev',page:page_prev,symbol:'&#8249',active:(page_prev!==null),title:{active:'previous page',inactive:'no previous page'}},
+      {id:'button_next',page:page_next,symbol:'&#8250',active:(page_next!==null),title:{active:'next page',inactive:'no next page'}},
+      {id:'button_last',page:page_max,symbol:'&raquo',active:(page_curr<page_max),title:{active:'last page',inactive:'already on last page'}},
+    ];
+    for (b of navButtons) { b.active ? addElem('a',nav,{classList:'button',title:b.title.active,id:b.id,innerHTML:b.symbol,href:createURL(winURLBase,winURLParams,`per_page=${per_page}&page=${b.page}`)}) : addElem('span',nav,{classList:'button_inactive',title:b.title.inactive,innerHTML:b.symbol}); };
+  };
+};
+
+const iNatURL = {base:'http://www.inaturalist.org'};
+const iNatPages = [['obs','observations'],['taxa'],['users'],['projects'],['photos'],['identify','observations/identify'],['apps','oauth/applications']];
+for (const i of iNatPages) { iNatURL[i[0]] = `${iNatURL.base}/${i[1]??i[0]}` };
+
+// define the table structure and fields needed to be retrieved from API
+// table column values (td) are set up to accept a record (r), sequence (i), and other/optional values (o)
+let dataDef = [
+  { th:{innerText:'#'}, td:(r,i,o)=>({innerText:i+1}), },
+  { th:{innerText:'ID'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.taxa}/${r.taxon.id}`,r.taxon.id)}), fields:['taxon.id'], },
+  { th:{innerText:'Photo'}, td:(p_options.includes('bigger_image')
+      ? (r,i,o)=>({innerHTML:imgWithFallback((r?.taxon?.default_photo?.medium_url??''),'icon_big')})
+      : (r,i,o)=>({innerHTML:imgWithFallback((r?.taxon?.default_photo?.square_url??''),'icon')})
+    ), fields:['taxon.default_photo.medium_url,taxon.default_photo.square_url'], },
+  { th:{innerText:'Name'}, td:(r,i,o)=>({innerText:r.taxon?(r.taxon.name||''):''}), fields:['taxon.name'], },
+  { th:{innerText:'Common Name'}, td:(r,i,o)=>({innerText:r.taxon?(r.taxon.preferred_common_name||''):''}), fields:['taxon.preferred_common_name'], },
+  { th:{innerText:'Rank'}, td:(r,i,o)=>({innerText:r.taxon?r.taxon.rank:''}), fields:['taxon.rank'], },
+  { th:{innerText:'Iconic Taxon'}, td:(r,i,o)=>({innerText:r.taxon?r.taxon.iconic_taxon_name:''}), fields:['taxon.iconic_taxon_name'], },
+  { th:{classList:'tar',innerText:'Taxon Obs Count'}, td:(r,i,o)=>({classList:'tar',innerHTML:hyperlink(obsSetURL('explore',`taxon_id=${r.taxon.id}`),groupDigits(r.count))}), fields:['taxon.id','count'], },
+  { th:{classList:'tar',innerText:'Taxon Ttl Obs Count'}, td:(r,i,o)=>({classList:'tar',innerHTML:hyperlink(obsSetURL('explore',`verifiable=any&taxon_id=${r.taxon.id}`),groupDigits(r.taxon.observations_count))}), fields:['taxon.id','taxon.observations_count'], },
+];
+if (p_options.includes('wikipedia_url')) {dataDef.splice(7,0,{ th:{innerText:'Wikipedia URL'}, td:(r,i,o)=>({innerHTML:hyperlink(r?.taxon?.wikipedia_url)}), fields:['taxon.wikipedia_url'], })};
+if (p_options.includes('ancestry')) {dataDef.splice(7,0,{ th:{innerText:'Ancestry'}, td:(r,i,o)=>({innerHTML:r.taxon.ancestor_ids.map(function(e){return hyperlink(`${iNatURL.taxa}/${e}`,e)}).join('/')||''}), fields:['taxon.ancestor_ids'], })};
+
+function escapeForCSV(str) {
+  if (str === null || str === undefined) return "";
+  str = String(str); // Convert to string
+  let escaped = str.replace(/"/g, '""'); // Escape double quotes by doubling them
+  if (/[",\n]/.test(str)) { escaped = `"${escaped}"`; }; // If the string contains special characters (double quote, comma, line break), wrap in quotes
+  return escaped;
+};
+
+async function exportData(exportDef,baseURL,count=0) {
+  let exportButton = document.getElementById('export');
+  exportButton.innerHTML = 'exporting...';
+  // generally the API will return no more than the first 10000 records for a given set of parameters, but it turns out this endpoint will allow more
+  // note that the API recommended request limit is about 1 request/second or no more than 100 requests per minute.
+  // it's unlikely that we'll violate this if we issue 20 or fewer requests together (@500 records per page = 10000 records).
+  // so if we have fewer than 10000 records (20 requests), we'll issue all the requests at one time.
+  // otherwise, we'll add a delay between requests
+  let maxCountDefault = 10000;
+  let maxCount = p_options.includes('unlimitedexport') ? 500000 : maxCountDefault; // currently, there are ~400000 recorded in the system. so we'll add a slightly higher max just to avoid getting caught in an infinite loop.
+  if (count>maxCount) {
+    count=maxCount;
+    alert(`By default, this page exports only up to ${maxCountDefault} records in order to avoid API request limits. To export more than ${maxCountDefault} records, reload the page with an additional parameter &options=unlimitedexport in the URL. Expect a large export to take at least 1 second per page of results to be exported.`)
+  };
+  let promiseArray = [];
+  let maxPerPage = 500;
+  for (i=0;i<Math.ceil(count/maxPerPage);i++) {
+    const delayInMS = (count/maxPerPage > 20) ? i * 1020 : 0;
+    promiseArray.push(get(createURL(baseURL,null,`per_page=${maxPerPage}&page=${i+1}`),null,delayInMS));
+  };
+  Promise.all(promiseArray)
+  .then(promiseResults=>{
+    let ary = [[...exportDef.map(n=>n.th)]]; // create header row
+    for (const [p,pr] of promiseResults.entries()) {
+      if (!pr.results) { break; };
+      for (const [i,r] of pr.results.entries()) {
+        const addlResults = {};
+        ary.push(exportDef.map(n=>n.td(r,p,i,addlResults)));
+      };
+    };
+    // transfer the contents of the array into a data object, create a hyperlink to the object, and simulate a click on the hyperlink to download the object.
+    const csv = `data:text/csv;charset=utf-8,${ary.map(e => e.join(',')).join('\n')}`;
+    const eURI = encodeURI(csv);
+    let link = document.createElement('a');
+    link.href = eURI;
+    link.download = 'inat_obs_species_counts.csv';
+    document.body.appendChild(link); // for FF
+    link.click();
+    exportButton.innerHTML = 'exported';
+  });
+};
+
+let exportDef = [
+  { th:'id', td:(r,p,i,o)=>escapeForCSV(r.taxon.id), fields:['taxon.id'], },
+  { th:'name', td:(r,p,i,o)=>escapeForCSV(r.taxon?.name), fields:['taxon.name'], },
+  { th:'common_name', td:(r,p,i,o)=>escapeForCSV(r.taxon?.preferred_common_name), fields:['taxon.preferred_common_name'], },
+  { th:'rank', td:(r,p,i,o)=>escapeForCSV(r.taxon?.rank), fields:['taxon.rank'], },
+  { th:'iconic_taxon', td:(r,p,i,o)=>escapeForCSV(r.taxon?.iconic_taxon_name), fields:['taxon.iconic_taxon_name'], },
+  { th:'taxon_obs_count', td:(r,p,i,o)=>escapeForCSV(r.count), fields:['count'], },
+  { th:'taxon_ttl_obs_count', td:(r,p,i,o)=>escapeForCSV(r.taxon?.observations_count), fields:['taxon.observations_count'], },
+];
+if (p_options.includes('wikipedia_url')) {exportDef.splice(5,0,{ th:'wikipedia_url', td:(r,p,i,o)=>escapeForCSV(r.taxon.wikipedia_url), fields:['taxon.wikipedia_url'], })};
+if (p_options.includes('ancestry')) {exportDef.splice(5,0,{ th:'ancestry', td:(r,p,i,o)=>escapeForCSV(r.taxon.ancestor_ids.join('/')), fields:['taxon.ancestor_ids'], })};
+
+// if no parameters are specified, show page instructions; otherwise, get data and create table
+if (reqURLParamsBase.size===0) {
+  const instructions = [
+    {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
+    {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob'))} in your browser.`},
+    {innerHTML:`The max records per page for this endpoint is 500. Unlike most of the iNaturalist API endpoints, this one will return records beyond the 10,000th record for a given set of parameters.`},
+    {innerHTML:`This page can display extra columns and provide additional functionality based on a special <code>options</code> parameter.<ul>`
+      +`<li>Adding <code>&options=ancestry</code> to the parameter list will include a column with taxon ancestry in the results.</li>`
+      +`<li>Adding <code>&options=wikipedia_url </code> will display a column with a link to the Wikipedia article for the taxon.</li>`
+      +`<li>Adding <code>&options=bigger_image</code> will display a larger version of the taxon photo.</li>`
+      +`<li>Adding <code>&options=unlimitedexport</code> will allow you export a lot of records.</li>`
+      +`</ul>Multiple options can be invoked together using a comma-separated list of values (ex. <code>&options=ancestry,wikipedia_url,bigger_image,unlimitedexport</code>).`},
+    {innerHTML:`Note that the counts returned by this page vs the ${hyperlink(iNatURL.obs,'Explore page')} in iNaturalist may not tie exactly because the Explore page will always filter out spam observations. Also, if you filter for a subspecies taxon on this page, the taxon shown here will be the species level, but the count will reflect the subspecies count, and the link to the Explore page will take you to the species level.`},
+  ];
+  addElems('p',document.body,instructions);
+}
+else { dataToTable(createURL(endpoint.reqURLBase,reqURLParamsBase),dataDef,'leaf taxa'); };
+</script>
+</body>
+
+</html>
