@@ -13,7 +13,7 @@
 |[iNatAPIv1_observations_species_counts.html](https://jumear.github.io/stirfry/iNatAPIv1_observations_species_counts) (deprecated)|https://forum.inaturalist.org/t/viewing-species-in-a-project-beyond-the-top-500/11420/10|
 |[iNatAPIv1_projects.html](https://jumear.github.io/stirfry/iNatAPIv1_projects)|https://forum.inaturalist.org/t/make-collection-and-umbrella-projects-show-up-in-nearby-projects-in-the-app/30268/7|
 |[iNatAPIv1_taxa.html](https://jumear.github.io/stirfry/iNatAPIv1_taxa)|https://forum.inaturalist.org/t/is-there-a-tool-code-snippet-that-allows-downloading-of-taxonomy-data-from-the-site/14268/6|
-|[iNatAPIv2_exemplar_identifications.html](https://jumear.github.io/stirfry/exemplar_identifications)|https://forum.inaturalist.org/t/new-search-and-sort-tool-for-identifying-identification-tips/80268/240|
+|[iNatAPIv2_exemplar_identifications.html](https://jumear.github.io/stirfry/iNatAPIv2_exemplar_identifications)|https://forum.inaturalist.org/t/new-search-and-sort-tool-for-identifying-identification-tips/80268/240|
 |[iNatAPIv2_observations.html](https://jumear.github.io/stirfry/iNatAPIv2_observations)|https://jumear.github.io/stirfry/iNatAPIv1_observations|
 |[iNatAPIv2_observations_species_counts.html](https://jumear.github.io/stirfry/iNatAPIv2_observations_species_counts)|https://jumear.github.io/stirfry/iNatAPIv1_observations_species_counts|
 |[iNat_PKCE_flow_example.html](https://jumear.github.io/stirfry/iNat_PKCE_flow_example)|https://forum.inaturalist.org/t/batch-add-users-to-collection-project-filters/8086/4|
