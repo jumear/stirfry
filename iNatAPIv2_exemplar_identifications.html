@@ -4,8 +4,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="viewport" content="width=device-width, minimum-scale=1.0" />
-<meta name="description" content="iNaturalist API Get Observation Species Counts" />
-<title>iNaturalist API v2 Get Observation Species Counts</title>
+<meta name="description" content="iNaturalist API Get Exemplar Identifications" />
+<title>iNaturalist API v2 Get Exemplar Identifications</title>
 <style>
   :root {
     background: var(--color-base);
@@ -128,8 +128,8 @@ async function get(url,options=null,delay=0) {
 // define endpoint
 const endpoint = {
   description: document.title,
-  docURL: 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations_species_counts',
-  reqURLBase:'https://api.inaturalist.org/v2/observations/species_counts',
+  docURL: 'https://api.inaturalist.org/v2/docs/#/ExemplarIdentifications/get_exemplar_identifications',
+  reqURLBase:'https://api.inaturalist.org/v2/exemplar_identifications',
 };
 addElem('h1',document.body,{innerText:endpoint.description});
 
@@ -140,6 +140,7 @@ const winURLParams = new URLSearchParams(window.location.search);
 
 // extract parameters used specifically by this page (not just passed through to the API)
 const p_options = winURLParams.get('options')?.split(',') || [];
+const p_include_category_controlled_terms = winURLParams.get('include_category_controlled_terms') || 'false';
 
 // create a copy of winURLParams and remove from it parameters that should not be passed through to the API (note: although fields is a valid API parameter, passing it through could cause the API to return less data than needed by this page)
 const reqURLParamsBase = new URLSearchParams(winURLParams);
@@ -191,6 +192,12 @@ async function dataToTable(reqURL,dataDef,recLabel='records') {
   if (results.length === 0) {
     addElem('p',document.body,{innerText:`No records were retrieved for these parameters.`});
     return response;
+  };
+
+  // this is special code to dynamically generate columns based on a summarized list of annotations present in the set
+  if (p_include_category_controlled_terms==='true') {
+    response.category_controlled_terms.sort((a, b) => a.controlled_attribute.label.localeCompare(b.controlled_attribute.label) || a.controlled_value.label.localeCompare(b.controlled_value.label));
+    for (a of response.category_controlled_terms) { dataDef.push({ th:{innerText:`${a.controlled_attribute.label}> ${a.controlled_value.label}`}, td:((x)=>(r,i,o)=>({innerText:(r.identification.observation.annotations.some(e=>(e.controlled_value.label===x.controlled_value&&e.controlled_attribute.label===x.controlled_attribute))),classList:`bin_${(r.identification.observation.annotations.some(e=>(e.controlled_value.label===x.controlled_value&&e.controlled_attribute.label===x.controlled_attribute)))}`}))({controlled_attribute:a.controlled_attribute.label,controlled_value:a.controlled_value.label}), }); };
   };
   
   // calculate max page based on total_results and per_page returned in response
@@ -245,20 +252,27 @@ for (const i of iNatPages) { iNatURL[i[0]] = `${iNatURL.base}/${i[1]??i[0]}` };
 // table column values (td) are set up to accept a record (r), sequence (i), and other/optional values (o)
 let dataDef = [
   { th:{innerText:'#'}, td:(r,i,o)=>({innerText:i+1}), },
-  { th:{innerText:'ID'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.taxa}/${r.taxon.id}`,r.taxon.id)}), fields:['taxon.id'], },
-  { th:{innerText:'Photo'}, td:(p_options.includes('bigger_image')
-      ? (r,i,o)=>({innerHTML:imgWithFallback((r?.taxon?.default_photo?.medium_url??''),'icon_big')})
-      : (r,i,o)=>({innerHTML:imgWithFallback((r?.taxon?.default_photo?.square_url??''),'icon')})
-    ), fields:['taxon.default_photo.medium_url,taxon.default_photo.square_url'], },
-  { th:{innerText:'Name'}, td:(r,i,o)=>({innerText:r.taxon?(r.taxon.name||''):''}), fields:['taxon.name'], },
-  { th:{innerText:'Common Name'}, td:(r,i,o)=>({innerText:r.taxon?(r.taxon.preferred_common_name||''):''}), fields:['taxon.preferred_common_name'], },
-  { th:{innerText:'Rank'}, td:(r,i,o)=>({innerText:r.taxon?r.taxon.rank:''}), fields:['taxon.rank'], },
-  { th:{innerText:'Iconic Taxon'}, td:(r,i,o)=>({innerText:r.taxon?r.taxon.iconic_taxon_name:''}), fields:['taxon.iconic_taxon_name'], },
-  { th:{classList:'tar',innerText:'Taxon Obs Count'}, td:(r,i,o)=>({classList:'tar',innerHTML:hyperlink(obsSetURL('explore',`taxon_id=${r.taxon.id}`),groupDigits(r.count))}), fields:['taxon.id','count'], },
-  { th:{classList:'tar',innerText:'Taxon Ttl Obs Count'}, td:(r,i,o)=>({classList:'tar',innerHTML:hyperlink(obsSetURL('explore',`verifiable=any&taxon_id=${r.taxon.id}`),groupDigits(r.taxon.observations_count))}), fields:['taxon.id','taxon.observations_count'], },
+  { th:{innerText:'Exemplar ID'}, td:(r,i,o)=>({innerHTML:r.id}), fields:['id'], },
+  { th:{innerText:'Obs'}, td:(r,i,o)=>({innerHTML:!r.identification?.observation?.id?'':hyperlink(`${iNatURL.obs}/${r.identification?.observation?.id}`,r.identification.observation.id)}), fields:['identification.observation.id'], },
+  { th:{innerText:'Obs Photo'}, td:(r,i,o)=>({innerHTML:imgWithFallback(r.identification?.observation?.photos[0]?.url,'photo')}), fields:['identification.observation.photos.url'], },
+  { th:{innerText:'ID'}, td:(r,i,o)=>({innerHTML:!r.identification?.observation?.id?'':hyperlink(`${iNatURL.obs}/${r.identification?.observation?.id}#activity_identification_${r.identification.uuid}`,r.identification.id)}), fields:['identification.id','identification.uuid','identification.observation.id'], },
+  { th:{innerText:'ID Taxon'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.taxa}/${r.identification.taxon.id}`,r.identification.taxon.id)}), fields:['identification.taxon.id'], },
+  { th:{innerText:'ID Date'}, td:(r,i,o)=>({innerText:dateToString(r.identification.created_at)}), fields:['identification.created_at'], },
+  { th:{innerText:'ID Notes'}, td:(r,i,o)=>({innerText:r.identification.body}), fields:['identification.body'], },
+  { th:{innerText:'Identifier Photo'}, td:(r,i,o)=>({innerHTML:imgWithFallback(r.identification?.user?.icon,'icon')}), fields:['identification.user.icon'], },
+  { th:{innerText:'Identifier'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.users}/${r.identification?.user.login}`,r.identification?.user?.login)}), fields:['identification.user.login'], },
+  { th:{innerText:'ID by Observer'}, td:(r,i,o)=>({innerText:r.identification.own_observation,classList:`bin_${r.identification.own_observation}`}), fields:['identification.own_observation'], },
+  { th:{innerText:'Disagree'}, td:(r,i,o)=>({innerText:r.identification.disagreement,classList:`bin_${r.identification.disagreement}`}), fields:['identification.disagreement'], },
+  { th:{innerText:'Annotations'}, td:(r,i,o)=>({innerText:r.identification?.observation?.annotations.map(e=>`${e.controlled_attribute.label}> ${e.controlled_value.label}`).join('; ')}), fields:['identification.observation.annotations.controlled_attribute.label','identification.observation.annotations.controlled_value.label'], },
+  //{ th:{innerText:'Observer Photo'}, td:(r,i,o)=>({innerHTML:imgWithFallback(r.identification?.observation?.user?.icon,'icon')}), fields:['identification.user.observation.icon'], },
+  //{ th:{innerText:'Observer'}, td:(r,i,o)=>({innerHTML:hyperlink(`${iNatURL.users}/${r.identification?.observation?.user?.login}`,r.identification?.observation?.user?.login)}), fields:['identification.observation.user.login'], },
 ];
-if (p_options.includes('wikipedia_url')) {dataDef.splice(7,0,{ th:{innerText:'Wikipedia URL'}, td:(r,i,o)=>({innerHTML:hyperlink(r?.taxon?.wikipedia_url)}), fields:['taxon.wikipedia_url'], })};
-if (p_options.includes('ancestry')) {dataDef.splice(7,0,{ th:{innerText:'Ancestry'}, td:(r,i,o)=>({innerHTML:r.taxon.ancestor_ids.map(function(e){return hyperlink(`${iNatURL.taxa}/${e}`,e)}).join('/')||''}), fields:['taxon.ancestor_ids'], })};
+if (p_options.includes('votes')) {
+  dataDef.splice(2,0,{ th:{classList:'tar',innerText:'Downvotes'}, td:(r,i,o)=>({classList:'tar',innerText:r.votes.filter(e=>e.vote_flag===false).length}), fields:['votes.vote_flag'], });
+  dataDef.splice(2,0,{ th:{classList:'tar',innerText:'Upvotes'}, td:(r,i,o)=>({classList:'tar',innerText:r.votes.filter(e=>e.vote_flag===true).length}), fields:['votes.vote_flag'], });
+};
+if (p_options.includes('nominated')) {dataDef.splice(2,0,{ th:{innerText:'Nominate Date'}, td:(r,i,o)=>({innerText:dateToString(r.nominated_at||'')}), fields:['nominated_at'], })};
+
 
 // functions for CSV export
 function escapeForCSV(str) {
@@ -274,17 +288,15 @@ async function exportData(exportDef,baseURL,count=0) {
   exportButton.innerHTML = 'exporting...';
   // generally the API will return no more than the first 10000 records for a given set of parameters, but it turns out this endpoint will allow more
   // note that the API recommended request limit is about 1 request/second or no more than 100 requests per minute.
-  // it's unlikely that we'll violate this if we issue 20 or fewer requests together (@500 records per page = 10000 records).
-  // so if we have fewer than 10000 records (20 requests), we'll issue all the requests at one time.
+  // it's unlikely that we'll violate this if we issue 20 or fewer requests together.  So if we have fewer than 2000 records (20 requests), we'll issue all the requests at one time.
   // otherwise, we'll add a delay between requests
-  let maxCountDefault = 10000;
-  let maxCount = p_options.includes('unlimitedexport') ? 500000 : maxCountDefault; // currently, there are ~400000 recorded in the system. so we'll add a slightly higher max just to avoid getting caught in an infinite loop.
+  let maxCount = 10000;
   if (count>maxCount) {
     count=maxCount;
-    alert(`By default, this page exports only up to ${maxCountDefault} records in order to avoid API request limits. To export more than ${maxCountDefault} records, reload the page with an additional parameter &options=unlimitedexport in the URL. Expect a large export to take at least 1 second per page of results to be exported.`)
+    alert(`This page exports only up to ${maxCount} records in order to avoid API request limits.`)
   };
   let promiseArray = [];
-  let maxPerPage = 500;
+  let maxPerPage = 200;
   for (i=0;i<Math.ceil(count/maxPerPage);i++) {
     const delayInMS = (count/maxPerPage > 20) ? i * 1020 : 0;
     promiseArray.push(get(createURL(baseURL,`per_page=${maxPerPage}&page=${i+1}`),null,delayInMS));
@@ -314,34 +326,39 @@ async function exportData(exportDef,baseURL,count=0) {
 // export definition
 // column values (td) are set up to accept a record (r), page (p), sequence (i), and other/optional values (o)
 let exportDef = [
-  { th:'id', td:(r,p,i,o)=>escapeForCSV(r.taxon.id), fields:['taxon.id'], },
-  { th:'name', td:(r,p,i,o)=>escapeForCSV(r.taxon?.name), fields:['taxon.name'], },
-  { th:'common_name', td:(r,p,i,o)=>escapeForCSV(r.taxon?.preferred_common_name), fields:['taxon.preferred_common_name'], },
-  { th:'rank', td:(r,p,i,o)=>escapeForCSV(r.taxon?.rank), fields:['taxon.rank'], },
-  { th:'iconic_taxon', td:(r,p,i,o)=>escapeForCSV(r.taxon?.iconic_taxon_name), fields:['taxon.iconic_taxon_name'], },
-  { th:'taxon_obs_count', td:(r,p,i,o)=>escapeForCSV(r.count), fields:['count'], },
-  { th:'taxon_ttl_obs_count', td:(r,p,i,o)=>escapeForCSV(r.taxon?.observations_count), fields:['taxon.observations_count'], },
+  { th:'exemplar_id', td:(r,p,i,o)=>escapeForCSV(r.id), fields:['id'], },
+  { th:'observation_id', td:(r,p,i,o)=>escapeForCSV(r.identification?.observation?.id), fields:['identification.observation.id'], },
+  { th:'identification_id', td:(r,p,i,o)=>escapeForCSV(r.identification.id), fields:['identification.id'], },
+  { th:'identiifcation_taxon_id', td:(r,p,i,o)=>escapeForCSV(r.identification?.taxon?.id), fields:['identification.taxon.id'], },
+  { th:'identification_date', td:(r,p,i,o)=>escapeForCSV(r.identification.created_at), fields:['identification.created_at'], },
+  { th:'identification_body', td:(r,p,i,o)=>escapeForCSV(r.identification?.body), fields:['identification.body'], },
+  { th:'identification_user_id', td:(r,p,i,o)=>escapeForCSV(r.identification?.user?.login), fields:['identification.user.login'], },
+  { th:'identification_by_observer', td:(r,p,i,o)=>escapeForCSV(r.identification.own_observation), fields:['identification.own_observation'], },
+  { th:'disagreement', td:(r,p,i,o)=>escapeForCSV(r.identification.disagreement), fields:['identification.disagreement'], },
+  { th:'annotations', td:(r,p,i,o)=>escapeForCSV(r.identification?.observation?.annotations.map(e=>`${e.controlled_attribute.label}> ${e.controlled_value.label}`).join('; ')), fields:['identification.observation.annotations.controlled_attribute.label','identification.observation.annotations.controlled_value.label'], },
 ];
-if (p_options.includes('wikipedia_url')) {exportDef.splice(5,0,{ th:'wikipedia_url', td:(r,p,i,o)=>escapeForCSV(r.taxon.wikipedia_url), fields:['taxon.wikipedia_url'], })};
-if (p_options.includes('ancestry')) {exportDef.splice(5,0,{ th:'ancestry', td:(r,p,i,o)=>escapeForCSV(r.taxon.ancestor_ids.join('/')), fields:['taxon.ancestor_ids'], })};
+if (p_options.includes('votes')) {
+  exportDef.splice(1,0,{ th:'downvotes', td:(r,p,i,o)=>escapeForCSV(r.votes.filter(e=>e.vote_flag===false).length), fields:['vote_flag'], });
+  exportDef.splice(1,0,{ th:'upvotes', td:(r,p,i,o)=>escapeForCSV(r.votes.filter(e=>e.vote_flag===true).length), fields:['vote_flag'], });
+};
+if (p_options.includes('nominated')) {exportDef.splice(1,0,{ th:'nominated_at', td:(r,p,i,o)=>escapeForCSV(r.nominated_at), fields:['nominated_at'], })};
+
 
 // if no parameters are specified, show page instructions; otherwise, get data and create table
 if (reqURLParamsBase.size===0) {
   const instructions = [
     {innerHTML:`This page displays selected parts of the response from the ${hyperlink(endpoint.docURL,endpoint.description)} endpoint in a human-readable format. To use this page, add at least one query parameter to the URL. See ${hyperlink(endpoint.docURL)} for available query parameters. Note that a special parameter <code>fields</code> will be ignored by this page, since the page returns a fixed set of information, and using <code>fields</code> could cause the server to retun only some of the information the page needs.`},
-    {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'user_id=bob&fields=all'),createURL(endpoint.reqURLBase,'user_id=bob'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'user_id=bob'))} in your browser.`},
-    {innerHTML:`The max records per page for this endpoint is 500. Unlike most of the iNaturalist API endpoints, this one will return records beyond the 10,000th record for a given set of parameters.`},
-    {innerHTML:`This page can display extra columns and provide additional functionality based on a special <code>options</code> parameter.<ul>`
-      +`<li>Adding <code>&options=ancestry</code> to the parameter list will include a column with taxon ancestry in the results.</li>`
-      +`<li>Adding <code>&options=wikipedia_url </code> will display a column with a link to the Wikipedia article for the taxon.</li>`
-      +`<li>Adding <code>&options=bigger_image</code> will display a larger version of the taxon photo.</li>`
-      +`<li>Adding <code>&options=unlimitedexport</code> will allow you export a lot of records.</li>`
-      +`</ul>Multiple options can be invoked together using a comma-separated list of values (ex. <code>&options=ancestry,wikipedia_url,bigger_image,unlimitedexport</code>).`},
-    {innerHTML:`Note that the counts returned by this page vs the ${hyperlink(iNatURL.obs,'Explore page')} in iNaturalist may not tie exactly because the Explore page will always filter out spam observations. Also, if you filter for a subspecies taxon on this page, the taxon shown here will be the species level, but the count will reflect the subspecies count, and the link to the Explore page will take you to the species level.`},
+    {innerHTML:`Suppose the address of this page is ${winURLBase}, and you want to see the results of ${hyperlink(createURL(endpoint.reqURLBase,'direct_taxon_id=62741&nominated=true&fields=all'),createURL(endpoint.reqURLBase,'direct_taxon_id=62741&nominated=true'))} in a friendly format. Then you would open ${hyperlink(createURL(winURLBase,'direct_taxon_id=62741&nominated=true'))} in your browser.`},
+    {innerHTML:`The max records per page for this endpoint is 200. The API will return only up to the 10,000th record for a given set of parameters.`},
+    {innerHTML:`This page can display extra columns based on a special <code>options</code> parameter.<ul>`
+      +`<li>Adding <code>&options=nominated</code> to the parameter list will include a column for nominated date.</li>`
+      +`<li>Adding <code>&options=votes</code> will display a columns counts of upvotes and downvotes.</li>`
+      +`</ul>Multiple options can be invoked together using a comma-separated list of values (ex. <code>&options=nominated,votes</code>).`},
+    {innerHTML:`If another special parameter <code>include_category_controlled_terms=true</code> is used, the page will display columns for each annotation category found in the set, indicating whether the related observation has that particular annotation.`},
   ];
   addElems('p',document.body,instructions);
 }
-else { dataToTable(createURL(endpoint.reqURLBase,reqURLParamsBase),dataDef,'leaf taxa'); };
+else { dataToTable(createURL(endpoint.reqURLBase,reqURLParamsBase),dataDef,'exemplar identifications'); };
 </script>
 </body>
 
