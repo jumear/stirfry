@@ -58,22 +58,22 @@
 <body>
 <script>
 function dateToString(str,dateonly=false) {
-   str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
-   if (dateonly) { str = str.split(' ')[0]; }
-   else {
-      str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
-      str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
-      str = str.replace('+00:00','±00:00');
-   };
-   return str;
+  str = str.replace(/t/i,' '); //replaces T (case insensitive) with a space
+  if (dateonly) { str = str.split(' ')[0]; }
+  else {
+    str = str.replace(/([+-]\d{2}\:?\d{2})/,' ($1)'); //puts parenthesis around time zone offset
+    str = str.replace(/z/i,' (+00:00)'); //replaces Z (case insensitve) with UTC
+    str = str.replace('+00:00','±00:00');
+  };
+  return str;
 };
 function groupDigits(n,delimiter=',') { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,delimiter) };
 function escapeHTML(str) {
   return String(str).replace(/&/g,'&amp;')
-   .replace(/</g,'&lt;')
-   .replace(/>/g,'&gt;')
-   .replace(/"/g,'&quot;')
-   .replace(/'/g,'&#39;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;')
 };
 function hyperlink(url,txt=url) { return url===null?'':`<a href="${url}">${escapeHTML(txt)}</a>`; };
 function imgWithFallback(src,imgClass='photo') { return `<img class="${imgClass}" src="${src}" onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22rgba(128,128,128,.2)%22/></svg>';"/>` };
@@ -106,12 +106,12 @@ async function get(url,options=null,delay=0) {
     const response = await fetch(url,options);
     const data = await response.json();
     if (data.errors) { // v2 can log multiple errors
-      const errorText = `Server responded with error(s): ${data.errors.map(e => `${e.errorCode} (${e.message})`).join(', ')}`
+      const errorText = `Server responded with status ${data.status} and error${data.errors.length>1?'s':''} ${data.errors.map(e => `(${e.errorCode?e.errorCode+': ':''}${e.path?e.path+' ':''}${e.message})`).join(', ')}`;
       console.error(errorText);
       addElem('p',document.body,{innerText:errorText});      
     }
     else if (data.error) { // v1 logs a single error
-      const errorText = `Server responded with error: ${data.status} (${data.error})`
+      const errorText = `Server responded with error: ${data.status} (${data.error})`;
       console.error(errorText);
       addElem('p',document.body,{innerText:errorText});      
     };
@@ -126,9 +126,9 @@ async function get(url,options=null,delay=0) {
 
 // define endpoint
 const endpoint = {
-   description: document.title,
-   docURL: 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations',
-   reqURLBase:'https://api.inaturalist.org/v2/observations',
+  description: document.title,
+  docURL: 'https://api.inaturalist.org/v2/docs/#/Observations/get_observations',
+  reqURLBase:'https://api.inaturalist.org/v2/observations',
 };
 addElem('h1',document.body,{innerText:endpoint.description});
 
