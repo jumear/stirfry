@@ -810,7 +810,7 @@ if (winurlparams=="") {
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=elevation", then the map will display with the USGS topo basemap (with contours in feet) by default, and the info pop-ups will include elevation (sourced from the '+furl('https://epqs.nationalmap.gov/','USGS elevation point query service')+'). USGS does not provide elevations outside of the United States. In cases where the USGS returns no data, the page will fall back to the '+furl('https://open-elevation.com/','Open-Elevation API')+'. As an example, if you want to see mountain goats in the United States, then you would navigate to '+furl(winurlexsearchstr+'?view=elevation&taxon_id=42414&place_id=1')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=heatmap", then the map will show a heatmap view of observations on a muted-color basemap. By default, clicking the heatmap will not open a info pop-up. As an example, to get an idea of where user kueda has made observations, you would navigate to '+furl(winurlexsearchstr+'?view=heatmap&user_id=kueda')+' in your web browser.');
    faddelem('p',div,null,null,'If a special "view" parameter is set to "=subsetratio", then the map will compare a gridded view of one set of observations (the subset, defined in the URL) to another set (the superset, defined by a required special "compare_exclude_param" parameter, which removes one or more parameters from the subset parameter list). The color of the markers will vary based on the ratio of subset to superset for each cell (red=1.0 and blue=0.0), and they will appear on top of a gray basemap. As an example, to compare research grade plant observations to verifiable plant observations, you would navigate to '+furl(winurlexsearchstr+'?view=subsetratio&verifiable=true&quality_grade=research&taxon_id=47126&compare_exclude_param=quality_grade')+' in your web browser. Note that if you use exclusion filter parameters (ex. not_user_id) in your subset and remove them from the superset, then you may get unexpected results (because the subset would no longer be a true subset).');    //faddelem('p',div,null,null,'If a special "view" parameter is set to "=ecolandunit", then the map will display with a USGS Ecological Land Unit overlay on a dark basemap by default, and the info pop-ups will include USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). This should work on any point of land worldwide. As an example, if you want to see maples around the world, then you would navigate to '+furl(winurlexsearchstr+'?view=ecolandunit&taxon_id=47727&defaultzoom=2')+' in your web browser.');
-   faddelem('p',div,null,null,'The map used to offer a USGS Ecological Land Unit overlay on a dark basemap, with pop-ups offering detailed USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). However, USGS no longer provides this data as of early 2025. USGS offers similar, newer data in the form of '+furl('https://www.sciencebase.gov/catalog/item/6296791ed34ec53d276bb293','World Terrestrial Ecosystems') +'. However, WTEs do not appear to be as detailed / useful as ELUs. So this map does not offer WTEs as a replacement option.');
+   faddelem('p',div,null,null,'The map used to offer a USGS Ecological Land Unit overlay on a dark basemap, with pop-ups offering detailed USGS ELU information (sourced from '+furl('https://www.usgs.gov/centers/geosciences-and-environmental-change-science-center/science/global-ecosystems','USGS Global Ecosystems')+'). However, USGS no longer provides this data as of early 2025. USGS offers similar, newer, but less detailed data in the form of '+furl('https://www.sciencebase.gov/catalog/item/6296791ed34ec53d276bb293','World Terrestrial Ecosystems') +'. However, there is no existing map tile service for WTE information. So instead, the map offers '+furl('https://land.copernicus.eu/en/products/global-dynamic-land-cover','Copernicus Global Land Cover')+' as an imperfect alternative.');
    faddelem('p',div,null,null,'There are 2 final sets of special parameters: centerlat, centerlng, and defaultzoom can be used to set the default map center and zoom level when the map is first opened; and showtaxonplace, showtaxonrange, showexpectednearby, and showplace can be set to true to display specific layers by default.');
 }
 else {
@@ -1133,7 +1133,15 @@ else {
    var l_usgs_3dep_contours = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/contours/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:1,2,3,4,5,6,7,8,10,11,12,13,15,16,17,18,21,22,25,26',{minZoom:8, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
    // var l_usgs_3dep_transport = L.tileLayer.usgs('https://carto.nationalmap.gov/arcgis/rest/services/transportation/MapServer/export?format=png32&dpi=120&transparent=true&layers=show:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38',{minZoom:4, maxZoom:20, attribution:s_usgs_overlay_attribution, filter:'opacity(100%)'});
 
-   var l_graticule = L.tileLayer.wms('https://gis.ngdc.noaa.gov/arcgis/services/web_mercator/graticule/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6', format:'image/png32', transparent:true});
+   // Copernicus layers
+   var s_copernicus_land_cover_2020 = {
+      template: 'https://land.copernicus.eu/cdse/lcm_global_10m_yearly_v1?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=LCM10&STYLE=default&FORMAT=image%2Fpng&TILEMATRIXSET=PopularWebMercator512&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&SHOWLOGO=false&TIME=2020-01-01%2F2020-01-01',
+      attribution: 'Copernicus Land Monitoring Service (2025). <a href="https://doi.org/10.2909/602507b2-96c7-47bb-b79d-7ba25e97d0a9">Land Cover 2020 (raster 10 m)</a>, global, annual - version 1.',
+   };
+   var l_copernicus_land_cover_2020 =  L.tileLayer(s_copernicus_land_cover_2020.template,{zoomOffset:1, minZoom: 6, maxNativeZoom:18, maxZoom:20, attribution: s_copernicus_land_cover_2020.attribution});
+   var l_copernicus_land_cover_2020_mod_muted =  L.tileLayer.styleFilter(s_copernicus_land_cover_2020.template,{zoomOffset:1, minZoom: 6, filter:'grayscale(65%)', maxNativeZoom:18, maxZoom:20, attribution: s_copernicus_land_cover_2020.attribution});
+
+   //var l_graticule = L.tileLayer.wms('https://gis.ngdc.noaa.gov/arcgis/services/web_mercator/graticule/MapServer/WMSServer?',{minZoom:0, maxZoom:20, attribution:s_usgs_overlay_attribution, layers:'0,1,2,3,4,5,6', format:'image/png32', transparent:true});
 
    //debug layer
    var l_debug = L.gridLayer.debugCoords();
@@ -1218,6 +1226,8 @@ else {
    // define available overlay maps (can view more than one at a time, arranged in order from lowest to highest)
    var overlaymaps = {
       //"USGS Ecological Land Units": l_usgs_ecolandunit,
+      "Copernicus Land Cover 2020": l_copernicus_land_cover_2020,
+      "Copernicus Land Cover 2020 Mod (Muted)": l_copernicus_land_cover_2020_mod_muted,
       "USGS Hydro": l_usgs_hydro,
       "EOX Hydrography": l_eox_hydrography,
       "USGS Contours (US only)": l_usgs_3dep_contours,
@@ -1247,7 +1257,7 @@ else {
       "iNaturalist Observation Info for Grid":g_utfgdm_sel_grid,
       ...((compexclparam==null) ? {} : {"iNaturalist Observation Info for Superset Grid": g_utfgdm_sel_superset}),
       "iNaturalist Observation Info for Points":g_utfgdm_sel_points,
-      "Graticule":l_graticule,
+      //"Graticule":l_graticule,
       "Debug Grid":l_debug,
    };
 
